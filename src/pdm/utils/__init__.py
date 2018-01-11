@@ -1,2 +1,2 @@
 #!/usr/bin/env python
-from .lockfile import pidlockfile
+from .lockfile import PIDLockFile
