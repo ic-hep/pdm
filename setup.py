@@ -7,6 +7,10 @@ setup(name='pdm',
       version='1.0',
       package_dir={'': 'src'},
       packages=find_packages('src'),
-      install_requires=[],
+      install_requires=['m2crypto',
+                        'flask==0.10.1',
+                        'flask-sqlalchemy==2.0',
+                        'sqlalchemy==0.9.8',
+                        'twisted==12.1.0'],
      )
 

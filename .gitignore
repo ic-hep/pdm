@@ -99,3 +99,10 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# SSL certificates
+etc/*.key
+etc/*.crt
+etc/*.csr
+etc/*.srl
+
