@@ -4,7 +4,9 @@
 set -x
 BASEDN="/C=XX/L=Default City/O=Default Company Ltd/OU=Test CA"
 
-rm -f *.csr *.crt *.key *.srl
+rm -rf certs
+mkdir certs
+cd certs
 
 # Generate CA
 openssl genrsa -out CA.key 2048
