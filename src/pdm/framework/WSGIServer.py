@@ -101,12 +101,12 @@ class WSGIServer(object):
       fnames = [fnames]
     data = ""
     for fname in fnames:
-      with open(fname, "r") as fd:
-        data += fd.read()
-        fd.close()
+      with open(fname, "r") as file_fd:
+        data += file_fd.read()
+        file_fd.close()
     return data
 
-  def __init__(self, port, app):
+  def __init__(self, port, app, logger=None):
     """ Initialises the web server. """
     self.__port = port
     self.__resource = WSGIAuth(reactor, reactor.getThreadPool(), app)
@@ -157,4 +157,3 @@ class WSGIServer(object):
     else:
       reactor.listenTCP(self.__port, self.__site)
     reactor.run()
-
