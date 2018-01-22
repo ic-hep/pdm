@@ -4,9 +4,9 @@
 class InstantiationError(RuntimeError):
     """Instantiation exception."""
 
-    def __init__(self, message):
+    def __init__(self, *args, **kwargs):
         """Initialisation."""
-        super(InstantiationError, self).__init__(message)
+        super(InstantiationError, self).__init__(*args, **kwargs)
 
 
 class SingletonMeta(type):
