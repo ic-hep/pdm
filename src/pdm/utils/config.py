@@ -32,7 +32,7 @@ class ConfigSystem(object):
         """Return a given section."""
         return deepcopy(self._config[section])
 
-    def setup(self, filenames='~/.config/pdm/pdm.conf'):
+    def setup(self, filenames='~/.config/pdm/pdm.conf', ignore_errors=False):
         """Setup the configuration system."""
         config_parser = SafeConfigParser()
         config_parser.optionxform = str
@@ -42,14 +42,15 @@ class ConfigSystem(object):
         filenames = {abspath(realpath(expanduser(expandvars(filename))))
                      for filename in filenames}
 
-        read_files = config_parser.read(filenames)
-
-        if read_files:
-            self._logger.info("Read config files: %s", read_files)
-
-        for skipped_file in filenames.difference(read_files):
-            self._logger.warning("Failed to read config file: %s ... file skipped!",
-                                 skipped_file)
+        for filename in filenames:
+            try:
+                with open(filename, 'rb') as config_file:
+                    config_parser.readfp(config_file)
+                self._logger.info("Read config file: %s", filename)
+            except Exception:
+                self._logger.warning("Failed to read config file: %s", filename)
+                if not ignore_errors:
+                    raise
 
         for section in config_parser.sections():
             self._config[section].update((key, ast.literal_eval(val))
