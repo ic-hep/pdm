@@ -1,0 +1,5 @@
+# Workqueue application authentication
+
+[auth/workqueue]
+/workqueue/api/v1.0/jobs%POST = "ALL"
+/workqueue/api/v1.0/jobs%PUT = "ALL"
