@@ -106,54 +106,41 @@ class WSGIServer(object):
         file_fd.close()
     return data
 
-  def __init__(self, port, app, logger=None):
-    """ Initialises the web server. """
-    self.__port = port
-    self.__resource = WSGIAuth(reactor, reactor.getThreadPool(), app)
-    self.__site = server.Site(self.__resource)
-    self.__ssl_opts = None
+  def __init__(self, logger=None):
+    self.__logger = logger
 
-  def enable_ssl(self, cert, key, cafile=None, client_req=False):
-    """ Enable SSL-only connections on this server.
-        cert & key should be paths to PEM encoded X509 certs for the server.
-        Setting cafile enables client cert authentication.
-        If client_req is false, client certificates become optional (this only
-        has an affect if cafile was set).
-        cert and key may point to the same file for a combined file with
-        both entitites in.
-        Returns None.
-    """
+  def __build_sslopts(self, cert, key, cafile, client_req):
     if os.path.realpath(cert) == os.path.realpath(key):
       # Server cert & key files are in the same file
       server_pem = self.__load_certs(cert)
     else:
       server_pem = self.__load_certs((cert, key))
-    server_key = ssl.PrivateCertificate.loadPEM(server_pem)
+    ssl_key = ssl.PrivateCertificate.loadPEM(server_pem)
 
-    ca_data = None
+    ssl_opts = None
     if cafile:
       ca_pem = self.__load_certs(cafile)
       ca_data = ssl.Certificate.loadPEM(ca_pem)
-
-    if ca_data:
-      # We accept client certificates
-      self.__ssl_opts = server_key.options(ca_data)
-      self.__ssl_opts.requireCertificate = client_req
+      ssl_opts = ssl_key.options(ca_data)
+      ssl_opts.requireCertificate = client_req
     else:
-      # Normal server-cert-only SSL
-      self.__ssl_opts = server_key.options()
+      ssl_opts = ssl_key.options()
+    return ssl_opts
 
-  def disable_ssl(self):
-    """ Disable SSL on this server. Returns None.
-    """
-    self.__ssl_opts = None
+  def add_server(self, port, app_server, cert, key, cafile, client_req=False):
+    # Set-up site/resource
+    resource = WSGIAuth(reactor, reactor.getThreadPool(), app_server)
+    site = server.Site(resource)
+    # Build SSL options (if required)
+    ssl_opts = self.__build_sslopts(cert, key, cafile, client_req)
+    # Attach everything to a port
+    if ssl_opts:
+      reactor.listenSSL(port, site, ssl_opts)
+    else:
+      reactor.listenTCP(port, site) 
 
   def run(self):
     """ Starts the web server on the given port.
         Only returns on interrupt.
     """
-    if self.__ssl_opts:
-      reactor.listenSSL(self.__port, self.__site, self.__ssl_opts)
-    else:
-      reactor.listenTCP(self.__port, self.__site)
     reactor.run()
