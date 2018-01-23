@@ -34,8 +34,10 @@ class ExecutableServer(object):
     app_config = config.get_section("app/%s" % app_name)
     if "db" in app_config:
       app_server.enable_db(app_config['db'])
+    # TODO: locate doesn't generate easy-to-find exceptions on import errors
     app_inst = locate(app_config["class"])()
     app_server.attach_obj(app_inst)
+    app_server.create_tables()
 
   def __init_wsgi(self, wsgi_name, config):
     wsgi_config = config.get_section(wsgi_name)
