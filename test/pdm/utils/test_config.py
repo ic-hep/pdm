@@ -1,9 +1,6 @@
 """Tests for the config utility."""
 import unittest
-<<<<<<< HEAD
-=======
 from collections import defaultdict
->>>>>>> origin/config_utils
 from textwrap import dedent
 from tempfile import NamedTemporaryFile
 
