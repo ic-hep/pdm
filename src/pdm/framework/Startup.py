@@ -5,7 +5,6 @@
 from __future__ import print_function
 
 import os
-import sys
 from argparse import ArgumentParser
 from pydoc import locate
 
@@ -68,4 +67,3 @@ class ExecutableServer(object):
     # TODO: Daemon this
     self.__wsgi_server.run()
     return
-

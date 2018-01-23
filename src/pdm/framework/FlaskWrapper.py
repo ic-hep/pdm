@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+""" A wrapper around Flask that provides application specific
+    authentication, logging and database services.
+"""
 
 import os
 import inspect
@@ -48,16 +51,11 @@ class FlaskServer(Flask):
       current_app.db = dbobj
 
   def __add_tables(self):
-    print "*** ADD ***"
-    print self.__db.metadata.tables
-    print self.__db.Model._decl_class_registry.keys()
     self.__db.tables = DBContainer()
     registry = self.__db.Model._decl_class_registry
     for tbl_name, tbl_inst in registry.iteritems():
       if hasattr(tbl_inst, '__tablename__'):
         setattr(self.__db.tables, tbl_name, tbl_inst)
-    print "*** ADD ***"
-    pass
 
   def __init__(self):
     Flask.__init__(self, "bah") # TODO: Proper name here!
@@ -70,7 +68,6 @@ class FlaskServer(Flask):
     self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db = SQLAlchemy(self)
     self.__update_dbctx(db)
-    print dir(db)
 
   def before_startup(self):
     with self.app_context():
@@ -90,7 +87,7 @@ class FlaskServer(Flask):
         if hasattr(obj_inst, '_db_model'):
           # TODO: Tidy this up!
           print "Extending DB model with %s" % obj_inst._db_model
-          db_model = obj_inst._db_model(self.__db.Model)
+          obj_inst._db_model(self.__db.Model)
         items = [x for x in dir(obj_inst) if not x.startswith('_')]
         for obj_item in [getattr(obj_inst, x) for x in items]:
           self.attach_obj(obj_item, obj_path)
