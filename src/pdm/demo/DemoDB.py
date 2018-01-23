@@ -2,15 +2,15 @@
 """ Demo DB Model.
 """
 
+from sqlalchemy import Column, Integer, String
+from pdm.framework.Database import JSONMixin
+
 class DBModel(object):
 
-  #class User():
-  #  __tablename__ = "users"
-  #  id = Column(Integer, primary_key=True)
+  def __init__(self, db_base):
 
-  #class Post():
-  #  __tablename__ = "posts"
-  #  id = Column(Integer, primary_key=True)
-
-  pass
+    class Turtle(db_base, JSONMixin):
+      __tablename__ = "turtles"
+      id = Column(Integer, primary_key=True)
+      name = Column(String(32))
 

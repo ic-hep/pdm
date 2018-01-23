@@ -1,16 +1,77 @@
 #!/usr/bin/env python
 
-from flask import request
-from pdm.framework.FlaskWrapper import export, export_ext, db_model
-from pdm.demo.DemoDB import DBModel
+import flask
+from flask import request, jsonify
+from pdm.framework.FlaskWrapper import export, export_ext, startup, db_model
+from pdm.framework.Database import from_json
+
+import pdm.demo.DemoDB
 
 @export_ext("/demo/api/v1.0")
-#@db_model(DBModel)
+@db_model(pdm.demo.DemoDB.DBModel)
 class DemoService(object):
 
   @staticmethod
-  @export_ext("hello", ['GET', 'POST'])
+  @startup
+  def preload_turtles():
+    print "Hello Turtles"
+    db = flask.current_app.db
+    Turtle = db.tables.Turtle
+    num = db.session.query(Turtle).count()
+    if num:
+      print "%u turtle(s) already exist." % num
+      return
+    # No turtles, add some...
+    turtles = (Turtle(name='Timmy'),
+               Turtle(name='Jimmy'),
+               Turtle(name='Mimmy'),
+              )
+    db.session.bulk_save_objects(turtles)
+    db.session.commit()
+    
+  @staticmethod
+  @export
   def hello():
-    print "DB Test: %s" % request.db
     return "Hello World!\n"
+
+  @staticmethod
+  @export_ext("turtles")
+  def turtles_get():
+    db = request.db
+    Turtle = db.tables.Turtle
+    res = {x.id:x.name for x in db.session.query(Turtle).all()}
+    return jsonify(res)
+
+  @staticmethod
+  @export_ext("turtles/<int:tid>")
+  def turtles_info(tid):
+    db = request.db
+    Turtle = db.tables.Turtle
+    res = Turtle.query.filter_by(id=tid).first_or_404()
+    return res.serialise()
+
+  @staticmethod
+  @export_ext("turtles/<int:tid>", ["DELETE"])
+  def turtles_delete(tid):
+    db = request.db
+    Turtle = db.tables.Turtle
+    res = Turtle.query.filter_by(id=tid).first_or_404()
+    if res.name == 'Timmy':
+      return "Undeletable\n", 401
+    db.session.delete(res)
+    db.session.commit()
+    return ""
+
+  @staticmethod
+  @export_ext("turtles", ["POST"])
+  def turtles_add():
+    db = request.db
+    Turtle = db.tables.Turtle
+    print "ADD"
+    # This next bit is probably curl messing me about
+    req_str = request.values.items()[0][0]
+    res = from_json(Turtle, req_str)
+    db.session.add(res)
+    db.session.commit()
+    return res.serialise()
 
