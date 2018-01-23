@@ -5,9 +5,6 @@ import fcntl
 import logging
 
 
-LOGGER = logging.getLogger(__name__)
-
-
 class AlreadyLockedError(IOError):
     """Lockfile already locked error."""
 
@@ -21,8 +18,7 @@ class PIDLockFile(object):
     Open a lockfile.
 
     Opens a file and try to acquire a filesystem lock on said file.
-    If successful write the current processes pid into the file. If
-    unsuccessful will exit program.
+    If successful write the current processes pid into the file.
     """
 
     def __init__(self, filename, lock_fail_log=True):
@@ -37,6 +33,7 @@ class PIDLockFile(object):
         self._filename = filename
         self._pidfile = None
         self._lock_fail_log = lock_fail_log
+        self._logger = logging.getLogger(__name__)
 
     @property
     def name(self):
@@ -66,7 +63,7 @@ class PIDLockFile(object):
         try:
             self._pidfile = open(self._filename, 'a+b')
         except IOError:
-            LOGGER.exception("Error opening pidfile %s", self._filename)
+            self._logger.exception("Error opening pidfile %s", self._filename)
             raise
 
         try:
@@ -79,10 +76,10 @@ class PIDLockFile(object):
             # attempt to start the daemon didn't work.
             if err.errno == 11:
                 if self._lock_fail_log:
-                    LOGGER.error("pidfile already locked by process with pid: %s", pid)
+                    self._logger.error("pidfile already locked by process with pid: %s", pid)
                 raise AlreadyLockedError("pidfile already locked by process with pid: %s" % pid)
             if self._lock_fail_log:
-                LOGGER.exception("Error trying to acquire lock on pidfile %s", self._filename)
+                self._logger.exception("Error trying to acquire lock on pidfile %s", self._filename)
             raise
 
         self.update_pid()
