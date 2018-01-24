@@ -40,7 +40,6 @@ class RESTClient(object):
     self.__url = self.__locate(service)
     self.__ssl_opts = self.__get_ssl_opts(ssl_opts)
     self.__token = token
-    self.__session = requests.Session()
 
   def __do_request(self, uri, method, data=None):
     """ Run a request on te server
@@ -49,10 +48,19 @@ class RESTClient(object):
     # TODO: Better way to join URLs?
     full_url = "%s/%s" % (self.__url, uri)
     cafile, cert, key = self.__ssl_opts
+    client_cert = None
     if cert and key:
       client_cert = (cert,key)
-    resp = requests.request(method, full_url, json=data,
+    # Handle headers
+    headers = {}
+    if self.__token:
+      headers['X-Token'] = self.__token
+    # Actually send the request
+    resp = requests.request(method, full_url, json=data, headers=headers,
                             verify=cafile, cert=client_cert)
+    if resp.status_code != requests.codes.ok:
+      # TODO: Better excpetions here
+      raise Exception("Request failed with code %u" % resp.status_code)
     if resp.text:
       return resp.json()
     else:
