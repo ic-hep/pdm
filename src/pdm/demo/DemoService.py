@@ -34,7 +34,7 @@ class DemoService(object):
   @staticmethod
   @export
   def hello():
-    return "Hello World!\n"
+    return jsonify("Hello World!\n")
 
   @staticmethod
   @export_ext("turtles")
@@ -69,10 +69,7 @@ class DemoService(object):
   def turtles_add():
     db = request.db
     Turtle = db.tables.Turtle
-    print "ADD"
-    # This next bit is probably curl messing me about
-    req_str = request.values.items()[0][0]
-    res = from_json(Turtle, req_str)
+    res = from_json(Turtle, request.data)
     db.session.add(res)
     db.session.commit()
     return res.serialise()
