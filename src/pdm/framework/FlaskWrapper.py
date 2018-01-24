@@ -4,7 +4,6 @@
 """
 
 import os
-import inspect
 import functools
 
 from pdm.framework.Tokens import TokenService
@@ -21,10 +20,10 @@ def export_inner(obj, ename, methods=None):
   """
   if not methods:
     methods = ["GET"]
-  obj._is_exported = True
-  obj._export_name = ename
-  obj._export_methods = methods
-  obj._export_auth = []
+  obj.is_exported = True
+  obj.export_name = ename
+  obj.export_methods = methods
+  obj.export_auth = []
   return obj
 
 def export(obj):
@@ -56,7 +55,7 @@ def startup(obj):
       dictionary of config options from the config file. If the application
       uses any keys, they should be removed from the dictionary.
   """
-  obj._is_startup = True
+  obj.is_startup = True
   return obj
 
 def db_model(db_obj):
@@ -67,11 +66,15 @@ def db_model(db_obj):
       use the model parameter as the base class.
   """
   def attach_db(obj):
-    obj._db_model = db_obj
+    """ Attches the db_obj to the db_model parameter of obj.
+        Returns obj.
+    """
+    obj.db_model = db_obj
     return obj
   return attach_db
 
 
+#pylint: disable=too-few-public-methods
 class DBContainer(object):
   """ A container of DB Table models.
       References to the table objects are dynamitcally attached to an instance
@@ -90,9 +93,7 @@ class FlaskServer(Flask):
         Returns True if the request should be allowed.
                 False if the request should be denied.
     """
-    rules = current_app.policy.get(resource, None)
-    if not rules:
-      return False # Fast path, rules not present => Access denied
+    rules = current_app.policy.get(resource, [])
     for rule in rules:
       if rule == 'ALL':
         return True
@@ -140,7 +141,7 @@ class FlaskServer(Flask):
       raw_token = request.headers['X-Token']
       res, token_value = current_app.token_svc.check(raw_token)
       if res:
-       return "403 Invalid Token", 403
+        return "403 Invalid Token", 403
       client_token = True
     # Now check request against policy
     if not FlaskServer.__req_allowed(client_dn, client_token):
@@ -171,6 +172,7 @@ class FlaskServer(Flask):
         Returns None.
     """
     self.__db.tables = DBContainer()
+    #pylint: disable=protected-access
     registry = self.__db.Model._decl_class_registry
     for tbl_name, tbl_inst in registry.iteritems():
       if hasattr(tbl_inst, '__tablename__'):
@@ -193,7 +195,7 @@ class FlaskServer(Flask):
       current_app.log = logger
       current_app.policy = {}
       current_app.token_svc = self.__token_svc
-    
+
   def enable_db(self, db_uri):
     """ Enables a database connection pool for this server.
         db_uri - An SQLAlchemy compliant Db conection string.
@@ -202,8 +204,8 @@ class FlaskServer(Flask):
     """
     self.config['SQLALCHEMY_DATABASE_URI'] = db_uri
     self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    db = SQLAlchemy(self)
-    self.__update_dbctx(db)
+    database = SQLAlchemy(self)
+    self.__update_dbctx(database)
 
   def before_startup(self, config):
     """ This function calls creates the database (if enabled) and calls
@@ -229,14 +231,14 @@ class FlaskServer(Flask):
         root_path - The base path to start attaching relative paths from.
         Returns None.
     """
-    if hasattr(obj_inst, '_is_exported'):
-      ename = obj_inst._export_name
+    if hasattr(obj_inst, 'is_exported'):
+      ename = obj_inst.export_name
       obj_path = os.path.join(root_path, ename)
       if not callable(obj_inst):
         self.__logger.debug("Class %s at %s", obj_inst, obj_path)
-        if hasattr(obj_inst, '_db_model'):
-          self.__logger.debug("Extending DB model: %s", obj_inst._db_model)
-          obj_inst._db_model(self.__db.Model)
+        if hasattr(obj_inst, 'db_model'):
+          self.__logger.debug("Extending DB model: %s", obj_inst.db_model)
+          obj_inst.db_model(self.__db.Model)
         items = [x for x in dir(obj_inst) if not x.startswith('_')]
         for obj_item in [getattr(obj_inst, x) for x in items]:
           self.attach_obj(obj_item, obj_path)
@@ -244,12 +246,13 @@ class FlaskServer(Flask):
         self.__logger.debug("Attaching %s at %s", obj_inst, obj_path)
         endpoint = obj_inst.__name__
         self.add_url_rule(obj_path, endpoint, obj_inst,
-                          methods=obj_inst._export_methods)
-    elif hasattr(obj_inst, '_is_startup'):
-      if obj_inst._is_startup:
+                          methods=obj_inst.export_methods)
+    elif hasattr(obj_inst, 'is_startup'):
+      if obj_inst.is_startup:
         self.__startup_funcs.append(obj_inst)
 
-  def __check_rule(self, auth_rule):
+  @staticmethod
+  def __check_rule(auth_rule):
     """ Checks that an auth_rule is valid.
         (See valid rules in add_auth_rules function).
         Returns True if rule is valid, False otherwise.
@@ -278,4 +281,3 @@ class FlaskServer(Flask):
           raise ValueError("Rule '%s' for '%s' is invalid." % (rule, path))
     with self.app_context():
       current_app.policy.update(auth_rules)
-

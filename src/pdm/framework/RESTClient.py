@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+""" RESTful client tools.
+"""
 
 import requests
 
@@ -56,7 +58,7 @@ class RESTClient(object):
     cafile, cert, key = self.__ssl_opts
     client_cert = None
     if cert and key:
-      client_cert = (cert,key)
+      client_cert = (cert, key)
     # Handle headers
     headers = {}
     if self.__token:
@@ -69,8 +71,7 @@ class RESTClient(object):
       raise Exception("Request failed with code %u" % resp.status_code)
     if resp.text:
       return resp.json()
-    else:
-      return None
+    return None
 
   def get(self, uri):
     """ Perform a GET request on the given URI. """

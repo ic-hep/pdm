@@ -2,7 +2,6 @@
 """ A module for handling client tokens. """
 
 import os
-import json #TODO: Use Serialiser class instead?
 from itsdangerous import URLSafeSerializer
 
 class TokenService(object):
@@ -50,4 +49,3 @@ class TokenService(object):
     except:
       # TODO: More specific catch here
       return ("Token Error", None)
-
