@@ -14,8 +14,9 @@ class DemoService(object):
   @staticmethod
   @startup
   def preload_turtles(config):
+    log = flask.current_app.log
     test_param = config.pop("test_param", 0)
-    print "Hello Turtles (%u)" % test_param
+    log.error("Hello Turtles (%u)", test_param)
     db = flask.current_app.db
     Turtle = db.tables.Turtle
     num = db.session.query(Turtle).count()

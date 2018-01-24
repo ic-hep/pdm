@@ -6,6 +6,7 @@ from __future__ import print_function
 
 import os
 import pydoc
+import logging
 from argparse import ArgumentParser
 
 from pdm.utils.daemon import Daemon
@@ -42,9 +43,6 @@ class ExecutableServer(object):
         Returns None.
     """
     app_config = config.get_section("app/%s" % app_name)
-    db_uri = app_config.pop("db", None)
-    if db_uri:
-      app_server.enable_db(db_uri)
     app_class = app_config.pop("class")
     try:
       app_inst = pydoc.locate(app_class)()
@@ -58,7 +56,7 @@ class ExecutableServer(object):
     if app_config:
       # There are => Unused items = typos?
       keys = ', '.join(app_config.keys())
-      raise ValueError("Unusued config params for %s: %s" % (app_name, keys))
+      raise ValueError("Unused config params for %s: '%s'" % (app_name, keys))
 
   def __init_wsgi(self, wsgi_name, config):
     """ Creates an instance of FlaskServer, opens a port and configures
@@ -72,9 +70,14 @@ class ExecutableServer(object):
     cafile = self.__fix_path(wsgi_config.get("cafile", None))
     cert = self.__fix_path(wsgi_config.get("cert", None))
     key = self.__fix_path(wsgi_config.get("key", None))
+    # Create Flask server & config basics
+    logger = logging.getLogger()
+    app_server = FlaskServer(logger, self.__debug)
+    db_uri = wsgi_config.get("db", None)
+    if db_uri:
+      app_server.enable_db(db_uri)
+    # Create child app instances
     app_names = wsgi_config.get("apps", [])
-    # Create child flask instances
-    app_server = FlaskServer()
     for app_name in app_names:
       self.__init_app(app_server, app_name, config)
     self.__wsgi_server.add_server(port, app_server, cert, key, cafile)
@@ -86,7 +89,10 @@ class ExecutableServer(object):
     """
     # Handle command-line args
     args = self.__parser.parse_args()
+    self.__debug = args.debug
     self.__conf_base = os.path.dirname(args.conf)
+    # Enabling logging
+    logging.basicConfig()
     # Load config file
     config = ConfigSystem.get_instance()
     config.setup(args.conf)

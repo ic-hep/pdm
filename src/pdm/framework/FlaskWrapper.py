@@ -89,6 +89,7 @@ class FlaskServer(Flask):
     """
     # TODO: Actually process auth
     request.db = current_app.db
+    request.log = current_app.log
 
   def __update_dbctx(self, dbobj):
     """ Updates this objects database object within the application context.
@@ -110,13 +111,20 @@ class FlaskServer(Flask):
       if hasattr(tbl_inst, '__tablename__'):
         setattr(self.__db.tables, tbl_name, tbl_inst)
 
-  def __init__(self):
+  def __init__(self, logger, debug=False):
     """ Constructs the server.
+        logger - The main logger to use.
+        debug - If set to true, enable flask debug mode
+                (Which includes far more details in returned errors, etc...)
     """
     Flask.__init__(self, "bah") # TODO: Proper name here!
+    self.debug = debug
     self.before_request(self.__init_handler)
     self.__update_dbctx(None)
     self.__startup_funcs = []
+    self.__logger = logger
+    with self.app_context():
+      current_app.log = logger
     
   def enable_db(self, db_uri):
     """ Enables a database connection pool for this server.
@@ -168,7 +176,8 @@ class FlaskServer(Flask):
           self.attach_obj(obj_item, obj_path)
       else:
         print "Attaching %s at %s" % (obj_inst, obj_path)
-        self.add_url_rule(obj_path, obj_inst.__name__, obj_inst,
+        endpoint = obj_inst.__name__
+        self.add_url_rule(obj_path, endpoint, obj_inst,
                           methods=obj_inst._export_methods)
     elif hasattr(obj_inst, '_is_startup'):
       if obj_inst._is_startup:
