@@ -106,10 +106,17 @@ class WSGIServer(object):
         file_fd.close()
     return data
 
-  def __init__(self, logger=None):
-    self.__logger = logger
+  def __init__(self):
+    """ Initialises this server. """
+    pass
 
   def __build_sslopts(self, cert, key, cafile, client_req):
+    """ Creates a twisted SSL opts object with the given parameters.
+        See the parameter descriptions for add_server function.
+        Returns SSL options object (or None if cert or key are None).
+    """
+    if not cert or not key:
+      return None
     if os.path.realpath(cert) == os.path.realpath(key):
       # Server cert & key files are in the same file
       server_pem = self.__load_certs(cert)
@@ -128,6 +135,18 @@ class WSGIServer(object):
     return ssl_opts
 
   def add_server(self, port, app_server, cert, key, cafile, client_req=False):
+    """ Adds a web/application server on a given port.
+        port - The port number to listen on.
+        app_server - A WSGI style application server (such as Flask).
+        cert - The path to the SSL cert file.
+        key - The path to the SSL key file.
+        cafile - The path to the CA file for verifying clients.
+        client_req - If cafile provided, is a client certificate REQUIRED?
+                     If True, clients without a cert will be rejected.
+        cert & key are optional (if set to None the server will be HTTP-only)
+        cafile is optional, if set to None, client certificate are disabled.
+        Returns None.
+    """
     # Set-up site/resource
     resource = WSGIAuth(reactor, reactor.getThreadPool(), app_server)
     site = server.Site(resource)
@@ -140,7 +159,7 @@ class WSGIServer(object):
       reactor.listenTCP(port, site) 
 
   def run(self):
-    """ Starts the web server on the given port.
+    """ Starts the web server(s).
         Only returns on interrupt.
     """
     reactor.run()

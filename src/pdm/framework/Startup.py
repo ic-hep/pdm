@@ -19,6 +19,7 @@ class ExecutableServer(object):
   """
 
   def __init__(self):
+    """ Prepares the argument parser. """
     self.__parser = ArgumentParser()
     self.__parser.add_argument("conf", help="Server config file")
     self.__parser.add_argument("--debug", "-d", action='store_true',
@@ -27,9 +28,19 @@ class ExecutableServer(object):
                                help="Log file name (defaults to stdout)")
 
   def __fix_path(self, path):
+    """ Convert a relative path to be rooted from the config directory
+        of this server.
+    """
     return os.path.join(self.__conf_base, path)
 
   def __init_app(self, app_server, app_name, config):
+    """ Initialise an end application from the config.
+        app_server - An instance of FlaskServer to attach the loaded
+                     application to.
+        app_name - The config name of this server.
+        config - Application config object.
+        Returns None.
+    """
     app_config = config.get_section("app/%s" % app_name)
     if "db" in app_config:
       app_server.enable_db(app_config['db'])
@@ -39,6 +50,12 @@ class ExecutableServer(object):
     app_server.before_startup()
 
   def __init_wsgi(self, wsgi_name, config):
+    """ Creates an instance of FlaskServer, opens a port and configures
+        the base server to run requests on the FlaskServer using WSGI.
+        wsgi_name - the config name of the WSGI server.
+        config - The main application config object.
+        Returns None.
+    """
     wsgi_config = config.get_section(wsgi_name)
     port = wsgi_config["port"]
     cafile = self.__fix_path(wsgi_config.get("cafile", None))
@@ -52,6 +69,10 @@ class ExecutableServer(object):
     self.__wsgi_server.add_server(port, app_server, cert, key, cafile)
 
   def run(self):
+    """ Process the command line arguments and start this server
+        (optionally as a daemon).
+        Returns None.
+    """
     # Handle command-line args
     args = self.__parser.parse_args()
     self.__conf_base = os.path.dirname(args.conf)
