@@ -5,8 +5,8 @@
 from __future__ import print_function
 
 import os
+import pydoc
 from argparse import ArgumentParser
-from pydoc import locate
 
 from pdm.utils.daemon import Daemon
 from pdm.utils.config import ConfigSystem
@@ -46,15 +46,19 @@ class ExecutableServer(object):
     if db_uri:
       app_server.enable_db(db_uri)
     app_class = app_config.pop("class")
-    # TODO: locate doesn't generate easy-to-find exceptions on import errors
-    app_inst = locate(app_class)()
+    try:
+      app_inst = pydoc.locate(app_class)()
+    except pydoc.ErrorDuringImport as err:
+      # We failed to import the client app, we need to raise the inner
+      # exception to make debugging easier
+      raise err.exc, err.value, err.tb
     app_server.attach_obj(app_inst)
     app_server.before_startup(app_config)
     # Test if there are any unused keys in the dictionary
     if app_config:
       # There are => Unused items = typos?
       keys = ', '.join(app_config.keys())
-      raise Exception("Unusued config params for %s: %s" % (app_name, keys))
+      raise ValueError("Unusued config params for %s: %s" % (app_name, keys))
 
   def __init_wsgi(self, wsgi_name, config):
     """ Creates an instance of FlaskServer, opens a port and configures
