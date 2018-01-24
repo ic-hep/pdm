@@ -6,8 +6,12 @@
 import os
 import inspect
 import functools
+
+from pdm.framework.Tokens import TokenService
+
 from flask import Flask, current_app, request
 from flask_sqlalchemy import SQLAlchemy
+
 
 def export_inner(obj, ename, methods=None):
   """ Inner function for export decorators.
@@ -125,20 +129,30 @@ class FlaskServer(Flask):
         use.
     """
     client_dn = None
-    client_token = None
+    client_token = False
+    token_value = None
     if 'Ssl-Client-Verify' in request.headers \
         and 'Ssl-Client-S-Dn' in request.headers:
       # Request has client cert
       if request.headers['Ssl-Client-Verify'] == 'SUCCESS':
         client_dn = request.headers['Ssl-Client-S-Dn']
     if 'X-Token' in request.headers:
-      pass # TODO: Check Token
+      raw_token = request.headers['X-Token']
+      res, token_value = current_app.token_svc.check(raw_token)
+      if res:
+       return "403 Invalid Token", 403
+      client_token = True
     # Now check request against policy
     if not FlaskServer.__req_allowed(client_dn, client_token):
       return "403 Forbidden\n", 403
     # Finally, update request object
     request.dn = client_dn
-    request.token = client_token
+    request.token_ok = client_token
+    if client_token:
+      request.token = token_value
+    else:
+      request.token = None
+    request.token_svc = current_app.token_svc
     request.db = current_app.db
     request.log = current_app.log
 
@@ -162,21 +176,23 @@ class FlaskServer(Flask):
       if hasattr(tbl_inst, '__tablename__'):
         setattr(self.__db.tables, tbl_name, tbl_inst)
 
-  def __init__(self, logger, debug=False):
+  def __init__(self, server_name, logger, debug=False, token_key=None):
     """ Constructs the server.
         logger - The main logger to use.
         debug - If set to true, enable flask debug mode
                 (Which includes far more details in returned errors, etc...)
     """
-    Flask.__init__(self, "bah") # TODO: Proper name here!
+    Flask.__init__(self, server_name)
     self.debug = debug
     self.before_request(self.__init_handler)
     self.__update_dbctx(None)
     self.__startup_funcs = []
     self.__logger = logger
+    self.__token_svc = TokenService(token_key, server_name)
     with self.app_context():
       current_app.log = logger
       current_app.policy = {}
+      current_app.token_svc = self.__token_svc
     
   def enable_db(self, db_uri):
     """ Enables a database connection pool for this server.

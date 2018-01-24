@@ -74,3 +74,18 @@ class DemoService(object):
     db.session.commit()
     return res.serialise()
 
+  @staticmethod
+  @export
+  def get_token():
+    token = request.token_svc.issue("Hello")
+    return jsonify(token)
+
+  @staticmethod
+  @export
+  def verify_token():
+    if request.token_ok:
+      res = "Token OK! (%s)" % request.token
+    else:
+      res = "Token Missing!"
+    return jsonify(res)
+

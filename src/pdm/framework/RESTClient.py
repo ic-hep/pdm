@@ -41,6 +41,12 @@ class RESTClient(object):
     self.__ssl_opts = self.__get_ssl_opts(ssl_opts)
     self.__token = token
 
+  def set_token(self, token):
+    """ Set the token to use for future requests.
+        Returns None.
+    """
+    self.__token = token
+
   def __do_request(self, uri, method, data=None):
     """ Run a request on te server
         Returns object from the server.

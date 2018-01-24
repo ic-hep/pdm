@@ -38,6 +38,33 @@ def main():
   client.del_turtle(my_id)
   show_turtles(client)
 
+
+  # Do Token Demo
+  print "\n\nTOKEN DEMO\n"
+  token = client.get('get_token')
+  print "Got Token: %s" % token
+
+  # Try a request without a token
+  try:
+    res = client.get('verify_token')
+    print "Tokenless request accepted!!! %s" % res
+  except:
+    print "No token request rejected as expected. :-)"
+  
+  # Try a request with the wrong token
+  try:
+    client.set_token('WRONGTOKEN')
+    res = client.get('verify_token')
+    print "Invalid token accepted!!! %s" % res
+  except:
+    print "Wrong token rejected, as expected. :-)"
+
+  # Try a request with the correct token
+  client.set_token(token)
+  res = client.get('verify_token')
+  print "Verify real token: %s" % res
+
+
 if __name__ == '__main__':
   main()
 

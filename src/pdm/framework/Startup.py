@@ -96,9 +96,10 @@ class ExecutableServer(object):
     cafile = self.__fix_path(wsgi_config.get("cafile", None))
     cert = self.__fix_path(wsgi_config.get("cert", None))
     key = self.__fix_path(wsgi_config.get("key", None))
+    secret = wsgi_config.get("secret", None)
     # Create Flask server & config basics
     logger = logging.getLogger()
-    app_server = FlaskServer(logger, self.__debug)
+    app_server = FlaskServer(wsgi_name, logger, self.__debug, secret)
     db_uri = wsgi_config.get("db", None)
     if db_uri:
       app_server.enable_db(db_uri)
