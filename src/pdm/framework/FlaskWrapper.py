@@ -24,13 +24,15 @@ def export_inner(obj, ename, methods=None):
   return obj
 
 def export(obj):
-  """ Export a class or function via the GET method on the web-server.
+  """ Class/Function decorator.
+      Export a class or function via the GET method on the web-server.
       The export name will be the __name__ value of the object.
   """
   return export_inner(obj, obj.__name__)
 
 def export_ext(ename, methods=None):
-  """ Export a class or function via the web-server with extra options.
+  """ Class/Function decorator.
+      Export a class or function via the web-server with extra options.
       ename - Export name of the item. This may be a relative name to inherit
               from the parent object, or absolute for an absolute path on the
               webserver.
@@ -41,11 +43,14 @@ def export_ext(ename, methods=None):
   return functools.partial(export_inner, ename=ename, methods=methods)
 
 def startup(obj):
-  """ Marks a function to be called at start-up on the webserver.
+  """ Funciton decorator.
+      Marks a function to be called at start-up on the webserver.
       The function will be called at the end of daemonisation before
       requests are accepted. The function is run in the application context
       (so flask.current_app is available, but not flask.request).
-      The function should take no parameters.
+      The function should take a single parameter, which will recieve a
+      dictionary of config options from the config file. If the application
+      uses any keys, they should be removed from the dictionary.
   """
   obj._is_startup = True
   return obj
@@ -95,10 +100,10 @@ class FlaskServer(Flask):
       current_app.db = dbobj
 
   def __add_tables(self):
-   """ Creates a new DBContainer within the database object
-       (as db.tables) and attaches all currently pending tables to it.
-       Returns None.
-   """
+    """ Creates a new DBContainer within the database object
+        (as db.tables) and attaches all currently pending tables to it.
+        Returns None.
+    """
     self.__db.tables = DBContainer()
     registry = self.__db.Model._decl_class_registry
     for tbl_name, tbl_inst in registry.iteritems():
@@ -124,11 +129,13 @@ class FlaskServer(Flask):
     db = SQLAlchemy(self)
     self.__update_dbctx(db)
 
-  def before_startup(self):
+  def before_startup(self, config):
     """ This function calls creates the database (if enabled) and calls
         any functions registered with the @startup constructor.
         This should be called immediately before starting the main request
         loop.
+        The config parmemter is passed through to the registered functions,
+        it should be a dictionary of config parameters.
         Returns None.
     """
     with self.app_context():
@@ -136,7 +143,7 @@ class FlaskServer(Flask):
         self.__add_tables()
         self.__db.create_all()
       for func in self.__startup_funcs:
-        func()
+        func(config)
 
   def attach_obj(self, obj_inst, root_path='/'):
     """ Attaches an object tree to this web service.

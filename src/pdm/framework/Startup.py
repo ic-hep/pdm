@@ -42,12 +42,19 @@ class ExecutableServer(object):
         Returns None.
     """
     app_config = config.get_section("app/%s" % app_name)
-    if "db" in app_config:
-      app_server.enable_db(app_config['db'])
+    db_uri = app_config.pop("db", None)
+    if db_uri:
+      app_server.enable_db(db_uri)
+    app_class = app_config.pop("class")
     # TODO: locate doesn't generate easy-to-find exceptions on import errors
-    app_inst = locate(app_config["class"])()
+    app_inst = locate(app_class)()
     app_server.attach_obj(app_inst)
-    app_server.before_startup()
+    app_server.before_startup(app_config)
+    # Test if there are any unused keys in the dictionary
+    if app_config:
+      # There are => Unused items = typos?
+      keys = ', '.join(app_config.keys())
+      raise Exception("Unusued config params for %s: %s" % (app_name, keys))
 
   def __init_wsgi(self, wsgi_name, config):
     """ Creates an instance of FlaskServer, opens a port and configures
