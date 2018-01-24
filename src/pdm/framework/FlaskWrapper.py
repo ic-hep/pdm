@@ -81,13 +81,64 @@ class FlaskServer(Flask):
   """
 
   @staticmethod
+  def __check_req(resource, client_dn, client_token):
+    """ Checks the request for resource against the current_app.policy.
+        Returns True if the request should be allowed.
+                False if the request should be denied.
+    """
+    rules = current_app.policy.get(resource, None)
+    if not rules:
+      return False # Fast path, rules not present => Access denied
+    for rule in rules:
+      if rule == 'ALL':
+        return True
+      if rule == 'ANY' and (client_dn or client_token):
+        return True
+      if rule == 'TOKEN' and client_token:
+        return True
+      if rule == 'CERT' and client_dn:
+        return True
+      if rule.startswith('CERT:'):
+        _, check_dn = rule.split(':', 1)
+        if client_dn == check_dn:
+          return True
+    # No rules matched => Access denied
+    return False
+
+  @staticmethod
+  def __req_allowed(client_dn, client_token):
+    real_path = request.url_rule.rule.split('<')[0]
+    if real_path.endswith('/'):
+      real_path = real_path[:-1]
+    resource = "%s%%%s" % (real_path, request.method)
+    if not resource in current_app.policy:
+      # No specific rule exists for this path + method
+      # Try the "methodless" rule
+      resource = real_path
+    return FlaskServer.__check_req(resource, client_dn, client_token)
+
+  @staticmethod
   def __init_handler():
     """ This function is registered as a "before_request" callback and
         handles checking the request authentication. It also posts various
         parts of the app context into the request proxy object for ease of
         use.
     """
-    # TODO: Actually process auth
+    client_dn = None
+    client_token = None
+    if 'Ssl-Client-Verify' in request.headers \
+        and 'Ssl-Client-S-Dn' in request.headers:
+      # Request has client cert
+      if request.headers['Ssl-Client-Verify'] == 'SUCCESS':
+        client_dn = request.headers['Ssl-Client-S-Dn']
+    if 'X-Token' in request.headers:
+      pass # TODO: Check Token
+    # Now check request against policy
+    if not FlaskServer.__req_allowed(client_dn, client_token):
+      return "403 Forbidden\n", 403
+    # Finally, update request object
+    request.dn = client_dn
+    request.token = client_token
     request.db = current_app.db
     request.log = current_app.log
 
@@ -125,6 +176,7 @@ class FlaskServer(Flask):
     self.__logger = logger
     with self.app_context():
       current_app.log = logger
+      current_app.policy = {}
     
   def enable_db(self, db_uri):
     """ Enables a database connection pool for this server.
@@ -165,20 +217,49 @@ class FlaskServer(Flask):
       ename = obj_inst._export_name
       obj_path = os.path.join(root_path, ename)
       if not callable(obj_inst):
-        # TODO: Proper logging
-        print "Class %s at %s" % (obj_inst, obj_path)
+        self.__logger.debug("Class %s at %s", obj_inst, obj_path)
         if hasattr(obj_inst, '_db_model'):
-          # TODO: Tidy this up!
-          print "Extending DB model with %s" % obj_inst._db_model
+          self.__logger.debug("Extending DB model: %s", obj_inst._db_model)
           obj_inst._db_model(self.__db.Model)
         items = [x for x in dir(obj_inst) if not x.startswith('_')]
         for obj_item in [getattr(obj_inst, x) for x in items]:
           self.attach_obj(obj_item, obj_path)
       else:
-        print "Attaching %s at %s" % (obj_inst, obj_path)
+        self.__logger.debug("Attaching %s at %s", obj_inst, obj_path)
         endpoint = obj_inst.__name__
         self.add_url_rule(obj_path, endpoint, obj_inst,
                           methods=obj_inst._export_methods)
     elif hasattr(obj_inst, '_is_startup'):
       if obj_inst._is_startup:
         self.__startup_funcs.append(obj_inst)
+
+  def __check_rule(self, auth_rule):
+    """ Checks that an auth_rule is valid.
+        (See valid rules in add_auth_rules function).
+        Returns True if rule is valid, False otherwise.
+    """
+    if auth_rule in ('CERT', 'TOKEN', 'ALL', 'ANY'):
+      return True
+    if auth_rule.startswith('CERT:') and len(auth_rule) > 5:
+      return True
+    return False
+
+  def add_auth_rules(self, auth_rules):
+    """ Adds authentication rules to the web server.
+        auth_rules - A dictionary of rules, keys are URI paths,
+                     values are lists of rule statements:
+                      - "CERT" - Any valid client cert is allowed.
+                      - "CERT:/some/dn" - Allow a specific CERT.
+                      - "TOKEN" - Any valid token is allowed.
+                      - "ANY" - Any valid credential is allowed.
+                      - "ALL" - All requests are allowed.
+        By default no-one can call any function.
+        Returns None.
+    """
+    for path, rules in auth_rules.iteritems():
+      for rule in rules:
+        if not self.__check_rule(rule):
+          raise ValueError("Rule '%s' for '%s' is invalid." % (rule, path))
+    with self.app_context():
+      current_app.policy.update(auth_rules)
+

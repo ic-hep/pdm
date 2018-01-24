@@ -2,8 +2,6 @@
 """ Objects for server start-up.
     Starts a development WSGI server based on a config file.
 """
-from __future__ import print_function
-
 import os
 import pydoc
 import logging
@@ -34,6 +32,31 @@ class ExecutableServer(object):
     """
     return os.path.join(self.__conf_base, path)
 
+  def __load_auth(self, app_name, auth_conf):
+    """ Loads the authentication config for a given app.
+        app_name - The config name of the app to load auth for.
+        auth_conf - Path to the auth config file (may be relative to the
+                    config dir).
+        Returns a dictionary of paths => list(auth rule strings)
+    """
+    config = ConfigSystem.get_instance()
+    config.setup(auth_conf)
+    auth_groups = config.get_section("groups/%s" % app_name)
+    auth_rules = config.get_section("auth/%s" % app_name)
+    auth_policy = {}
+    for uri, conf_rules in auth_rules.iteritems():
+      auth_rules = []
+      if isinstance(conf_rules, str):
+        conf_rules = [conf_rules]
+      for rule in conf_rules:
+        if rule.startswith('@'):
+          # Rule is a group
+          auth_rules.extend(auth_groups[rule[1:]])
+        else:
+          auth_rules.append(rule)
+      auth_policy[uri] = auth_rules
+    return auth_policy
+
   def __init_app(self, app_server, app_name, config):
     """ Initialise an end application from the config.
         app_server - An instance of FlaskServer to attach the loaded
@@ -43,14 +66,17 @@ class ExecutableServer(object):
         Returns None.
     """
     app_config = config.get_section("app/%s" % app_name)
+    auth_conf = self.__fix_path(app_config.pop("auth"))
+    auth_pol = self.__load_auth(app_name, auth_conf)
+    app_server.add_auth_rules(auth_pol)
     app_class = app_config.pop("class")
     try:
       app_inst = pydoc.locate(app_class)()
+      app_server.attach_obj(app_inst)
     except pydoc.ErrorDuringImport as err:
       # We failed to import the client app, we need to raise the inner
       # exception to make debugging easier
       raise err.exc, err.value, err.tb
-    app_server.attach_obj(app_inst)
     app_server.before_startup(app_config)
     # Test if there are any unused keys in the dictionary
     if app_config:
@@ -92,7 +118,10 @@ class ExecutableServer(object):
     self.__debug = args.debug
     self.__conf_base = os.path.dirname(args.conf)
     # Enabling logging
-    logging.basicConfig()
+    if (self.__debug):
+      logging.basicConfig(level=logging.DEBUG)
+    else:
+      logging.basicConfig(level=logging.INFO)
     # Load config file
     config = ConfigSystem.get_instance()
     config.setup(args.conf)
