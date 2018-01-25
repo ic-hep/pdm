@@ -10,7 +10,10 @@ import functools
 from pdm.framework.Tokens import TokenService
 
 from flask import Flask, Response, current_app, request
-from flask_sqlalchemy import SQLAlchemy
+
+# This has to be imported last or database tables aren't found
+# TODO: Work out why this happens.
+from pdm.framework.Database import MemSafeSQAlchemy
 
 
 def export_inner(obj, ename, methods=None):
@@ -214,7 +217,7 @@ class FlaskServer(Flask):
         """
         self.config['SQLALCHEMY_DATABASE_URI'] = db_uri
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        database = SQLAlchemy(self)
+        database = MemSafeSQAlchemy(self)
         self.__update_dbctx(database)
 
     def before_startup(self, config):
