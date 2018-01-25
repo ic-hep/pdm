@@ -112,7 +112,10 @@ class FlaskServer(Flask):
 
     @staticmethod
     def __req_allowed(client_dn, client_token):
-        real_path = request.url_rule.rule.split('<')[0]
+        if request.url_rule:
+            real_path = request.url_rule.rule.split('<')[0]
+        else:
+            real_path = request.path
         if real_path.endswith('/'):
             real_path = real_path[:-1]
         resource = "%s%%%s" % (real_path, request.method)
