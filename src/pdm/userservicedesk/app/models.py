@@ -2,6 +2,7 @@ __author__ = 'martynia'
 
 from  pdm.userservicedesk.app import foo
 from  pdm.userservicedesk.app import db
+from  pdm.utils.db import managed_session
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -26,23 +27,25 @@ class User(db.Model):
         onupdate=db.func.current_timestamp())
 
 
-
-    #def __init__(self, username, name, surname, dn, password, email, state = 1):
-    #    """initialize with user data."""
-    #    self.name = name
-    #    self.username = username
-
     @staticmethod
     def get_all():
         return User.query.all()
 
     def save(self):
-        db.session.add(self)
-        db.session.commit()
+        with managed_session(db) as m_session:
+            m_session.add(self)
+
+        #db.session.add(self)
+        #db.session.commit()
 
     def delete(self):
-        db.session.delete(self)
-        db.session.commit()
+        with managed_session(db) as m_session:
+            m_session.delete(self)
+        #db.session.delete(self)
+        #db.session.commit()
 
     def __repr__(self):
         return '<User %r>' % self.username
+
+    def __str__(self):
+        return 'User: %s, surname: %s, name: %s, email: %s ' % (self.username, self.surname, self.name, self.email)

@@ -64,10 +64,50 @@ class UserManamementTestCase(unittest.TestCase):
         for idx, user in enumerate(expected_list) :
             self.assertDictContainsSubset(user, actual_list[idx])
 
+    def test_user_modification(self):
+        """Test API can modify a user (PUT request)"""
+        res = requests.post('http://localhost:5000/users/api/v1.0/users', json=self.users2)
+        self.assertEqual(res.status_code, 201)
+        #
+        res = requests.put('http://localhost:5000/users/api/v1.0/users/guest', json=dict(email='admin2@example.com'))
+        self.assertEqual(res.status_code, 200)
+        # check the response
+        self.assertEqual(res.json()[0]['email'], 'admin2@example.com')
+        # check the stored user and its email address
+        res = requests.get('http://localhost:5000/users/api/v1.0/users/guest')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()[0]['email'], 'admin2@example.com')
+
+    def test_user_deletion(self):
+        """Test API can delete a particular user (GET request)"""
+        res = requests.post('http://localhost:5000/users/api/v1.0/users', json=self.users2)
+        self.assertEqual(res.status_code, 201)
+        res = requests.delete('http://localhost:5000/users/api/v1.0/users/guest')
+        self.assertEqual(res.status_code, 200)
+        res = requests.get('http://localhost:5000/users/api/v1.0/users/guest')
+        self.assertEqual(res.status_code, 404)
+        res = requests.delete('http://localhost:5000/users/api/v1.0/users/guest')
+        self.assertEqual(res.status_code, 404)
+
+    def test_get_user(self):
+        """Test API can list a particular user (GET request)"""
+        res = requests.post('http://localhost:5000/users/api/v1.0/users', json=self.users2)
+        self.assertEqual(res.status_code, 201)
+        #
+        res = requests.get('http://localhost:5000/users/api/v1.0/users/guest')
+        self.assertEqual(res.status_code, 200)
+        #
+        self.assertEqual(len(res.json()), 1)
+        self.assertDictContainsSubset(self.users2, res.json()[0])
+        # non existing user
+        res = requests.get('http://localhost:5000/users/api/v1.0/users/ursamajor')
+        self.assertEqual(res.status_code, 404)
+
     def tearDown(self):
         """teardown all initialized variables."""
         with self.app.app_context():
             # drop all tables
+            pass
             db.session.remove()
             db.drop_all()
 
