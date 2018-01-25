@@ -9,12 +9,9 @@ import logging
 import functools
 
 from pdm.framework.Tokens import TokenService
+from pdm.framework.Database import MemSafeSQAlchemy
 
 from flask import Flask, Response, current_app, request
-
-# This has to be imported last or database tables aren't found
-# TODO: Work out why this happens.
-from pdm.framework.Database import MemSafeSQAlchemy
 
 
 def export_inner(obj, ename, methods=None):
@@ -203,6 +200,8 @@ class FlaskServer(Flask):
         self.debug = debug
         self.before_request(self.__init_handler)
         self.__update_dbctx(None)
+        self.__db_classes = []
+        self.__db_insts = []
         self.__startup_funcs = []
         self.__logger = logger
         self.__token_svc = TokenService(token_key, server_name)
@@ -232,6 +231,8 @@ class FlaskServer(Flask):
         """
         with self.app_context():
             if self.__db:
+                for cls in self.__db_classes:
+                    self.__db_insts.append(cls(self.__db.Model))
                 self.__add_tables()
                 self.__db.create_all()
             for func in self.__startup_funcs:
@@ -253,7 +254,7 @@ class FlaskServer(Flask):
                 if hasattr(obj_inst, 'db_model'):
                     self.__logger.debug("Extending DB model: %s",
                                         obj_inst.db_model)
-                    obj_inst.db_model(self.__db.Model)
+                    self.__db_classes.append(obj_inst.db_model)
                 items = [x for x in dir(obj_inst) if not x.startswith('_')]
                 for obj_item in [getattr(obj_inst, x) for x in items]:
                     self.attach_obj(obj_item, obj_path)
