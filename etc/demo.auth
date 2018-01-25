@@ -1,0 +1,13 @@
+# Demo application authentication
+
+[groups/demo]
+
+[auth/demo]
+/demo/api/v1.0/hello = "ALL"
+/demo/api/v1.0/turtles = "CERT"
+# Note that this rule also matches the ones ending with turtles/<int:tid>
+/demo/api/v1.0/turtles%GET = "ANY"
+
+/demo/api/v1.0/get_token = "ALL"
+/demo/api/v1.0/verify_token = "TOKEN"
+
