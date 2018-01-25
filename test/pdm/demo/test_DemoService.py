@@ -17,9 +17,9 @@ class TestConfigSystem(unittest.TestCase):
     def tearDown(self):
         pass
 
-#    def test_hello(self):
-#        res = self.__test.get('/demo/api/v1.0/hello')
-#        #assert(res.data == 'Bah')
+    def test_hello(self):
+        res = self.__test.get('/demo/api/v1.0/hello')
+        assert(res.data == "Hello World!\n")
 
     def test_getToken(self):
         res = self.__test.get('/demo/api/v1.0/get_token')
