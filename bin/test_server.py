@@ -9,9 +9,9 @@ sys.path.append(IMP_PATH)
 from pdm.framework.Startup import ExecutableServer
 
 def main():
-  exe = ExecutableServer()
-  exe.run()
+    exe = ExecutableServer()
+    exe.run()
 
 if __name__ == '__main__':
-  main()
+    main()
 
