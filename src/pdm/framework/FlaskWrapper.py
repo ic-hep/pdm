@@ -5,6 +5,7 @@
 
 import os
 import json
+import logging
 import functools
 
 from pdm.framework.Tokens import TokenService
@@ -191,7 +192,8 @@ class FlaskServer(Flask):
             if hasattr(tbl_inst, '__tablename__'):
                 setattr(self.__db.tables, tbl_name, tbl_inst)
 
-    def __init__(self, server_name, logger, debug=False, token_key=None):
+    def __init__(self, server_name, logger=logging.getLogger(),
+                 debug=False, token_key=None):
         """ Constructs the server.
             logger - The main logger to use.
             debug - If set to true, enable flask debug mode
@@ -222,9 +224,8 @@ class FlaskServer(Flask):
 
     def before_startup(self, config):
         """ This function calls creates the database (if enabled) and calls
-            any functions registered with the @startup constructor.
-            This should be called immediately before starting the main request
-            loop.
+            any functions registered with the @startup constructor. This
+            should be called immediately before starting the main request loop.
             The config parmemter is passed through to the registered functions,
             it should be a dictionary of config parameters.
             Returns None.
@@ -295,3 +296,10 @@ class FlaskServer(Flask):
                     raise ValueError("Rule '%s' for '%s' is invalid." % (rule, path))
         with self.app_context():
             current_app.policy.update(auth_rules)
+
+    def test_mode(self, main_cls, conf={}, auth=None):
+        inst = main_cls()
+        self.enable_db("sqlite:///")
+        self.attach_obj(inst)
+        self.before_startup(conf)
+
