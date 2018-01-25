@@ -28,7 +28,8 @@ class DemoService(object):
                Turtle(name='Jimmy'),
                Turtle(name='Mimmy'),
               )
-    db.session.bulk_save_objects(turtles)
+    for turtle in turtles:
+      db.session.add(turtle)
     db.session.commit()
     
   @staticmethod
