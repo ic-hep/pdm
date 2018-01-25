@@ -4,11 +4,12 @@
 """
 
 import os
+import json
 import functools
 
 from pdm.framework.Tokens import TokenService
 
-from flask import Flask, current_app, request
+from flask import Flask, Response, current_app, request
 from flask_sqlalchemy import SQLAlchemy
 
 
@@ -73,6 +74,12 @@ def db_model(db_obj):
         return obj
     return attach_db
 
+def jsonify(obj):
+    """ Works just like Flask's jsonify method, but doesn't care about the
+        input type.
+        Returns a Flask response object.
+    """
+    return Response(json.dumps(obj), mimetype='application/json')
 
 #pylint: disable=too-few-public-methods
 class DBContainer(object):
