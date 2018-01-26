@@ -5,6 +5,7 @@
 
 import os
 import json
+import logging
 import functools
 
 from pdm.framework.Tokens import TokenService
@@ -133,12 +134,43 @@ class FlaskServer(Flask):
         return FlaskServer.__check_req(resource, client_dn, client_token)
 
     @staticmethod
+    def __extend_request():
+        """ Adds a few extra items into request from current_app for
+            convenience. Particularly request.db, log & token_svc.
+        """
+        request.token_svc = current_app.token_svc
+        request.db = current_app.db
+        request.log = current_app.log
+
+    @staticmethod
+    def __test_init_handler():
+        """ Like __init_handler, but fakes authentication data for test mode.
+        """
+        auth_mode, auth_data = current_app.test_auth
+        request.dn = None
+        request.token_ok = False
+        request.token = None
+        if auth_mode == "CERT":
+            request.dn = auth_data
+        elif auth_mode == "TOKEN":
+            request.token_ok = True
+            request.token = auth_data
+        elif auth_mode == "ALL":
+            pass
+        else:
+            raise AssertionError("Unrecognised test auth '%s'!" % auth_mode)
+        FlaskServer.__extend_request()
+
+    @staticmethod
     def __init_handler():
         """ This function is registered as a "before_request" callback and
             handles checking the request authentication. It also posts various
             parts of the app context into the request proxy object for ease of
             use.
         """
+        if current_app.test_auth:
+          # We are in test mode and want fake authentication
+          return FlaskServer.__test_init_handler()
         client_dn = None
         client_token = False
         token_value = None
@@ -163,9 +195,7 @@ class FlaskServer(Flask):
             request.token = token_value
         else:
             request.token = None
-        request.token_svc = current_app.token_svc
-        request.db = current_app.db
-        request.log = current_app.log
+        FlaskServer.__extend_request()
 
     def __update_dbctx(self, dbobj):
         """ Updates this objects database object within the application context.
@@ -188,7 +218,8 @@ class FlaskServer(Flask):
             if hasattr(tbl_inst, '__tablename__'):
                 setattr(self.__db.tables, tbl_name, tbl_inst)
 
-    def __init__(self, server_name, logger, debug=False, token_key=None):
+    def __init__(self, server_name, logger=logging.getLogger(),
+                 debug=False, token_key=None):
         """ Constructs the server.
             logger - The main logger to use.
             debug - If set to true, enable flask debug mode
@@ -201,9 +232,11 @@ class FlaskServer(Flask):
         self.__db_classes = []
         self.__db_insts = []
         self.__startup_funcs = []
+        self.__test_auth = None
         self.__logger = logger
         self.__token_svc = TokenService(token_key, server_name)
         with self.app_context():
+            current_app.test_auth = self.__test_auth
             current_app.log = logger
             current_app.policy = {}
             current_app.token_svc = self.__token_svc
@@ -221,9 +254,8 @@ class FlaskServer(Flask):
 
     def before_startup(self, config):
         """ This function calls creates the database (if enabled) and calls
-            any functions registered with the @startup constructor.
-            This should be called immediately before starting the main request
-            loop.
+            any functions registered with the @startup constructor. This
+            should be called immediately before starting the main request loop.
             The config parmemter is passed through to the registered functions,
             it should be a dictionary of config parameters.
             Returns None.
@@ -296,3 +328,37 @@ class FlaskServer(Flask):
                     raise ValueError("Rule '%s' for '%s' is invalid." % (rule, path))
         with self.app_context():
             current_app.policy.update(auth_rules)
+
+    def test_mode(self, main_cls, conf={}):
+        """ Configures this app instance in test mode.
+            An in-memory Sqlite database is used for the DB.
+            main_cls is the class to use for endpoints.
+            conf is a dictionary to pass as config for startup methods.
+            If all parameters in conf arne't used an assertion error is
+            thrown.
+            Returns None.
+        """
+        inst = main_cls()
+        self.enable_db("sqlite:///")
+        self.attach_obj(inst)
+        self.before_startup(conf)
+        # Config should have been completely consumed
+        assert(not conf)
+
+    def fake_auth(self, auth_mode, auth_data=None):
+        """ Sets the auth mode for all endpoints.
+            auth_mode is the mode to pretend was used.
+            auth_data is mode specific.
+
+            auth_mode should be one of the following:
+            None - No auth data (auth_data must = None)
+            "CERT" - auth_data should be a DN.
+            "TOKEN" - auth_data should be a json encoded token.
+            "ALL" - No auth, all request anyway.
+        """
+        if auth_mode:
+          self.__test_auth = (auth_mode, auth_data)
+        else:
+          self.__test_auth = None
+        with self.app_context():
+            current_app.test_auth = self.__test_auth
