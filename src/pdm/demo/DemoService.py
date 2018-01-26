@@ -50,7 +50,7 @@ class DemoService(object):
     db = request.db
     Turtle = db.tables.Turtle
     res = Turtle.query.filter_by(id=tid).first_or_404()
-    return res.serialise()
+    return res.json()
 
   @staticmethod
   @export_ext("turtles/<int:tid>", ["DELETE"])
@@ -72,7 +72,7 @@ class DemoService(object):
     res = Turtle.from_json(request.data)
     db.session.add(res)
     db.session.commit()
-    return res.serialise()
+    return res.json()
 
   @staticmethod
   @export
