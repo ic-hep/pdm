@@ -4,12 +4,13 @@
 """
 
 import os
+import json
 import functools
 
 from pdm.framework.Tokens import TokenService
+from pdm.framework.Database import MemSafeSQAlchemy
 
-from flask import Flask, current_app, request
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, Response, current_app, request
 
 
 def export_inner(obj, ename, methods=None):
@@ -73,6 +74,12 @@ def db_model(db_obj):
         return obj
     return attach_db
 
+def jsonify(obj):
+    """ Works just like Flask's jsonify method, but doesn't care about the
+        input type.
+        Returns a Flask response object.
+    """
+    return Response(json.dumps(obj), mimetype='application/json')
 
 #pylint: disable=too-few-public-methods
 class DBContainer(object):
@@ -112,7 +119,10 @@ class FlaskServer(Flask):
 
     @staticmethod
     def __req_allowed(client_dn, client_token):
-        real_path = request.url_rule.rule.split('<')[0]
+        if request.url_rule:
+            real_path = request.url_rule.rule.split('<')[0]
+        else:
+            real_path = request.path
         if real_path.endswith('/'):
             real_path = real_path[:-1]
         resource = "%s%%%s" % (real_path, request.method)
@@ -188,6 +198,8 @@ class FlaskServer(Flask):
         self.debug = debug
         self.before_request(self.__init_handler)
         self.__update_dbctx(None)
+        self.__db_classes = []
+        self.__db_insts = []
         self.__startup_funcs = []
         self.__logger = logger
         self.__token_svc = TokenService(token_key, server_name)
@@ -204,7 +216,7 @@ class FlaskServer(Flask):
         """
         self.config['SQLALCHEMY_DATABASE_URI'] = db_uri
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        database = SQLAlchemy(self)
+        database = MemSafeSQAlchemy(self)
         self.__update_dbctx(database)
 
     def before_startup(self, config):
@@ -218,6 +230,8 @@ class FlaskServer(Flask):
         """
         with self.app_context():
             if self.__db:
+                for cls in self.__db_classes:
+                    self.__db_insts.append(cls(self.__db.Model))
                 self.__add_tables()
                 self.__db.create_all()
             for func in self.__startup_funcs:
@@ -239,7 +253,7 @@ class FlaskServer(Flask):
                 if hasattr(obj_inst, 'db_model'):
                     self.__logger.debug("Extending DB model: %s",
                                         obj_inst.db_model)
-                    obj_inst.db_model(self.__db.Model)
+                    self.__db_classes.append(obj_inst.db_model)
                 items = [x for x in dir(obj_inst) if not x.startswith('_')]
                 for obj_item in [getattr(obj_inst, x) for x in items]:
                     self.attach_obj(obj_item, obj_path)
