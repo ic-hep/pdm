@@ -2,10 +2,9 @@
 """
 __author__ = 'martynia'
 
-from pdm.userservicedesk.app import human_resources
 import requests
 import argparse
-from pdm.userservicedesk.app.models import User
+from flask import request
 
 def add_user(user):
 
@@ -49,6 +48,7 @@ def main():
     from getpass import getpass
     password = getpass()
 
+    User = request.db.tables.User
     user  = User(username = args.username, name = name, surname = surname,
                  email = email, state = 0, password = password)
 
