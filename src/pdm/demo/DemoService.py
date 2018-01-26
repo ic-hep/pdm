@@ -3,7 +3,6 @@
 import flask
 from flask import request
 from pdm.framework.FlaskWrapper import export, export_ext, startup, db_model, jsonify
-from pdm.framework.Database import from_json
 
 import pdm.demo.DemoDB
 
@@ -70,7 +69,7 @@ class DemoService(object):
   def turtles_add():
     db = request.db
     Turtle = db.tables.Turtle
-    res = from_json(Turtle, request.data)
+    res = Turtle.from_json(request.data)
     db.session.add(res)
     db.session.commit()
     return res.serialise()
