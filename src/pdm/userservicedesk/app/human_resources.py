@@ -43,7 +43,10 @@ def manage(app):
         if not user:
             # Raise an HTTPException with a 404 not found status code
             abort(404)
+#########
+        #{k:v for k, v in user.__dict__.iteritems() if k in user.__table__.columns}
 
+#########
         result = [{
             'id': user.id,
             'username' : user.username,
