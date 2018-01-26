@@ -3,6 +3,7 @@
 """
 
 import json
+from datetime import datetime
 from flask import jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.pool import StaticPool
@@ -22,27 +23,32 @@ class MemSafeSQAlchemy(SQLAlchemy):
       options["poolclass"] = StaticPool
     return super(MemSafeSQAlchemy, self).apply_driver_hacks(app, info, options)
 
+class JSONTableEncoder(json.JSONEncoder):
+    """JSON DB Table Encoder."""
+
+    def default(self, obj):
+        """Default encoding method."""
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        if isinstance(obj, JSONMixin):
+            return {column.name: getattr(obj, column.name)
+                    for column in obj.__table__.columns}
+        return super(JSONTableEncoder, self).default(obj)
+
 #pylint: disable=too-few-public-methods
 class JSONMixin(object):
-    """ A mixin class which provides basic serialisation
-        for SQLAlchemy based table classes.
+    """
+    JSON serialisation mixin for DB tables.
+
+    A mixin class which provides basic serialisation
+    for SQLAlchemy based table classes.
     """
 
-    def serialise(self):
-        """ Convert table to a JSON string. """
-        res = {}
-        for col in self.__table__.columns:
-            val = getattr(self, col.name)
-            res[col.name] = val
-        return jsonify(res)
+    def json(self):
+        """JSONify the table object."""
+        return json.dumps(self, cls=JSONTableEncoder)
 
-
-def from_json(base_cls, json_str):
-    """ Create a database table class instance from a given
-        JSON string.
-        base_cls - The class type to create an instance of.
-        json_str - The JSON string.
-        Returns an instance of type base_cls
-    """
-    json_obj = json.loads(json_str)
-    return base_cls(**json_obj)
+    @classmethod
+    def from_json(cls, json_str):
+        """Load object from JSON string."""
+        return cls(**json.loads(json_str))
