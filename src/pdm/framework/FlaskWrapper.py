@@ -71,7 +71,10 @@ def db_model(db_obj):
         """ Attches the db_obj to the db_model parameter of obj.
             Returns obj.
         """
-        obj.db_model = db_obj
+        if hasattr(obj, 'db_model'):
+            obj.db_model.append(db_obj)
+        else:
+            obj.db_model = [db_obj]
         return obj
     return attach_db
 
@@ -285,7 +288,7 @@ class FlaskServer(Flask):
                 if hasattr(obj_inst, 'db_model'):
                     self.__logger.debug("Extending DB model: %s",
                                         obj_inst.db_model)
-                    self.__db_classes.append(obj_inst.db_model)
+                    self.__db_classes.extend(obj_inst.db_model)
                 items = [x for x in dir(obj_inst) if not x.startswith('_')]
                 for obj_item in [getattr(obj_inst, x) for x in items]:
                     self.attach_obj(obj_item, obj_path)
