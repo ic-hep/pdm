@@ -7,7 +7,7 @@ from pdm.demo.DemoService import DemoService
 from pdm.framework.FlaskWrapper import FlaskServer
 
 
-class TestConfigSystem(unittest.TestCase):
+class TestDemoService(unittest.TestCase):
 
     def setUp(self):
         conf = { 'test_param': 1111 }
