@@ -39,13 +39,12 @@ class TokenService(object):
 
     def check(self, token):
         """ Checks a token has a valid signature.
-            Returns a tuple of (error, value)
-            error is a string describing the problem or None if everything
-            was fine. Value is the token value, if error == None.
+            Returns the token value. 
+            If the token is not valid, a ValueError will be raised.
         """
         try:
             res = self.__signer.loads(token)
-            return (None, res)
+            return res
         except:
             # TODO: More specific catch here
-            return ("Token Error", None)
+            raise ValueError("Token is invalid")
