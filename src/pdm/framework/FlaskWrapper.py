@@ -9,7 +9,7 @@ import logging
 import functools
 
 from pdm.framework.Tokens import TokenService
-from pdm.framework.Database import MemSafeSQAlchemy
+from pdm.framework.Database import MemSafeSQAlchemy, JSONTableEncoder
 
 from flask import Flask, Response, current_app, request
 
@@ -83,7 +83,8 @@ def jsonify(obj):
         input type.
         Returns a Flask response object.
     """
-    return Response(json.dumps(obj), mimetype='application/json')
+    return Response(json.dumps(obj, cls=JSONTableEncoder),
+                    mimetype='application/json')
 
 #pylint: disable=too-few-public-methods
 class DBContainer(object):

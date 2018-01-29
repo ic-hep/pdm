@@ -31,8 +31,12 @@ class JSONTableEncoder(json.JSONEncoder):
         if isinstance(obj, datetime):
             return obj.isoformat()
         if isinstance(obj, JSONMixin):
-            return {column.name: getattr(obj, column.name)
-                    for column in obj.__table__.columns}
+            if hasattr(obj, '__json_fields__'):
+                return {attr_name: getattr(obj, attr_name)
+                        for attr_name in obj.__json_fields__}
+            else:
+                return {column.name: getattr(obj, column.name)
+                        for column in obj.__table__.columns}
         return super(JSONTableEncoder, self).default(obj)
 
 #pylint: disable=too-few-public-methods
