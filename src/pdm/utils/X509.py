@@ -17,16 +17,16 @@ class X509Utils(object):
         """
         eq_val = "="
         if with_space:
-          eq_val = " = "
+            eq_val = " = "
         dn_parts = input_dn.split(input_sep)
         output_parts = []
         for dn_part in dn_parts:
-          if not len(dn_part):
-            continue # Empty segment
-          field, value = dn_part.split("=", 1)
-          field = field.strip()
-          value = value.strip()
-          output_parts.append("%s%s%s" % (field, eq_val, value))
+            if not dn_part:
+                continue # Empty segment
+            field, value = dn_part.split("=", 1)
+            field = field.strip()
+            value = value.strip()
+            output_parts.append("%s%s%s" % (field, eq_val, value))
         return output_sep.join(output_parts)
 
     @staticmethod
@@ -36,7 +36,7 @@ class X509Utils(object):
             If the input doesn't start with / character (i.e. input
             is probably already RFC2253) then input is returned.
         """
-        if not len(input_dn):
+        if not input_dn:
             raise ValueError("Empty DN provided to conversion function.")
         if input_dn[0] != '/':
             return input_dn
@@ -47,10 +47,10 @@ class X509Utils(object):
         """ This convert an RFC style DN: C = XX, L = YY, ...
             to an OpenSSL style one: /C=XX/L=YY,...
             If the input already starts with a / then it is
-            directly returned (as it's probably already in the 
+            directly returned (as it's probably already in the
             correct format.
         """
-        if not len(input_dn):
+        if not input_dn:
             raise ValueError("Empty DN provided to conversion function.")
         if input_dn[0] == '/':
             return input_dn
@@ -99,6 +99,78 @@ class X509CA(object):
     # (if passphrase specified)
     ENC_ALGO = 'aes_256_cbc'
 
+    @staticmethod
+    def __gen_csr(req_dn):
+        """ Generate a CSR for the given DN.
+            Returns a tuple of (RSA, PKey, CSR)
+            where RSA is an M2Crypto.RSA object containg the RSA key-pair.
+            PKey is an EVP.PKey containing the keys.
+            CSR is an M2Crypto.X509.Request object.
+            Raises a RuntimeError if anything goes wrong.
+        """
+        # First generate a key pair
+        rsa_key = RSA.gen_key(X509CA.KEY_SIZE,
+                              X509CA.PUB_EXPONENT,
+                              callback=lambda: None)
+        evp_key = EVP.PKey()
+        evp_key.assign_rsa(rsa_key)
+        # Create the request
+        req = X509.Request()
+        if not req.set_version(X509CA.CERT_VER):
+            raise RuntimeError("Failed to set cert CSR version")
+        if not req.set_subject_name(X509Utils.str_to_x509name(req_dn)):
+            raise RuntimeError("Failed to set cert CSR subject")
+        if not req.set_pubkey(evp_key):
+            raise RuntimeError("Failed to set cert CSR pubkey")
+        if not req.sign(evp_key, X509CA.SIG_ALGO):
+            raise RuntimeError("Failed to sign cert CSR")
+        return (rsa_key, evp_key, req)
+
+    @staticmethod
+    def __gen_basic_cert(req, valid_days, serial, issuer, is_ca):
+        """ Generate a cert template from a CSR.
+            req - The M2Crypto.X509.Request object.
+            valid_days - Lifetime of new cert in days (from now).
+            serial - Serial of new certificate.
+            issuer - CA's M2Crypto.X509.X509 object.
+        """
+        cert = X509.X509()
+        if not cert.set_version(X509CA.CERT_VER):
+            raise RuntimeError("Failed to set CA cert version")
+        if not cert.set_serial_number(serial):
+            raise RuntimeError("Failed to set CA cert serial")
+        if not cert.set_subject(req.get_subject()):
+            raise RuntimeError("Failed to set CA cert subject")
+        if not cert.set_issuer(issuer.get_subject()):
+            raise RuntimeError("Failed to set CA cert issuer")
+        if not cert.set_pubkey(req.get_pubkey()):
+            raise RuntimeError("Failed to set CA cert pubkey")
+        not_before = m2.x509_get_not_before(cert.x509)
+        m2.x509_gmtime_adj(not_before, 0)
+        not_after = m2.x509_get_not_after(cert.x509)
+        m2.x509_gmtime_adj(not_after, valid_days * 24 * 3600)
+        return cert
+
+    @staticmethod
+    def __gen_ca(req, evp_key, valid_days, serial=1):
+        """ Generate a CA cert by self-signing a CSR.
+            Returns an X509.X509 object.
+            Raises a RuntimeError if anything goes wrong.
+        """
+        cert = X509CA.__gen_basic_cert(req, valid_days, serial,
+                                       req, True)
+        # Add CA extensions
+        ca_ext = X509.new_extension('basicConstraints', 'CA:TRUE', 1)
+        if not cert.add_ext(ca_ext):
+            raise RuntimeError("Failed to add CA cert constraints ext")
+        # TODO: Add subject/auth key ID fields
+        #cert.add_ext(X509.new_extension('subjectKeyIdentifier', 'abcd'))
+        #cert.add_ext(X509.new_extension('AuthorityKeyIdentifier', 'abcd'))
+        # Finally sign the cert
+        if not cert.sign(evp_key, X509CA.SIG_ALGO):
+            raise RuntimeError("Failed to sign CA cert")
+        return cert
+
     def __init__(self):
         self.__cert = None
         self.__key = None
@@ -115,52 +187,13 @@ class X509CA(object):
             Returns None.
         """
         self.clear()
-        # Generate an RSA key-pair
-        # We add an empty callback so we don't get text on stdout
-        priv_key = RSA.gen_key(self.KEY_SIZE,
-                               self.PUB_EXPONENT,
-                               callback=lambda: None)
-        pub_key = EVP.PKey()
-        pub_key.assign_rsa(priv_key)
-        # Create the initial request
-        req = X509.Request()
-        if not req.set_version(self.CERT_VER):
-            raise RuntimeError("Failed to set CA CSR version")
-        if not req.set_subject_name(X509Utils.str_to_x509name(ca_name)):
-            raise RuntimeError("Failed to set CA CSR subject")
-        if not req.set_pubkey(pub_key):
-            raise RuntimeError("Failed to set CA CSR pubkey")
-        if not req.sign(pub_key, self.SIG_ALGO):
-            raise RuntimeError("Failed to sign CA CSR")
+        # Get the private key & request
+        rsa_key, evp_key, req = self.__gen_csr(ca_name)
         # Now convert the request into a self-signed (CA) cert
-        cert = X509.X509()
-        if not cert.set_version(self.CERT_VER):
-            raise RuntimeError("Failed to set CA cert version")
-        if not cert.set_serial_number(1):
-            raise RuntimeError("Failed to set CA cert serial")
-        if not cert.set_subject(req.get_subject()):
-            raise RuntimeError("Failed to set CA cert subject")
-        if not cert.set_issuer(req.get_subject()):
-            raise RuntimeError("Failed to set CA cert issuer")
-        if not cert.set_pubkey(req.get_pubkey()):
-            raise RuntimeError("Failed to set CA cert pubkey")
-        not_before = m2.x509_get_not_before(cert.x509)
-        m2.x509_gmtime_adj(not_before, 0)
-        not_after = m2.x509_get_not_after(cert.x509)
-        m2.x509_gmtime_adj(not_after, valid_days * 24 * 3600)
-        # Add CA extensions
-        ca_ext = X509.new_extension('basicConstraints', 'CA:TRUE', 1)
-        if not cert.add_ext(ca_ext):
-            raise RuntimeError("Failed to add CA cert constraints ext")
-        # TODO: Add subject/auth key ID fields
-        #cert.add_ext(X509.new_extension('subjectKeyIdentifier', 'abcd'))
-        #cert.add_ext(X509.new_extension('AuthorityKeyIdentifier', 'abcd'))
-        # Finally sign the cert
-        if not cert.sign(pub_key, self.SIG_ALGO):
-            raise RuntimeError("Failed to sign CA cert")
+        cert = self.__gen_ca(req, evp_key, valid_days)
         # Store the results as the active CA objects
         self.__cert = cert
-        self.__key = priv_key
+        self.__key = rsa_key
         if serial is not None:
             if serial <= 1:
                 raise ValueError("CA starting serial must be greater than 1.")
@@ -179,7 +212,7 @@ class X509CA(object):
         cert = X509.load_cert_string(cert_pem, X509.FORMAT_PEM)
         pw_cb = lambda x: ""
         if passphrase:
-          pw_cb = lambda x: passphrase
+            pw_cb = lambda x: passphrase
         key = RSA.load_key_string(key_pem, callback=pw_cb)
         if serial <= 1:
             raise ValueError("CA serial must be larger than 1.")
@@ -237,4 +270,3 @@ class X509CA(object):
         """
         self.__check_init()
         return self.__serial
-
