@@ -255,12 +255,8 @@ class FlaskServer(Flask):
         database = MemSafeSQAlchemy(self)
         self.__update_dbctx(database)
 
-    def before_startup(self, config):
-        """ This function calls creates the database (if enabled) and calls
-            any functions registered with the @startup constructor. This
-            should be called immediately before starting the main request loop.
-            The config parmemter is passed through to the registered functions,
-            it should be a dictionary of config parameters.
+    def build_db(self):
+        """ Creates a database using all registered db_models.
             Returns None.
         """
         with self.app_context():
@@ -269,6 +265,16 @@ class FlaskServer(Flask):
                     self.__db_insts.append(cls(self.__db.Model))
                 self.__add_tables()
                 self.__db.create_all()
+
+    def before_startup(self, config):
+        """ This function calls any functions registered with the @startup
+            constructor. This should be called immediately before starting
+            the main request loop. The config parmemter is passed through
+            to the registered functions, it should be a dictionary of
+            config parameters.
+            Returns None.
+        """
+        with self.app_context():
             for func in self.__startup_funcs:
                 func(config)
 
@@ -339,14 +345,25 @@ class FlaskServer(Flask):
             conf is a dictionary to pass as config for startup methods.
             If all parameters in conf arne't used an assertion error is
             thrown.
+            If conf is set to None, the build_db and before_startup functions
+            are not called (and should be called manually).
             Returns None.
         """
         inst = main_cls()
         self.enable_db("sqlite:///")
         self.attach_obj(inst)
-        self.before_startup(conf)
-        # Config should have been completely consumed
-        assert(not conf)
+        if conf is not None:
+          self.build_db()
+          self.before_startup(conf)
+          # Config should have been completely consumed
+          assert(not conf)
+
+    def test_db(self):
+        """ Gets an instance to the internal DB object.
+            This allows a test instance to modify the database directly.
+            Should not be used outside of test cases.
+        """
+        return self.__db
 
     def fake_auth(self, auth_mode, auth_data=None):
         """ Sets the auth mode for all endpoints.
