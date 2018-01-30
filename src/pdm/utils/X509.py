@@ -116,6 +116,8 @@ class X509CA(object):
             PKey is an EVP.PKey containing the keys.
             CSR is an M2Crypto.X509.Request object.
             Raises a RuntimeError if anything goes wrong.
+            NOTE: Keep evp_key in scope while rsa_key is in scope otherwise
+                  the interpreter may segfault in newer versions of python.
         """
         # First generate a key pair
         rsa_key = RSA.gen_key(X509CA.KEY_SIZE,
@@ -334,7 +336,8 @@ class X509CA(object):
         """
         self.__check_init()
         # Generate request
-        rsa_key, _, req = self.__gen_csr(subject)
+        # See note about evp_key in __gen_csr doc.
+        rsa_key, evp_key, req = self.__gen_csr(subject)
         # Convert request to cert
         alt_names = []
         if email:
@@ -358,12 +361,14 @@ class X509CA(object):
         """ Internal method for generating an RFC proxy.
             cert - X509.X509 object of user cert.
             sign_key - EVP.PKey object to sign the proxy with.
-            Returns a (cert, key) tuple of types (X509, RSA).
+            Returns a (cert, evp_key, key) tuple of types (X509, EVP, RSA).
         """
         cert_dn = X509Utils.x509name_to_str(usercert.get_subject())
         proxy_serial = random.randint(1000000000, 9999999999)
         proxy_dn = "%s, CN = %u" % (cert_dn, proxy_serial)
-        rsa_key, _, req = X509CA.__gen_csr(proxy_dn)
+        # Note: While it's unused, evp_key must stay in memory while
+        #       rsa_key is valid otherwise it may cause a segfault.
+        rsa_key, evp_key, req = X509CA.__gen_csr(proxy_dn)
         cert = X509CA.__gen_basic_cert(req, valid_days, proxy_serial, usercert)
         key_use_ext = X509.new_extension('keyUsage', X509CA.DEFAULT_KEY_USE)
         if not cert.add_ext(key_use_ext):
@@ -374,7 +379,7 @@ class X509CA(object):
             raise RuntimeError("Failed to add proxy info ext")
         if not cert.sign(sign_key, X509CA.SIG_ALGO):
             raise RuntimeError("Failed to sign proxy cert")
-        return (cert, rsa_key)
+        return (cert, evp_key, rsa_key)
 
     @staticmethod
     def gen_proxy(cert_pem, key_pem, valid_days, passphrase=None):
@@ -392,8 +397,9 @@ class X509CA(object):
         user_key = RSA.load_key_string(key_pem, callback=pw_cb)
         sign_key = EVP.PKey()
         sign_key.assign_rsa(user_key)
-        proxy_cert, proxy_key = X509CA.__gen_proxy(user_cert,
-                                                   sign_key, valid_days)
+        proxy_cert, evp_key, proxy_key = X509CA.__gen_proxy(user_cert,
+                                                            sign_key,
+                                                            valid_days)
         proxy_cert_pem = proxy_cert.as_pem()
         proxy_key_pem = proxy_key.as_pem(cipher=None)
         return (proxy_cert_pem, proxy_key_pem)
