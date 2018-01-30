@@ -7,7 +7,7 @@ from pdm.demo.DemoService import DemoService
 from pdm.framework.FlaskWrapper import FlaskServer
 
 
-class TestConfigSystem(unittest.TestCase):
+class TestDemoService(unittest.TestCase):
 
     def setUp(self):
         conf = { 'test_param': 1111 }
@@ -15,6 +15,29 @@ class TestConfigSystem(unittest.TestCase):
         self.__service.test_mode(DemoService, conf)
         self.__service.fake_auth("ALL")
         self.__test = self.__service.test_client()
+
+    def test_init_existingDB(self):
+        """ Tests that the config step completes correctly if a DB already
+            exists.
+        """
+        # Create a clean copy of the service
+        service = FlaskServer(self.__name__)
+        service.test_mode(DemoService, None)
+        service.build_db()
+        # Add a single turtle to the table
+        db = service.test_db()
+        new_turtle = db.tables.Turtle(name='Before')
+        db.session.add(new_turtle)
+        db.session.commit()
+        # Continue service start-up
+        service.before_startup({})
+        service.fake_auth("ALL")
+        client = service.test_client()
+        # Now check that we only have one turtle
+        # Rather than the 3 we get by default
+        res = client.get('/demo/api/v1.0/turtles')
+        assert(res.status_code == 200)
+        assert(len(json.loads(res.data)) == 1)
 
     def test_hello(self):
         res = self.__test.get('/demo/api/v1.0/hello')

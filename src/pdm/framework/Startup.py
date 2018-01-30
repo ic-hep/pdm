@@ -80,6 +80,7 @@ class ExecutableServer(object):
             # We failed to import the client app, we need to raise the inner
             # exception to make debugging easier
             raise err.exc, err.value, err.tb
+        app_server.build_db()
         app_server.before_startup(app_config)
         # Test if there are any unused keys in the dictionary
         if app_config:

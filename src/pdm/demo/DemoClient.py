@@ -5,7 +5,7 @@ from pdm.framework.RESTClient import RESTClient
 class DemoClient(RESTClient):
   
   def __init__(self):
-    RESTClient.__init__(self, 'demo')
+    super(DemoClient, self).__init__('demo')
 
   def hello(self):
     """ Call the hello function on the server and return the result.
