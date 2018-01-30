@@ -127,7 +127,7 @@ class X509CA(object):
         return (rsa_key, evp_key, req)
 
     @staticmethod
-    def __gen_basic_cert(req, valid_days, serial, issuer, is_ca):
+    def __gen_basic_cert(req, valid_days, serial, issuer):
         """ Generate a cert template from a CSR.
             req - The M2Crypto.X509.Request object.
             valid_days - Lifetime of new cert in days (from now).
@@ -152,28 +152,64 @@ class X509CA(object):
         return cert
 
     @staticmethod
-    def __gen_ca(req, evp_key, valid_days, serial=1):
-        """ Generate a CA cert by self-signing a CSR.
-            Returns an X509.X509 object.
-            Raises a RuntimeError if anything goes wrong.
+    def __add_basic_exts(cert, auth_pubkey, is_ca=False):
+        """ Adds basic extensions to a cert.
+            Specifially, basicConstraints, subjectKeyID and AuthKeyID.
+            cert - X509.X509 object to add extensions to.
+            auth_pubkey - EVP.PKey object to digest for the authKeyID field.
+            is_ca - Used to set the CA basicConstraint.
+            Returns None, Raises RuntimeError on failure.
         """
-        cert = X509CA.__gen_basic_cert(req, valid_days, serial,
-                                       req, True)
-        # Add CA extensions
-        ca_ext = X509.new_extension('basicConstraints', 'CA:TRUE', 1)
+        bc_str = 'CA:FALSE'
+        if is_ca:
+            bc_str = 'CA:TRUE'
+        ca_ext = X509.new_extension('basicConstraints', bc_str, 1)
         if not cert.add_ext(ca_ext):
             raise RuntimeError("Failed to add CA cert constraints ext")
         # TODO: Add subject/auth key ID fields
         #cert.add_ext(X509.new_extension('subjectKeyIdentifier', 'abcd'))
         #cert.add_ext(X509.new_extension('AuthorityKeyIdentifier', 'abcd'))
+
+    @staticmethod
+    def __gen_ca(req, evp_key, valid_days, serial=1):
+        """ Generate a CA cert by self-signing a CSR.
+            Returns an X509.X509 object.
+            Raises a RuntimeError if anything goes wrong.
+        """
+        cert = X509CA.__gen_basic_cert(req, valid_days, serial, req)
+        # Add CA extensions
+        X509CA.__add_basic_exts(cert, req, True)
         # Finally sign the cert
         if not cert.sign(evp_key, X509CA.SIG_ALGO):
             raise RuntimeError("Failed to sign CA cert")
         return cert
 
+    @staticmethod
+    def __gen_cert(req, valid_days, serial, altNames, issuer, sign_key):
+        """ Generates a normal non-CA cert for and signs it with
+            the given certificate.
+            req - X509.Request object to base the cert on.
+            valid_days - Lifetime of new cert in days.
+            serial - Serial number of new cert.
+            altNames - Iterable of alternative names to attach in extensions.
+            issuer - X509.X509 object for CA (Used to get issuer DN).
+            sign_key - EVP.PKey object to sign cert with.
+            Returns signed X509.X509 object.
+        """
+        cert = X509CA.__gen_basic_cert(req, valid_days, serial, issuer)
+        X509CA.__add_basic_exts(cert, issuer, False)
+        for alt_name in altNames:
+            an_ext = X509.new_extension('subjectAltName', alt_name, 0)
+            if not cert.add_ext(an_ext):
+                raise RuntimeError("Failed to add altName '%s'" % alt_name)
+        if not cert.sign(sign_key, X509CA.SIG_ALGO):
+            raise RuntimeError("Failed to sign normal cert")
+        return cert
+
     def __init__(self):
         self.__cert = None
         self.__key = None
+        self.__sign_key = None
         self.__serial = None
 
     def gen_ca(self, ca_name, valid_days, serial=None):
@@ -194,6 +230,7 @@ class X509CA(object):
         # Store the results as the active CA objects
         self.__cert = cert
         self.__key = rsa_key
+        self.__sign_key = evp_key
         if serial is not None:
             if serial <= 1:
                 raise ValueError("CA starting serial must be greater than 1.")
@@ -219,19 +256,21 @@ class X509CA(object):
         # Store the newly loaded objects
         self.__cert = cert
         self.__key = key
+        self.__sign_key = EVP.PKey(key)
         self.__serial = serial
 
     def clear(self):
         """ Clears the stored CA information. """
         self.__cert = None
         self.__key = None
+        self.__sign_key = None
         self.__serial = None
 
     def ready(self):
         """ Returns True if the CA is properly initialised,
             False otherwise.
         """
-        if self.__cert and self.__key and self.__serial:
+        if self.__cert and self.__key and self.__sign_key and self.__serial:
             return True
         return False
 
@@ -270,3 +309,33 @@ class X509CA(object):
         """
         self.__check_init()
         return self.__serial
+
+    def gen_cert(self, subject, valid_days, email=None, passphrase=None):
+        """ Creates and signs a cert with the given DN, validity and altNames.
+            subject - The target DN in RFC format.
+            valid_days - Lifetime of new cert, from now, in days.
+            email - Optional e-mail address to attach as an alt name.
+            Returns PEM encoded public cert and private key tuple:
+                    (cert, key).
+        """
+        # TODO: Thread safe?
+        self.__check_init()
+        # Generate request
+        rsa_key, evp_key, req = self.__gen_csr(subject)
+        # Convert request to cert
+        altNames = []
+        if email:
+            altNames.append("email:%s" % email)
+        new_serial = self.__serial
+        cert = X509CA.__gen_cert(req, valid_days, new_serial,
+                                 altNames, self.__cert, self.__sign_key)
+        # Finally convert output to PEM
+        cert_pem = cert.as_pem()
+        if passphrase:
+             pw_cb = lambda x: passphrase
+             key_pem = rsa_key.as_pem(cipher=self.ENC_ALGO, callback=pw_cb)
+        else:
+             key_pem = rsa_key.as_pem(cipher=None)
+        # Everything successful, bump CA serial number
+        self.__serial += 1
+        return (cert_pem, key_pem)

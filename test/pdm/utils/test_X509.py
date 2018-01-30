@@ -118,7 +118,7 @@ class TestX509CA(unittest.TestCase):
     @mock.patch('M2Crypto.m2.x509_get_not_after')
     @mock.patch('M2Crypto.m2.x509_get_not_before')
     @mock.patch('M2Crypto.X509.X509')
-    def test_gen_cert_errors(self, x509_constr, not_before, not_after):
+    def test_gen_ca_errors(self, x509_constr, not_before, not_after):
         """ Checks that errors created while generating the CA cert are
             correctly converted into exceptions.
         """
@@ -142,6 +142,45 @@ class TestX509CA(unittest.TestCase):
             self.assertRaises(RuntimeError, self.__ca.gen_ca, *constr_params)
             self.assertTrue(getattr(x509_obj, fcn).called)
             getattr(x509_obj, fcn).return_value = 1
+
+    @mock.patch('M2Crypto.m2.x509_get_not_after')
+    @mock.patch('M2Crypto.m2.x509_get_not_before')
+    @mock.patch('M2Crypto.X509.X509')
+    def test_gen_cert_errors(self, x509_constr, not_before, not_after):
+        """ Check that any errors returned while generating the CA cert
+            correctly get converted into exceptions.
+            This only does the non-CA cert specific errors, everything else
+            should be covered by test_gen_ca_errors.
+        """
+        x509_obj = mock.MagicMock()
+        x509_constr.return_value = x509_obj
+        not_before.return_value = None
+        not_after.return_value = None
+        # Create CA certificate
+        self.__ca.gen_ca("/C=ZZ/CN=Issuer CA", 5)
+        # Now test the error handling
+        X509_FN = [
+            'add_ext',
+            'sign',
+        ]
+        CERT_PARAMS = ("/C=ZZ/CN=Test Cert", 1, "test@test.test")
+        for fcn in X509_FN:
+            print "Testing errors on function %s" % fcn
+            getattr(x509_obj, fcn).return_value = 0
+            self.assertRaises(RuntimeError, self.__ca.gen_cert, *CERT_PARAMS)
+            self.assertTrue(getattr(x509_obj, fcn).called)
+            getattr(x509_obj, fcn).return_value = 1
+        # We also have to check that adding the altName fails in the correct
+        # way, this is hidden behind another all to add_ext
+        def add_ext_altfail(ext):
+            if ext.get_name() == 'subjectAltName':
+                return 0
+            return 1
+        x509_obj.add_ext.called = False
+        x509_obj.add_ext.side_effect = add_ext_altfail
+        self.assertRaises(RuntimeError, self.__ca.gen_cert, *CERT_PARAMS)
+        self.assertTrue(x509_obj.add_ext.called)
+        x509_obj.add_ext.side_effect = None
 
     def test_gen_serial(self):
         """ Check that gen_ca serial checking works correctly. """
@@ -198,3 +237,54 @@ class TestX509CA(unittest.TestCase):
                               cert, key, 0, passphrase)
             self.assertRaises(ValueError, self.__ca.set_ca,
                               cert, key, 1, passphrase)
+
+    def test_gen_cert(self):
+        """ Check issuing a client certificate. """
+        from M2Crypto import X509, RSA
+        TEST_ISSUER = "C = ZZ, L = YY, O = Test CA, CN = Basic Test CA"
+        TEST_SUBJECT = "C = ZZ, L = YY, CN = Test User"
+        TEST_EMAIL = "test@test.test"
+        TEST_DAYS = 3
+        self.__ca.gen_ca(TEST_ISSUER, 5)
+        start_serial = self.__ca.get_serial()
+        cert, key = self.__ca.gen_cert(TEST_SUBJECT,
+                                       valid_days=TEST_DAYS, email=TEST_EMAIL)
+        self.assertTrue('BEGIN CERTIFICATE' in cert)
+        self.assertTrue('BEGIN RSA PRIVATE KEY' in key)
+        # Load the cert and check its properties
+        cert_obj = X509.load_cert_string(cert)
+        self.assertEqual(cert_obj.get_serial_number(), start_serial)
+        cert_subject = X509Utils.x509name_to_str(cert_obj.get_subject())
+        self.assertEqual(cert_subject, TEST_SUBJECT)
+        cert_issuer = X509Utils.x509name_to_str(cert_obj.get_issuer())
+        self.assertEqual(cert_issuer, TEST_ISSUER)
+        # Check cert times
+        from datetime import datetime
+        start_time = cert_obj.get_not_before().get_datetime()
+        end_time = cert_obj.get_not_after().get_datetime()
+        valid_time = end_time - start_time
+        self.assertEqual(valid_time.days,TEST_DAYS)
+        self.assertEqual(valid_time.seconds, 0)
+        # Check cert started in the last 60 seconds
+        # I'm not sure this will work in BST, I guess we'll see.
+        start_diff = datetime.now(start_time.tzinfo) - start_time
+        self.assertEqual(start_diff.days, 0)
+        self.assertLess(start_diff.seconds, 60)
+        # Check cert extensions
+        self.assertEqual(cert_obj.get_ext('basicConstraints').get_value(),
+                         'CA:FALSE')
+        self.assertEqual(cert_obj.get_ext('subjectAltName').get_value(),
+                         'email:%s' % TEST_EMAIL)
+        # Check that the CA's serial number increased
+        self.assertGreater(self.__ca.get_serial(), start_serial)
+        # Issue another cert, but with an encrypted private key
+        cert, key = self.__ca.gen_cert("C = ZZ, L = YY, CN = Test User 2",
+                                        valid_days=3, email="test2@test.com",
+                                        passphrase="weakpass")
+        # Check that key is encrypted correctly
+        self.assertRaises(RSA.RSAError, RSA.load_key_string, key,
+                          callback=lambda x: None)
+        self.assertRaises(RSA.RSAError, RSA.load_key_string, key,
+                          callback=lambda x: "wrongpass")
+        key_obj = RSA.load_key_string(key, callback=lambda x: "weakpass")
+        self.assertIsInstance(key_obj, RSA.RSA)
