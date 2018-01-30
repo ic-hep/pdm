@@ -2,8 +2,59 @@
 
 import mock
 import unittest
+from functools import partial
 
 from pdm.utils.X509 import X509Utils, X509CA
+
+
+# We need a keypair for testing proxy generation
+# It doesn't matter that these are expired and we don't
+# have a CA.
+TESTCERT_AND_KEY = ("""-----BEGIN CERTIFICATE-----
+MIIC2DCCAcCgAwIBAgIBAjANBgkqhkiG9w0BAQsFADAfMQswCQYDVQQGEwJYWDEQ
+MA4GA1UEAwwHVGVzdCBDQTAeFw0xODAxMzAxNDE5NDhaFw0xODAyMDMxNDE5NDha
+MCExCzAJBgNVBAYTAlhYMRIwEAYDVQQDDAlUZXN0IFVzZXIwggEiMA0GCSqGSIb3
+DQEBAQUAA4IBDwAwggEKAoIBAQC4JLzhms5bnBBiESlbUSFOk5Hi9bVFn15h44fm
+E30kmsoQdz+eePZ9gPYpcg9MW7rxUCYdoKhfCUdx1sEo8m7+1RWMoQhUDhR8RD7b
+/WQd++rXfLp+d3dw5qBwbcYewwndtzYFjaA+n6FKl93BRKszs+SBn6OApKpsL2OQ
+Ni0SGeUfd0PK07ka2615fiSQ+6y0WmaPh0OYkWopZm/lI7wd6zWha/1g5GIDOGjE
+dI73Dzf+h+bE0kiZiHhRFQY3slWCBo3Y3l9RXDuEGl0UkR9EuzhwNHS8mQXlby26
+nm+PtynbKUkflJN5gxDSN4+Xwimo24jNudT9ZorMVkbSVQXfAgMBAAGjHTAbMAwG
+A1UdEwEB/wQCMAAwCwYDVR0PBAQDAgSwMA0GCSqGSIb3DQEBCwUAA4IBAQBao+2+
+7xZcZ/QOwzVXRwA3xT/pyscprZnn4FsUpVC5nq271l7G8FnGd51/iKnea3mxhSdO
+xKLA7sYYfSxBhz3ip8eUncJvzUMXdl03pnJC6opVejFw7IvkMmuZnZRmDX3VNdCs
+CXykEfzEB7L5QBDhhc8fYkFPCltz1O+N6E0b0WXPMEARQK5YzRqwzx+RS+Dg4W1H
+SiLXzFAVWNEAKzihMuex+iiRYFpncQbuF+WbBNZTZhuh71t0PKlBrV3qw6JMG/dP
+qdPfxBek0F3Qf4ze0fLGEIEbTMfdHbdzgvI14l6hFcJUH0bFJ9l7RPOOJTNQwDSP
+w6piDJ1a0kdB2y2D
+-----END CERTIFICATE-----""",
+"""-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEAuCS84ZrOW5wQYhEpW1EhTpOR4vW1RZ9eYeOH5hN9JJrKEHc/
+nnj2fYD2KXIPTFu68VAmHaCoXwlHcdbBKPJu/tUVjKEIVA4UfEQ+2/1kHfvq13y6
+fnd3cOagcG3GHsMJ3bc2BY2gPp+hSpfdwUSrM7PkgZ+jgKSqbC9jkDYtEhnlH3dD
+ytO5GtuteX4kkPustFpmj4dDmJFqKWZv5SO8Hes1oWv9YORiAzhoxHSO9w83/ofm
+xNJImYh4URUGN7JVggaN2N5fUVw7hBpdFJEfRLs4cDR0vJkF5W8tup5vj7cp2ylJ
+H5STeYMQ0jePl8IpqNuIzbnU/WaKzFZG0lUF3wIDAQABAoIBADTAIXOnezH3FSJi
+tCw6o4X09DfGF3WoX8s++PFJ5/GSfgwVfR4SnNn7FYlt6UAAjx8NzL10BoejCtpr
+oM3wFSffNtsgTlh16BxpGHDAt+t2/SFZ07ri0k5/YrqSV8z8JlljYJBar+sAo53Q
+v2/cEgcvo2gWqSnzAfcX5DetrV+fmiUltTB2gBQJ5k/rH7YzdO4KLqp2K922DfRG
+YmEIMQxqsrkjWEPE44WP0gxTaq/7RZ//UWowz1zip2NHAkAzHs/1nYs+/dXkjJHS
+nmnD5h2FTOHPi94UCybJxNIj+StH+VHyW+idOQMIsIRBpRu1It3Ywkd7icvZAqGY
+n/i99RECgYEA9F+zpCZ8rQHfCegSwEyeU3QZupD+XOUUSQJWA0fBJIwxK4GP8+0Q
+saDETyYo9rTUXekgmuv1Yuo82aQ+B1zXWJa5JWH3x+su985+3YZKXy05XO3ZqEHZ
+NnDqIKaf1eI6HyvBybHbe8YUtxqazkTdD6i8I6902ZlaKKR3pSXWq6sCgYEAwOd5
+TbAgK0oFlExgBj5EYSqqXhjsI33RrTBHA2+BmVVnsMjOoJrIU4udlfLDYsJ9UYs7
+XpbqrO+2B88IgA1RFpEwzofpONX8XCPL4Am7OsueL/RmOuF0tuY0ATdT8WvNbkFk
+9qXARSjQEkCYnlfM7lMykLj1FehHM7seud9bOp0CgYARQcDZ0q3zObKabH0Gf2Ke
+2hAHEL4lqTepgDS6vpJxFkVSoS+dNhx7rrKuNC+oXFSy3QekaQ1HEuuBIwwOUQwU
+AXDJpwVsZLtIXJiw5A7UcckfOtyn+R5xrb+a1qlq3TLliJ2CtMCfGPnVhFdyQYKq
+3GuMyZMi2qV3QUYBr45dSQKBgHTH7SS9+kuarVQBBKTi70yPosICfnpiAhzBvEv1
+JlUoYfShLI4IBjylqgoMBIL2UR2bl56E6J83I1EI4hF7flqWHSD7IJK64OL6/MKt
+wX4vpJ1NbNI6iQjsxhDyaMwfwib8Sd4TrBlyQry6BGrfpn2lOlho0F6p1ukXX9uQ
+v071AoGBAJJO+2RBUsCbDytTCP2pvulEy+p0mBiZ/DQrGjquBBB2PQ7nW8XbVp1O
+9y6EDLBC34X3DIUZLGcBcCeR6Tm3jp2nTCbNcVivDBSp1dalXcsB8B84T9nYAMSN
+ELDTXzkmV/eqakXQVhwEhKH1ff00h8xF/VT2DE3yy9RC0jZ0vfKL
+-----END RSA PRIVATE KEY-----""")
 
 
 class TestX509Utils(unittest.TestCase):
@@ -288,3 +339,76 @@ class TestX509CA(unittest.TestCase):
                           callback=lambda x: "wrongpass")
         key_obj = RSA.load_key_string(key, callback=lambda x: "weakpass")
         self.assertIsInstance(key_obj, RSA.RSA)
+
+    def test_gen_proxy(self):
+        """ Test generating a user proxy. """
+        from M2Crypto import X509, RSA
+        TEST_DAYS = 1
+        USER_DN = "C = XX, CN = Test User"
+        self.__ca.gen_ca("C = XX, CN = Test CA", 5)
+        usercert, userkey = self.__ca.gen_cert(USER_DN, 4)
+        proxycert, proxykey = self.__ca.gen_proxy(usercert, userkey,
+                                                  TEST_DAYS)
+        # TODO: Actually check proxy here!
+        # Check proxy looks fine
+        proxy_obj = X509.load_cert_string(proxycert)
+        proxy_serial = proxy_obj.get_serial_number()
+        proxy_subject = X509Utils.x509name_to_str(proxy_obj.get_subject())
+        exp_proxy_subj = "%s, CN = %u" % (USER_DN, proxy_serial)
+        self.assertEqual(exp_proxy_subj, proxy_subject)
+        proxy_issuer = X509Utils.x509name_to_str(proxy_obj.get_issuer())
+        self.assertEqual(proxy_issuer, USER_DN)
+        # Check proxy times
+        from datetime import datetime
+        start_time = proxy_obj.get_not_before().get_datetime()
+        end_time = proxy_obj.get_not_after().get_datetime()
+        valid_time = end_time - start_time
+        self.assertEqual(valid_time.days,TEST_DAYS)
+        self.assertEqual(valid_time.seconds, 0)
+        # Test generating proxy with passphrase
+        USER_PASSPHRASE = "weaktest"
+        usercert, userkey = self.__ca.gen_cert("/C=XX, CN=Test User", 4,
+                                               passphrase=USER_PASSPHRASE)
+        self.assertRaises(RSA.RSAError, self.__ca.gen_proxy, usercert,
+                          userkey, 1)
+        self.assertRaises(RSA.RSAError, self.__ca.gen_proxy, usercert,
+                          userkey, 1, "wrongtest")
+        proxycert, proxykey = self.__ca.gen_proxy(usercert, userkey,
+                                                  1, USER_PASSPHRASE)
+
+    @mock.patch('M2Crypto.m2.x509_get_not_after')
+    @mock.patch('M2Crypto.m2.x509_get_not_before')
+    @mock.patch('M2Crypto.X509.X509')
+    def test_gen_proxy_errors(self, x509_constr, not_before, not_after):
+        """ Test all possible error conditions on generating a proxy.
+            Only includes tests not tested by general certificate tests.
+        """
+        x509_obj = mock.MagicMock()
+        x509_constr.return_value = x509_obj
+        not_before.return_value = None
+        not_after.return_value = None
+        # We use a pregenerated usercert & key
+        usercert, userkey = TESTCERT_AND_KEY
+        # Check sign failures
+        x509_obj.sign.return_value = 0
+        self.assertRaises(RuntimeError, self.__ca.gen_proxy,
+                          usercert, userkey, 1)
+        self.assertTrue(x509_obj.sign.called)
+        x509_obj.sign.return_value = 1
+        # Now we have to check the
+        def add_ext_fail(fail_ext, ext):
+            print ext.get_name()
+            if ext.get_name() == fail_ext:
+                return 0
+            return 1
+        x509_obj.add_ext.called = False
+        x509_obj.add_ext.side_effect = partial(add_ext_fail, 'keyUsage')
+        self.assertRaises(RuntimeError, self.__ca.gen_proxy,
+                          usercert, userkey, 1)
+        self.assertTrue(x509_obj.add_ext.called)
+        x509_obj.add_ext.called = False
+        x509_obj.add_ext.side_effect = partial(add_ext_fail, 'proxyCertInfo')
+        self.assertRaises(RuntimeError, self.__ca.gen_proxy,
+                          usercert, userkey, 1)
+        self.assertTrue(x509_obj.add_ext.called)
+        x509_obj.add_ext.side_effect = None

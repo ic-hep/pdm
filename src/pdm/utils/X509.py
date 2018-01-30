@@ -2,6 +2,7 @@
 """ X509 CA: Modules for issuing certificates.
 """
 
+import random
 from M2Crypto import m2, ASN1, EVP, RSA, X509
 
 
@@ -98,6 +99,14 @@ class X509CA(object):
     # Encryption algorithm for private keys
     # (if passphrase specified)
     ENC_ALGO = 'aes_256_cbc'
+    # Proxy extension constants
+    ## DER encoded proxy cert info extension for unlimited proxy
+    ## (unlimited path length with no restrictions)
+    PROXY_UNLIMITED = 'DER:30:0C:30:0A:06:08:2B:06:01:05:05:07:15:01'
+    ## DER encoded extension for limited proxy
+    PROXY_LIMITED = 'DER:30:0F:30:0D:06:0B:2B:06:01:04:01:9B:50:01:01:01:09'
+    # Allowed cert & proxy key use
+    DEFAULT_KEY_USE = 'digitalSignature,keyEncipherment,dataEncipherment'
 
     @staticmethod
     def __gen_csr(req_dn):
@@ -157,18 +166,22 @@ class X509CA(object):
             Specifially, basicConstraints, subjectKeyID and AuthKeyID.
             cert - X509.X509 object to add extensions to.
             auth_pubkey - EVP.PKey object to digest for the authKeyID field.
-            is_ca - Used to set the CA basicConstraint.
+            is_ca - Used to set the CA basicConstraint, boolean. If set to
+                    None then no CA contraint is included.
             Returns None, Raises RuntimeError on failure.
         """
-        bc_str = 'CA:FALSE'
-        if is_ca:
-            bc_str = 'CA:TRUE'
-        ca_ext = X509.new_extension('basicConstraints', bc_str, 1)
-        if not cert.add_ext(ca_ext):
-            raise RuntimeError("Failed to add CA cert constraints ext")
-        # TODO: Add subject/auth key ID fields
-        #cert.add_ext(X509.new_extension('subjectKeyIdentifier', 'abcd'))
-        #cert.add_ext(X509.new_extension('AuthorityKeyIdentifier', 'abcd'))
+        if is_ca is not None:
+            bc_str = 'CA:FALSE'
+            if is_ca:
+                bc_str = 'CA:TRUE'
+            ca_ext = X509.new_extension('basicConstraints', bc_str, 1)
+            if not cert.add_ext(ca_ext):
+                raise RuntimeError("Failed to add CA cert constraints ext")
+        # TODO: Add subject/auth key ID fields, as well as keyUsage
+        # TODO: Check results
+        #cert.add_ext(X509.new_extension('subjectKeyIdentifier', 'hash'))
+        #cert.add_ext(X509.new_extension('authorityKeyIdentifier', 'keyid'))
+        cert.add_ext(X509.new_extension('keyUsage', X509CA.DEFAULT_KEY_USE))
 
     @staticmethod
     def __gen_ca(req, evp_key, valid_days, serial=1):
@@ -184,21 +197,22 @@ class X509CA(object):
             raise RuntimeError("Failed to sign CA cert")
         return cert
 
+    #pylint: disable=too-many-arguments
     @staticmethod
-    def __gen_cert(req, valid_days, serial, altNames, issuer, sign_key):
+    def __gen_cert(req, valid_days, serial, alt_names, issuer, sign_key):
         """ Generates a normal non-CA cert for and signs it with
             the given certificate.
             req - X509.Request object to base the cert on.
             valid_days - Lifetime of new cert in days.
             serial - Serial number of new cert.
-            altNames - Iterable of alternative names to attach in extensions.
+            alt_names - Iterable of alternative names to attach in extensions.
             issuer - X509.X509 object for CA (Used to get issuer DN).
             sign_key - EVP.PKey object to sign cert with.
             Returns signed X509.X509 object.
         """
         cert = X509CA.__gen_basic_cert(req, valid_days, serial, issuer)
         X509CA.__add_basic_exts(cert, issuer, False)
-        for alt_name in altNames:
+        for alt_name in alt_names:
             an_ext = X509.new_extension('subjectAltName', alt_name, 0)
             if not cert.add_ext(an_ext):
                 raise RuntimeError("Failed to add altName '%s'" % alt_name)
@@ -311,31 +325,75 @@ class X509CA(object):
         return self.__serial
 
     def gen_cert(self, subject, valid_days, email=None, passphrase=None):
-        """ Creates and signs a cert with the given DN, validity and altNames.
+        """ Creates and signs a cert with the given details.
             subject - The target DN in RFC format.
             valid_days - Lifetime of new cert, from now, in days.
             email - Optional e-mail address to attach as an alt name.
             Returns PEM encoded public cert and private key tuple:
                     (cert, key).
         """
-        # TODO: Thread safe?
         self.__check_init()
         # Generate request
-        rsa_key, evp_key, req = self.__gen_csr(subject)
+        rsa_key, _, req = self.__gen_csr(subject)
         # Convert request to cert
-        altNames = []
+        alt_names = []
         if email:
-            altNames.append("email:%s" % email)
+            alt_names.append("email:%s" % email)
         new_serial = self.__serial
         cert = X509CA.__gen_cert(req, valid_days, new_serial,
-                                 altNames, self.__cert, self.__sign_key)
+                                 alt_names, self.__cert, self.__sign_key)
         # Finally convert output to PEM
         cert_pem = cert.as_pem()
         if passphrase:
-             pw_cb = lambda x: passphrase
-             key_pem = rsa_key.as_pem(cipher=self.ENC_ALGO, callback=pw_cb)
+            pw_cb = lambda x: passphrase
+            key_pem = rsa_key.as_pem(cipher=self.ENC_ALGO, callback=pw_cb)
         else:
-             key_pem = rsa_key.as_pem(cipher=None)
+            key_pem = rsa_key.as_pem(cipher=None)
         # Everything successful, bump CA serial number
         self.__serial += 1
         return (cert_pem, key_pem)
+
+    @staticmethod
+    def __gen_proxy(usercert, sign_key, valid_days):
+        """ Internal method for generating an RFC proxy.
+            cert - X509.X509 object of user cert.
+            sign_key - EVP.PKey object to sign the proxy with.
+            Returns a (cert, key) tuple of types (X509, RSA).
+        """
+        cert_dn = X509Utils.x509name_to_str(usercert.get_subject())
+        proxy_serial = random.randint(1000000000, 9999999999)
+        proxy_dn = "%s, CN = %u" % (cert_dn, proxy_serial)
+        rsa_key, _, req = X509CA.__gen_csr(proxy_dn)
+        cert = X509CA.__gen_basic_cert(req, valid_days, proxy_serial, usercert)
+        key_use_ext = X509.new_extension('keyUsage', X509CA.DEFAULT_KEY_USE)
+        if not cert.add_ext(key_use_ext):
+            raise RuntimeError("Failed to proxy key usage ext")
+        proxy_ext = X509.new_extension('proxyCertInfo',
+                                       X509CA.PROXY_UNLIMITED, 1)
+        if not cert.add_ext(proxy_ext):
+            raise RuntimeError("Failed to add proxy info ext")
+        if not cert.sign(sign_key, X509CA.SIG_ALGO):
+            raise RuntimeError("Failed to sign proxy cert")
+        return (cert, rsa_key)
+
+    @staticmethod
+    def gen_proxy(cert_pem, key_pem, valid_days, passphrase=None):
+        """ Generates an RFC3820 proxy for the supplied user cert.
+            cert_pem & key_pem - User cery & key PEM files.
+            valid_days - How long the proxy should be valid for.
+            passphrase - Passphrase to use for encrypted user key.
+            Returns a tuple of PEM strings (proxycert, proxykey)
+            proxykey is unencrypted.
+        """
+        user_cert = X509.load_cert_string(cert_pem)
+        pw_cb = lambda x: None
+        if passphrase:
+            pw_cb = lambda x: passphrase
+        user_key = RSA.load_key_string(key_pem, callback=pw_cb)
+        sign_key = EVP.PKey()
+        sign_key.assign_rsa(user_key)
+        proxy_cert, proxy_key = X509CA.__gen_proxy(user_cert,
+                                                   sign_key, valid_days)
+        proxy_cert_pem = proxy_cert.as_pem()
+        proxy_key_pem = proxy_key.as_pem(cipher=None)
+        return (proxy_cert_pem, proxy_key_pem)
