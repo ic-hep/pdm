@@ -184,8 +184,11 @@ class FlaskServer(Flask):
                 client_dn = request.headers['Ssl-Client-S-Dn']
         if 'X-Token' in request.headers:
             raw_token = request.headers['X-Token']
-            res, token_value = current_app.token_svc.check(raw_token)
-            if res:
+            try:
+                token_value = current_app.token_svc.check(raw_token)
+            except ValueError:
+                # Token decoding failed, it is probably corrupt or has been
+                # tampered with.
                 return "403 Invalid Token", 403
             client_token = True
         # Now check request against policy
