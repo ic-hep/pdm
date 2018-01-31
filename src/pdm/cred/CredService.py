@@ -8,6 +8,7 @@ from pdm.framework.FlaskWrapper import (db_model, export, export_ext, startup,
                                         jsonify)
 from pdm.cred.CredDB import CredDBModel
 from pdm.utils.X509 import X509CA, X509Utils
+from pdm.utils.sshkey import SSHKeyUtils
 
 @export_ext('/cred/api/v1.0')
 @db_model(CredDBModel)
@@ -15,6 +16,8 @@ class CredService(object):
 
     # Unique key for the user CA cert in the DB
     USER_CA_INDEX = 1
+    CRED_TYPE_X509 = 0
+    CRED_TYPE_SSH = 1
 
     @staticmethod
     @startup
@@ -51,30 +54,71 @@ class CredService(object):
         current_app._user_lifetime = 365
 
     @staticmethod
+    def __load_ca():
+        """ A helper function to get a pre-configured CA object from the
+            database. Note: This opens the database row with update locking.
+            Returns a tuple of (ca_obj, ca_entry) or types (X509CA, CAEntry).
+        """
+        db = request.db
+        CAEntry = db.tables.CAEntry
+        ca_info = CAEntry.query.with_for_update() \
+                               .filter_by(cred_id=CredService.USER_CA_INDEX) \
+                               .first_or_404()
+        ca_obj = X509CA()
+        ca_obj.set_ca(str(ca_info.pub_cert),
+                      str(ca_info.priv_key),
+                      ca_info.serial)
+        return (ca_obj, ca_info)
+
+    @staticmethod
     @export_ext("ca")
     def get_ca():
         """ Get the CA certificate that is used to issue user creds.
         """
         db = request.db
-        CAEntry = db.tables.CAEntry
-        ca_info = CAEntry.query.filter_by(cred_id=CredService.USER_CA_INDEX) \
-                               .first_or_404()
-        res = {'ca': ca_info.pub_cert}
+        ca_obj, _ = CredService.__load_ca()
+        ca_cert = ca_obj.get_cert()
+        db.session.rollback() # Close the lock on the CA table
+        res = {'ca': ca_cert}
         return jsonify(res)
 
     @staticmethod
     @export_ext("user", ["POST"])
     def add_user():
+        db = request.db
+        UserCred = db.tables.UserCred
         # Decode POST data
         user_id = 0
         user_key = "weakUserpass"
+        user_email = None
         # Generate a new DN for the user
         random_num = random.randint(1000000000, 9999999999)
         user_dn = "%s, CN=User_%u %u" % (current_app._user_base_dn,
                                          user_id, random_num)
         # Create a new X509 cert for the user
+        ca_obj, ca_entry = CredService.__load_ca()
+        cert_pub, cert_priv = ca_obj.gen_cert(user_dn,
+                                              current_app._user_lifetime,
+                                              email=user_email,
+                                              passphrase=user_key)
+        ca_entry.serial = ca_obj.get_serial()
+        db.session.commit() # Store the CA serial back in the DB
+        ca_cred = UserCred(user_id=user_id,
+                           cred_type=CredService.CRED_TYPE_X509,
+                           expiry_date=None,
+                           cred_pub=cert_pub,
+                           cred_priv=cert_priv)
         # Create a new SSH key for the user
-        pass
+        ssh_pub, ssh_priv = SSHKeyUtils.gen_rsa_keypair(user_key)
+        ssh_cred = UserCred(user_id=user_id,
+                            cred_type=CredService.CRED_TYPE_SSH,
+                            expiry_date=None,
+                            cred_pub=ssh_pub,
+                            cred_priv=ssh_priv)
+        # Finally add the new entries to the DB
+        db.session.add(ca_cred)
+        db.session.add(ssh_cred)
+        db.session.commit()
 
     @staticmethod
     @export_ext("user/<int:user_id>", ["DELETE"])
