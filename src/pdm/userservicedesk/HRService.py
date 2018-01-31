@@ -4,13 +4,15 @@ __author__ = 'martynia'
 import flask
 from flask import request, abort
 from pdm.framework.FlaskWrapper import export, export_ext, startup, db_model, jsonify
-from pdm.framework.Database import from_json
 import pdm.userservicedesk.models
+import logging
 
 
 @export_ext("/users/api/v1.0")
 @db_model(pdm.userservicedesk.models.UserModel)
 class HRService(object):
+
+    _logger = logging.getLogger(__name__)
 
     @staticmethod
     @export
@@ -35,9 +37,9 @@ class HRService(object):
                 'state' : user.state,
                 #'dn' : user.dn,
                 'email' : user.email,
-                'password' : user.password,
-                'date_created': user.date_created,
-                'date_modified': user.date_modified
+                #'password' : user.password,
+                'date_created': str(user.date_created),
+                'date_modified': str(user.date_modified)
             }
             results.append(obj)
         response = jsonify(results)
@@ -53,11 +55,24 @@ class HRService(object):
         :return: json response with user data or 404 if the user does not exist
         """
 
+        if  request.token_ok:
+            id = request.token[5:]
+        else:
+            abort(403)
+
         User = request.db.tables.User
-        user = User.query.filter_by(username=username).first()
+        # user by id from the token
+        user = User.query.filter_by(id=id).first()
+
         if not user:
             # Raise an HTTPException with a 404 not found status code
+            HRService._logger.error("GET: requested user for id %s doesn't not exist ", id)
             abort(404)
+
+        if not (user.username == username or user.email == username):
+            # unathorised
+            HRService._logger.error("GET: user's id %s does not match the username or email %s (other existing users's token supplied)", id, username)
+            abort(403)
 
         result = [{
             'id': user.id,
@@ -67,9 +82,9 @@ class HRService(object):
             'state' : user.state,
             #'dn' : user.dn,
             'email' : user.email,
-            'password' : user.password,
-            'date_created': user.date_created,
-            'date_modified': user.date_modified
+            #'password' : user.password,
+            'date_created': str(user.date_created),
+            'date_modified': str(user.date_modified)
         }]
         response = jsonify(result)
         response.status_code = 200
@@ -86,7 +101,8 @@ class HRService(object):
         User = request.db.tables.User
         user = User(username = request.json['username'], name =request.json['name'], surname = request.json['surname'],
                     email = request.json["email"], state = 0, password = request.json['password'])
-        user.save()
+        db = request.db
+        user.save(db)
         response = jsonify([{
             'id': user.id,
             'name': user.name,
@@ -95,9 +111,9 @@ class HRService(object):
             'state' : user.state,
             #'dn' : user.dn,
             'email' : user.email,
-            'password' :user.password,
-            'date_created': user.date_created,
-            'date_modified': user.date_modified
+            #'password' :user.password,
+            'date_created': str(user.date_created),
+            'date_modified': str(user.date_modified)
         }])
         response.status_code = 201
         return response
@@ -123,7 +139,8 @@ class HRService(object):
             if key not in ['id','userid','date_created','date_modified']:
                 setattr(user, key, value)
 
-        user.save()
+        db = request.db
+        user.save(db)
 
         response = jsonify([{
             'id': user.id,
@@ -133,15 +150,15 @@ class HRService(object):
             'state' : user.state,
             #'dn' : user.dn,
             'email' : user.email,
-            'password' :user.password,
-            'date_created': user.date_created,
-            'date_modified': user.date_modified
+            #'password' :user.password,
+            'date_created': str(user.date_created),
+            'date_modified': str(user.date_modified)
         }])
         response.status_code = 200
         return response
 
     @staticmethod
-    @export_ext("users/<string:username>", ["PUT"])
+    @export_ext("users/<string:username>", ["DELETE"])
     def delete_user(username):
         """
         Delete a user
@@ -154,7 +171,9 @@ class HRService(object):
         if not user:
             # Raise an HTTPException with a 404 not found status code
             abort(404)
-        user.delete()
+
+        db = request.db
+        user.delete(db)
 
         response = jsonify([{
             'message': "user %s deleted successfully" % (user.username,)
@@ -162,3 +181,48 @@ class HRService(object):
 
         response.status_code = 200
         return response
+
+    @staticmethod
+    @export_ext("login", ["POST"])
+    def get_token():
+        HRService._logger.info("login request %s ", request.json)
+        passwd = request.json['passwd']
+        if not (passwd and HRService.check_passwd()):
+            HRService._logger.error("login request:no password supplied: %s  ", request.json)
+            abort(403)
+
+        User = request.db.tables.User
+        if  request.json['username']:
+            user = User.query.filter_by(username=request.json['username']).first()
+        elif request.json['email']:
+            user = User.query.filter_by(email=request.json['email']).first()
+        else:
+            HRService._logger.error("login request:no username or email provided: %s  ", request.json)
+            abort(403)
+
+        if not user:
+            HRService._logger.error("login request:user %s doesn't not exist ", request.json)
+            abort(403)
+
+        id = user.id
+        if passwd != user.password:
+            HRService._logger.info("login request %s failed (wrong password) ", request.json)
+            abort(403)
+        plain = "User_%s" %id
+        HRService._logger.info("login request %s accepted ", request.json)
+        token = request.token_svc.issue(plain)
+        return jsonify(token)
+
+    @staticmethod
+    @export
+    def verify_token():
+        if request.token_ok:
+            print "Token OK! (%s)" % request.token
+            res = "Token OK! (%s)" % request.token
+        else:
+            res = "Token Missing!"
+        return jsonify(res)
+
+    @staticmethod
+    def check_passwd():
+        return True

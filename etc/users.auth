@@ -1,13 +1,13 @@
-# Demo application authentication
+# Users application authentication
 
 [groups/users]
 
 [auth/users]
 /users/api/v1.0/hello = "ALL"
 /users/api/v1.0/users = "CERT"
-# Note that this rule also matches the ones ending with turtles/<int:tid>
-/users/api/v1.0/users%GET = "ANY"
+# Note that this rule also matches the ones ending with users/<int:tid>  (was "ANY")
+/users/api/v1.0/users%GET = "TOKEN"
 
-/users/api/v1.0/get_token = "ALL"
+/users/api/v1.0/login = "ALL"
 /users/api/v1.0/verify_token = "TOKEN"
 
