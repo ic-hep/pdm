@@ -281,13 +281,17 @@ class TestX509CA(unittest.TestCase):
             self.assertTrue(self.__ca.ready())
             self.assertEqual(self.__ca.get_serial(), 44)
             self.assertEqual(self.__ca.get_dn(), TEST_DN)
-            # Finally, test the serial error handling
+            # Test the serial error handling
             self.assertRaises(ValueError, self.__ca.set_ca,
                               cert, key, -123, passphrase)
             self.assertRaises(ValueError, self.__ca.set_ca,
                               cert, key, 0, passphrase)
             self.assertRaises(ValueError, self.__ca.set_ca,
                               cert, key, 1, passphrase)
+            # Finally check that CA can issue a cert
+            # This checks that __sign_key has been reloaded correctly.
+            usercert, _ = self.__ca.gen_cert("C = ZZ, CN = Sign Test User", 2)
+            self.assertIn('BEGIN CERTIFICATE', usercert)
 
     def test_gen_cert(self):
         """ Check issuing a client certificate. """
