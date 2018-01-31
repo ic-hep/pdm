@@ -82,11 +82,19 @@ class TestDBJson(unittest.TestCase):
                           mock.Mock(), cls=JSONTableEncoder)
 
     def test_jsonFields(self):
-        """ A class with a __json_fields__ attr should only
+        """ A class with a __excluded_fields__ attr should not
             export the fields listed.
         """
         class TestCls(JSONMixin):
-            __json_fields__ = ('A', 'C')
+            # Fake SQAlchemy table structure
+            columns = (mock.Mock(), mock.Mock(), mock.Mock())
+            columns[0].name = 'A'
+            columns[1].name = 'B'
+            columns[2].name = 'C'
+            __table__ = mock.Mock()
+            __table__.columns = columns
+            # Try to exclude field B
+            __excluded_fields__ = ('B')
             A = "TestA"
             B = "TestB"
             C = 123

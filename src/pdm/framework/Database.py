@@ -31,12 +31,9 @@ class JSONTableEncoder(json.JSONEncoder):
         if isinstance(obj, datetime):
             return obj.isoformat()
         if isinstance(obj, JSONMixin):
-            if hasattr(obj, '__json_fields__'):
-                return {attr_name: getattr(obj, attr_name)
-                        for attr_name in obj.__json_fields__}
-            else:
-                return {column.name: getattr(obj, column.name)
-                        for column in obj.__table__.columns}
+            cols = [column.name for column in obj.__table__.columns
+                                if column.name not in obj.__excluded_fields__]
+            return {column: getattr(obj, column) for column in cols}
         return super(JSONTableEncoder, self).default(obj)
 
 #pylint: disable=too-few-public-methods
@@ -47,6 +44,9 @@ class JSONMixin(object):
     A mixin class which provides basic serialisation
     for SQLAlchemy based table classes.
     """
+
+    # No fields excluded by default
+    __excluded_fields__ = []
 
     def json(self):
         """JSONify the table object."""
