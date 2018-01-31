@@ -2,6 +2,7 @@
 """ Main user credential service.
 """
 
+import random
 from flask import current_app, request
 from pdm.framework.FlaskWrapper import (db_model, export, export_ext, startup,
                                         jsonify)
