@@ -3,11 +3,6 @@
 
 from sqlalchemy import Column, Integer, TEXT, TIMESTAMP
 
-    class Turtle(db_base, JSONMixin):
-      __tablename__ = "turtles"
-      id = Column(Integer, primary_key=True)
-      name = Column(String(32))
-
 class CredDBModel(object):
     """ Credential database model container. """
 
