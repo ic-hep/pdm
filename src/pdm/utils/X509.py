@@ -88,6 +88,16 @@ class X509Utils(object):
         """
         return x509_name.as_text(flags=m2.XN_FLAG_ONELINE)
 
+    @staticmethod
+    def get_cert_expiry(cert_pem):
+        """ Gets the expiry date of a given X.509 public certificate
+            in PEM format.
+            cert_pem - Input cert PEM string.
+            Returns a datetime object of the expiry time.
+        """
+        cert = X509.load_cert_string(cert_pem, X509.FORMAT_PEM)
+        return cert.get_not_after().get_datetime()
+
 
 class X509CA(object):
     """ An X509 Certificate Authority implementation.

@@ -75,3 +75,4 @@ class test_CredService(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         # TODO: Check response object matches spec
         # TODO: Check credentials in database
+        # TODO: Check CA serial was stored correctly

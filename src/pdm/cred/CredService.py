@@ -103,44 +103,90 @@ class CredService(object):
                                               passphrase=user_key)
         ca_entry.serial = ca_obj.get_serial()
         db.session.commit() # Store the CA serial back in the DB
+        cert_expiry = X509Utils.get_cert_expiry(cert_pub)
         ca_cred = UserCred(user_id=user_id,
                            cred_type=CredService.CRED_TYPE_X509,
-                           expiry_date=None,
+                           expiry_date=cert_expiry,
                            cred_pub=cert_pub,
                            cred_priv=cert_priv)
         # Create a new SSH key for the user
         ssh_pub, ssh_priv = SSHKeyUtils.gen_rsa_keypair(user_key)
+        # SSH keys don't exipre... We'll use the same time as the
+        # cert so they both need renewing together.
         ssh_cred = UserCred(user_id=user_id,
                             cred_type=CredService.CRED_TYPE_SSH,
-                            expiry_date=None,
+                            expiry_date=cert_expiry,
                             cred_pub=ssh_pub,
                             cred_priv=ssh_priv)
         # Finally add the new entries to the DB
         db.session.add(ca_cred)
         db.session.add(ssh_cred)
         db.session.commit()
+        # Success, return an empty 200
+        return ""
 
     @staticmethod
     @export_ext("user/<int:user_id>", ["DELETE"])
     def del_user(user_id):
-        pass
+        db = request.db
+        UserCred = db.tables.UserCred
+        # This will cascade delete on the JobCred table
+        UserCred.query.filter_by(user_id=user_id).delete()
+        db.session.commit()
 
     @staticmethod
     @export_ext("user/<int:user_id>")
     def get_user(user_id):
-        pass
+        db = request.db
+        UserCred = db.tables.UserCred
+        newest_cred = UserCred.query.filter_by(user_id=user_id) \
+                                    .order_by(UserCred.expires.desc()) \
+                                    .first_or_404()
+        ret = {'valid_until': newest_cred.expires}
+        return jsonify(res)
 
     @staticmethod
     @export_ext("cred", ["POST"])
     def add_cred():
-        pass
+        # TODO: Decode the POST data
+        user_id = 0
+        user_key = "bah"
+        cred_type = 0
+        mex_lifetime = 1000
+        # Now prepare the DB
+        db = request.db
+        UserCred = db.tables.UserCred
+        JobCred = db.tables.JobCred
+        # We have to get the user's newest credential of the type specified.
+        newest_cred = UserCred.query.filter_by(user_id=user_id,
+                                               cred_type=cred_type) \
+                                    .order_by(UserCred.expires.desc()) \
+                                    .first_or_404()
+        # Generate the token for retrieving this credential
+        res = {'token': ""}
+        return jsonify(res)
 
     @staticmethod
     @export_ext("cred/<string:token>", ["DELETE"])
     def del_cred(token):
-        pass
+        # TODO: Decode the token
+        cred_id = 0
+        db = request.db
+        JobCred = db.tables.JobCred
+        JobCred.query.filter_by(cred_id=cred_id).delete()
+        db.session.commit()
+        return ""
 
     @staticmethod
     @export_ext("cred/<string:token>")
     def get_cred():
-        pass
+        # TODO: Decode the token
+        cred_id = 0
+        db = request.db
+        JobCred = db.tables.JobCred
+        cred = JobCred.query.filter_by(cred_id=cred_id).first_or_404()
+        # Now delegate a new credential if possible
+        res = {'cred_type': cred.cred_type,
+               'pub_key': "",
+               'priv_key': ""}
+        return jsonify(res)
