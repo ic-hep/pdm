@@ -70,7 +70,8 @@ class RESTClient(object):
                                 verify=cafile, cert=client_cert)
         if resp.status_code != requests.codes.ok:
             # TODO: Better excpetions here
-            raise Exception("Request failed with code %u" % resp.status_code)
+            raise RuntimeError("Request failed with code %u" % \
+                               resp.status_code)
         if resp.text:
             return resp.json()
         return None
@@ -134,7 +135,8 @@ class RESTClientTest(object):
         full_uri = "%s/%s" % (self.__base, uri)
         res = call_fn(full_uri, data=json.dumps(data))
         if res.status_code != 200:
-            raise Exception("Request failed with code %u" % res.status_code)
+            raise RuntimeError("Request failed with code %u" % \
+                               res.status_code)
         if res.data:
             return json.loads(res.data)
         return None
