@@ -46,12 +46,15 @@ class HRService(object):
         response.status_code = 200
         return response
 
+#
+#    @staticmethod
+#    @export_ext("users/<string:username>")
+#    def get_user(username):
     @staticmethod
-    @export_ext("users/<string:username>")
-    def get_user(username):
+    @export_ext("users/self")
+    def get_user():
         """
-        Get user by username.
-        :param username: username
+        Get user own self based on id from the token passed in.
         :return: json response with user data or 404 if the user does not exist
         """
 
@@ -69,10 +72,10 @@ class HRService(object):
             HRService._logger.error("GET: requested user for id %s doesn't not exist ", id)
             abort(404)
 
-        if not (user.username == username or user.email == username):
-            # unathorised
-            HRService._logger.error("GET: user's id %s does not match the username or email %s (other existing users's token supplied)", id, username)
-            abort(403)
+        #if not (user.username == username or user.email == username):
+        #    # unathorised
+        #    HRService._logger.error("GET: user's id %s does not match the username or email %s (other existing users's token supplied)", id, username)
+        #    abort(403)
 
         result = [{
             'id': user.id,
@@ -97,10 +100,12 @@ class HRService(object):
         Add a new user.
         :return: json document with added user data.
         """
-        print request.json
+        #print request.json
+        print 'server side: ', request.data
         User = request.db.tables.User
-        user = User(username = request.json['username'], name =request.json['name'], surname = request.json['surname'],
-                    email = request.json["email"], state = 0, password = request.json['password'])
+        user = User.from_json(request.data)
+        #user = User(username = request.json['username'], name =request.json['name'], surname = request.json['surname'],
+        #            email = request.json["email"], state = 0, password = request.json['password'])
         db = request.db
         user.save(db)
         response = jsonify([{
