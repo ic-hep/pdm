@@ -75,6 +75,18 @@ class DemoService(object):
     return res.json()
 
   @staticmethod
+  @export_ext("turtles/<int:tid>", ["PUT"])
+  def turtles_modify(tid):
+    db = request.db
+    Turtle = db.tables.Turtle
+    turtle = Turtle.query.filter_by(id=tid).first_or_404()
+    data = Turtle.from_json(request.data)
+    if data:
+      turtle.name = data.name
+    db.session.commit()
+    return turtle.json()
+
+  @staticmethod
   @export
   def get_token():
     token = request.token_svc.issue("Hello")

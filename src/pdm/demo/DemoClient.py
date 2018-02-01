@@ -32,3 +32,13 @@ class DemoClient(RESTClient):
     new_turtle = {'name': tname}
     return self.post('turtles', new_turtle)
 
+  def modify_turtle(self, tid, tname):
+    """
+    Modifies a turtle (change name)
+    :param tname: new name
+    :param tid: turtle id
+    :return: modified turtle
+    """
+    target = 'turtles/%u' % tid
+    return self.put(target, {'name': tname})
+
