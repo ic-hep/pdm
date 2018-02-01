@@ -37,18 +37,29 @@ class WSGIAuth(wsgi.WSGIResource):
 
     @staticmethod
     def __dn_to_str(x509name):
-        """ Converts an pyOpenSSL X509Name object to an OpenSSL style
+        """ Converts an pyOpenSSL X509Name object to an RFC style
             string representation.
-            i.e. CN=My User,OU=TestUnit,O=TestOrg,C=XX
+            i.e. C=XX, O=TestOrg, OU=TestUnit, CN=My User
         """
         dn_parts = []
-        for field in ('emailAddress', 'CN', 'OU', 'O', 'L', 'ST', 'C'):
+        # E-mail is special as it joins on to CN
+        if hasattr(x509name, 'CN'):
+            if hasattr(x509name, 'emailAddress'):
+                dn_parts.append("CN=%s/emailAddress=%s" % \
+                                (x509name.CN, x509name.emailAddress))
+            else:
+                dn_parts.append("CN=%s" % x509name.CN)
+        elif hasattr(x509name, 'emailAddress'):
+            dn_parts.append("emailAddress=%s" % x509name.emailAddress)
+        # Now do other, more standard, parts...
+        for field in ('OU', 'O', 'L', 'ST', 'C'):
             if not hasattr(x509name, field):
                 continue
             field_val = getattr(x509name, field)
             if field_val:
                 dn_parts.append("%s=%s" % (field, field_val))
-        return ','.join(dn_parts)
+        dn_parts.reverse()
+        return ', '.join(dn_parts)
 
     def render(self, request):
         """ Main request handling function.

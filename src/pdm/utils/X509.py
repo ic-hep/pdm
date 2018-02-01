@@ -272,7 +272,8 @@ class X509CA(object):
         # Store the newly loaded objects
         self.__cert = cert
         self.__key = key
-        self.__sign_key = EVP.PKey(key)
+        self.__sign_key = EVP.PKey()
+        self.__sign_key.assign_rsa(key)
         self.__serial = serial
 
     def clear(self):
