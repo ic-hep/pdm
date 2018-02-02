@@ -151,6 +151,10 @@ class RESTClientTest(object):
         """ Post data to URI on test_client interface. """
         return self.__do_call(self.__tc.post, uri, data)
 
+    def put(self, uri, data):
+        """ Put data to URI on test_client interface. """
+        return self.__do_call(self.__tc.put, uri, data)
+
     def delete(self, uri):
         """ Delete URI on test_client interface. """
         return self.__do_call(self.__tc.delete, uri)

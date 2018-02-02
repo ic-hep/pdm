@@ -47,3 +47,12 @@ class TestDemoClient(unittest.TestCase):
         self.__client.del_turtle(3)
         turtles = self.__client.get_turtles()
         assert(len(turtles) == 2)
+
+    def test_modifyTurtle(self):
+        tid=1
+        modif_turtle = self.__client.modify_turtle(tid, 'TimmyBoy')
+        assert(modif_turtle)['id'] == tid
+        assert(modif_turtle)['name'] == 'TimmyBoy'
+        turtles = self.__client.get_turtles()
+        assert(turtles['1']) == 'TimmyBoy'
+        assert(len(turtles) == 3)
