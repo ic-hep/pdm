@@ -1,6 +1,8 @@
 #!/bin/bash
 
+echo "travis_fold:start:pylint"
 pylint src/pdm | tee pylint.log
+echo "travis_fold:end:pylint"
 
 # Get the score (as an int)
 SCORE=`grep 'Your code has been rated at' pylint.log \
