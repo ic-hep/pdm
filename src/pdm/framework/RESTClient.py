@@ -82,6 +82,10 @@ class RESTClient(object):
         """ Perform a POST request on the given URI. """
         return self.__do_request(uri, 'POST', data)
 
+    def put(self, uri, data):
+        """ Perform a PUT request on the given URI. """
+        return self.__do_request(uri, 'PUT', data)
+
     def delete(self, uri):
         """ Perform a DELETE request on the given URI. """
         return self.__do_request(uri, 'DELETE')
@@ -149,6 +153,10 @@ class RESTClientTest(object):
     def post(self, uri, data):
         """ Post data to URI on test_client interface. """
         return self.__do_call(self.__tc.post, uri, data)
+
+    def put(self, uri, data):
+        """ Put data to URI on test_client interface. """
+        return self.__do_call(self.__tc.put, uri, data)
 
     def delete(self, uri):
         """ Delete URI on test_client interface. """

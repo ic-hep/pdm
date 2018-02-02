@@ -65,6 +65,14 @@ class TestDemoService(unittest.TestCase):
         turtle = json.loads(res.data)
         assert(turtle['id'] == turtle_id)
         assert(turtle['name'] == 'New Turtle')
+        # modify the turtle
+        mod_turtle = {'name': 'New Lovely Turtle'}
+        res = self.__test.put('/demo/api/v1.0/turtles/%u' % turtle_id,
+                              data=json.dumps(mod_turtle))
+        assert(res.status_code == 200)
+        turtle = json.loads(res.data)
+        assert(turtle['id'] == turtle_id)
+        assert(turtle['name'] == 'New Lovely Turtle')
         # Delete Turtle
         res = self.__test.delete('/demo/api/v1.0/turtles/%u' % turtle_id)
         assert(res.status_code == 200)
