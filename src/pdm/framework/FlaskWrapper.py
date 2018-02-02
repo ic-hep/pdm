@@ -131,10 +131,6 @@ class FlaskServer(Flask):
         if real_path.endswith('/'):
             real_path = real_path[:-1]
         resource = "%s%%%s" % (real_path, request.method)
-        if not resource in current_app.policy:
-            # No specific rule exists for this path + method
-            # Try the "methodless" rule
-            resource = real_path
         return FlaskServer.__check_req(resource, client_dn, client_token)
 
     @staticmethod
@@ -335,12 +331,17 @@ class FlaskServer(Flask):
             By default no-one can call any function.
             Returns None.
         """
+        real_rules = {}
         for path, rules in auth_rules.iteritems():
             for rule in rules:
                 if not self.__check_rule(rule):
                     raise ValueError("Rule '%s' for '%s' is invalid." % (rule, path))
+            if not "%" in path:
+                # If a method is not specified on path, assume GET
+                path = "%s%%GET" % path
+            real_rules[path] = rules
         with self.app_context():
-            current_app.policy.update(auth_rules)
+            current_app.policy.update(real_rules)
 
     def test_mode(self, main_cls, conf={}):
         """ Configures this app instance in test mode.
