@@ -73,8 +73,8 @@ class TestRESTClient(unittest.TestCase):
     def test_put(self, mock_req):
         """ Test HTTP PUT verb. """
         client = self.__get_inst()
-        client.put("/test_url")
-        mock_req.assert_called_with("/test_url", "PUT")
+        client.put("/test_url", "POSTDATA")
+        mock_req.assert_called_with("/test_url", "PUT", "POSTDATA")
 
     @mock.patch.object(RESTClient, "_RESTClient__do_request")
     def test_post(self, mock_req):
@@ -233,14 +233,15 @@ class TestRESTClientTest(unittest.TestCase):
                                          "/file", data='null')
 
     def test_put(self):
-        """ Try a plain put and check the correct function was called. """
+        """ Test put call, includes data """
+        POST_DATA = {'test': 'yes'}
         res_obj = mock.Mock()
         res_obj.status_code = 200
         res_obj.data = ""
         self.__tc.put.return_value = res_obj
-        self.__client.put('file')
+        self.__client.put('file', data=POST_DATA)
         self.__tc.put.assert_called_with(TestRESTClientTest.TEST_BASE + \
-                                         "/file", data='null')
+                                         "/file", data=json.dumps(POST_DATA))
 
     def test_delete(self):
         """ Test the delete call. """
