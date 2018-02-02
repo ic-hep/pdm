@@ -34,9 +34,9 @@ def main():
     my_id = client.add_turtle("New Turtle")['id']
     print "New turtle is ID: %u" % my_id
     show_turtles(client)
-    print "modifying turtle with id %u" % my_id
+    print "Modifying turtle with ID %u" % my_id
     mt = client.modify_turtle(my_id, "My Lovely Turtle")
-    print "modified turtle:",mt
+    print "Modified turtle: %" % mt
     show_turtles(client)
 
     print "Deleting new turtle."""
