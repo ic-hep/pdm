@@ -3,7 +3,6 @@
 """
 
 import json
-import mock
 import requests
 
 from pdm.utils.config import ConfigSystem
@@ -109,6 +108,10 @@ class RESTClientTest(object):
                             the end of testing with patcher.stop().
                     client is a patched instance of target class.
         """
+        # We import mock here as TestClient is only meant for use in the tests
+        # If we import it globally, it'll break importing this module in
+        # production.
+        import mock
         # We patch away the base class of the target, replacing it with
         # RESTClientTest instead.
         patcher = mock.patch.object(target, '__bases__', (RESTClientTest, ))
