@@ -13,7 +13,7 @@ class TestDemoClient(unittest.TestCase):
     def setUp(self):
         # Get an instance of DemoService to test against
         conf = { 'test_param': 1111 }
-        self.__service = FlaskServer(self.__name__)
+        self.__service = FlaskServer("pdm.demo.DemoService")
         self.__service.test_mode(DemoService, conf)
         self.__service.fake_auth("ALL")
         self.__test = self.__service.test_client()
