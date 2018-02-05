@@ -95,12 +95,9 @@ class Daemon(object):
         """Called on daemon exit."""
         self._logger.info("Daemon shutting down...")
 
-    def terminate(self, signum, _):
+    def terminate(self, _, _):
         """Called on receiving SIGTERM."""
-        if signum == signal.SIGTERM:
-            self._logger.warning("Daemon received SIGTERM.")
-        else:
-            self._logger.warning("Daemon received signal %u.", signum)
+        self._logger.warning("Daemon received SIGTERM.")
 
     #pylint: disable=too-many-branches, too-many-statements
     def start(self):
