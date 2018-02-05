@@ -9,7 +9,6 @@ from collections import defaultdict
 from .singleton import singleton
 
 
-#pylint: disable=no-member
 @singleton
 class ConfigSystem(object):
     """Config system singleton."""
@@ -28,13 +27,6 @@ class ConfigSystem(object):
     def sections(self):
         """Get list of sections."""
         return self._config.keys()
-
-    @staticmethod
-    def get_instance():
-        """ WARNING: This is a fake function to keep pylint happy.
-                     Real implementation is in singleton decorator.
-        """
-        return ConfigSystem()
 
     def get_section(self, section):
         """Return a given section."""
