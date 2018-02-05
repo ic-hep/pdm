@@ -95,7 +95,7 @@ class Daemon(object):
         """Called on daemon exit."""
         self._logger.info("Daemon shutting down...")
 
-    def terminate(self, _, _):
+    def terminate(self, *_):
         """Called on receiving SIGTERM."""
         self._logger.warning("Daemon received SIGTERM.")
 
