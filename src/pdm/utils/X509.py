@@ -3,7 +3,9 @@
 """
 
 import random
-from M2Crypto import m2, ASN1, EVP, RSA, X509
+#pylint: disable=no-member
+from M2Crypto import m2
+from M2Crypto import ASN1, EVP, RSA, X509
 
 
 class X509Utils(object):
@@ -162,6 +164,7 @@ class X509CA(object):
         m2.x509_gmtime_adj(not_after, valid_days * 24 * 3600)
         return cert
 
+    #pylint: disable=unused-argument
     @staticmethod
     def __add_basic_exts(cert, auth_pubkey, is_ca=False):
         """ Adds basic extensions to a cert.
@@ -338,6 +341,7 @@ class X509CA(object):
         self.__check_init()
         # Generate request
         # See note about evp_key in __gen_csr doc.
+        #pylint: disable=unused-variable
         rsa_key, evp_key, req = self.__gen_csr(subject)
         # Convert request to cert
         alt_names = []
@@ -398,6 +402,7 @@ class X509CA(object):
         user_key = RSA.load_key_string(key_pem, callback=pw_cb)
         sign_key = EVP.PKey()
         sign_key.assign_rsa(user_key)
+        #pylint: disable=unused-variable
         proxy_cert, evp_key, proxy_key = X509CA.__gen_proxy(user_cert,
                                                             sign_key,
                                                             valid_days)

@@ -12,6 +12,7 @@ from pdm.framework.WSGIServer import WSGIServer
 from pdm.framework.FlaskWrapper import FlaskServer
 
 
+#pylint: disable=too-few-public-methods
 class ExecutableServer(object):
     """ A base object for starting a WSGI+Flask debug server.
     """

@@ -94,6 +94,7 @@ class DBContainer(object):
     """
     pass
 
+#pylint: disable=too-many-instance-attributes
 class FlaskServer(Flask):
     """ A wrapper around a flask application server providing additional
         configuration & runtime helpers.
@@ -169,8 +170,8 @@ class FlaskServer(Flask):
             use.
         """
         if current_app.test_auth:
-          # We are in test mode and want fake authentication
-          return FlaskServer.__test_init_handler()
+            # We are in test mode and want fake authentication
+            return FlaskServer.__test_init_handler()
         client_dn = None
         client_token = False
         token_value = None
@@ -343,7 +344,7 @@ class FlaskServer(Flask):
         with self.app_context():
             current_app.policy.update(real_rules)
 
-    def test_mode(self, main_cls, conf={}):
+    def test_mode(self, main_cls, conf=""):
         """ Configures this app instance in test mode.
             An in-memory Sqlite database is used for the DB.
             main_cls is the class to use for endpoints.
@@ -354,14 +355,18 @@ class FlaskServer(Flask):
             are not called (and should be called manually).
             Returns None.
         """
+        if not conf and conf is not None:
+            # Specfiying conf={} as default parameter is unsafe
+            # Instead we use a string and change it to a dict here.
+            conf = {}
         inst = main_cls()
         self.enable_db("sqlite:///")
         self.attach_obj(inst)
         if conf is not None:
-          self.build_db()
-          self.before_startup(conf)
-          # Config should have been completely consumed
-          assert(not conf)
+            self.build_db()
+            self.before_startup(conf)
+            # Config should have been completely consumed
+            assert not conf
 
     def test_db(self):
         """ Gets an instance to the internal DB object.
@@ -382,8 +387,8 @@ class FlaskServer(Flask):
             "ALL" - No auth, all request anyway.
         """
         if auth_mode:
-          self.__test_auth = (auth_mode, auth_data)
+            self.__test_auth = (auth_mode, auth_data)
         else:
-          self.__test_auth = None
+            self.__test_auth = None
         with self.app_context():
             current_app.test_auth = self.__test_auth

@@ -10,7 +10,7 @@ SCORE=`grep 'Your code has been rated at' pylint.log \
 rm -f pylint.log
 
 echo "Detected pylint score (int): ${SCORE}"
-if [ "${SCORE}" -lt "8" ]; then
+if [ "${SCORE}" -lt "9" ]; then
   echo "Pylint score is too low."
   exit 1
 fi

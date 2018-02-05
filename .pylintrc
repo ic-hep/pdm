@@ -1,3 +1,10 @@
+[MESSAGES CONTROL]
+
+# We don't care about getting an info message for checks that were
+# disabled locally (that's partly the point in disabling it in the
+# first place)
+disable=locally-disabled
+
 [BASIC]
 
 # Add "db" to standard name list
@@ -6,4 +13,10 @@ good-names=i,j,k,ex,Run,_,db
 # Allow variable names to start with capital
 # To only be used with Table class references
 variable-rgx=(([a-zA-Z][a-z0-9_]{2,30})|(_[a-z0-9_]*))$
+
+[TYPECHECK]
+
+# ConfigSystem's singleton pattern upsets pylint everywhere is it called
+# Tell it that this is fine.
+generated-members=ConfigSystem.get_instance
 
