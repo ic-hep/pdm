@@ -2,6 +2,7 @@
 """ Main user credential service.
 """
 
+import json
 import random
 from flask import current_app, request
 from pdm.framework.FlaskWrapper import (db_model, export, export_ext, startup,
@@ -148,11 +149,18 @@ class CredService(object):
     @staticmethod
     @export_ext("cred", ["POST"])
     def add_cred():
-        # TODO: Decode the POST data
-        user_id = 0
-        user_key = "bah"
-        cred_type = 0
-        mex_lifetime = 1000
+        try:
+            # Decode the POST data
+            if not request.data:
+                raise ValueError("Missing POST data")
+            user_data = json.loads(request.data)
+            user_id = int(user_data["user_id"])
+            user_key = user_data["user_key"]
+            cred_type = user_data["cred_type"]
+            # TODO: min(lifetime, config max)
+            mex_lifetime = int(user_data["max_lifetime"])
+        except ValueError, KeyError:
+            return "Malformed POST data", 500
         # Now prepare the DB
         db = request.db
         UserCred = db.tables.UserCred
@@ -162,15 +170,18 @@ class CredService(object):
                                                cred_type=cred_type) \
                                     .order_by(UserCred.expires.desc()) \
                                     .first_or_404()
-        # Generate the token for retrieving this credential
-        res = {'token': ""}
-        return jsonify(res)
+        # TODO: Create new credentials
+        # TODO: Generate the token for retrieving this credential
+        token = request.token_svc.issue(0)
+        return token
 
     @staticmethod
     @export_ext("cred/<string:token>", ["DELETE"])
     def del_cred(token):
-        # TODO: Decode the token
-        cred_id = 0
+        try:
+            cred_id = self.token_svc.check(token)
+        except ValueError:
+            return "Invalid token", 403
         db = request.db
         JobCred = db.tables.JobCred
         JobCred.query.filter_by(cred_id=cred_id).delete()
@@ -180,11 +191,14 @@ class CredService(object):
     @staticmethod
     @export_ext("cred/<string:token>")
     def get_cred():
-        # TODO: Decode the token
-        cred_id = 0
+        try:
+            cred_id = self.token_svc.check(token)
+        except ValueError:
+            return "Invalid token", 403
         db = request.db
         JobCred = db.tables.JobCred
         cred = JobCred.query.filter_by(cred_id=cred_id).first_or_404()
+        # TODO: Delegate a new credential from the job credential here
         # Now delegate a new credential if possible
         res = {'cred_type': cred.cred_type,
                'pub_key': "",

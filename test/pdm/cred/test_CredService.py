@@ -16,7 +16,7 @@ class test_CredService(unittest.TestCase):
             sensible default parameters.
         """
         conf = {}
-        self.__service = FlaskServer(self.__name__)
+        self.__service = FlaskServer("pdm.cred.CredService")
         self.__service.test_mode(CredService, conf)
         self.__service.fake_auth("ALL")
         self.__client = self.__service.test_client()
