@@ -5,7 +5,9 @@
 import os
 
 from twisted.web import server, wsgi
-from twisted.internet import reactor, ssl
+#pylint: disable=no-member
+from twisted.internet import reactor
+from twisted.internet import ssl
 
 class WSGIAuth(wsgi.WSGIResource):
     """ This class implements a wrapper around the twisted WSGI module to
@@ -145,6 +147,7 @@ class WSGIServer(object):
             ssl_opts = ssl_key.options()
         return ssl_opts
 
+    #pylint: disable=too-many-arguments
     def add_server(self, port, app_server, cert, key, cafile, client_req=False):
         """ Adds a web/application server on a given port.
             port - The port number to listen on.

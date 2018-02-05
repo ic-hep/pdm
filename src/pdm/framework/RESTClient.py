@@ -67,6 +67,7 @@ class RESTClient(object):
         # Actually send the request
         resp = requests.request(method, full_url, json=data, headers=headers,
                                 verify=cafile, cert=client_cert)
+        #pylint: disable=no-member
         if resp.status_code != requests.codes.ok:
             # TODO: Better excpetions here
             raise RuntimeError("Request failed with code %u" % \
@@ -104,7 +105,7 @@ class RESTClientTest(object):
         """ Creates an instance of the given class, but replaces the
             RESTClient interface with RESTClientTest instead, which allows
             a local Flask test_client to be called directly.
-            target - The target class to create an instance off (should 
+            target - The target class to create an instance off (should
                      inherit from only RESTClient).
             test_client - The test_client object from the Flask service.
             base_uri - The base_uri of the service.
@@ -128,7 +129,7 @@ class RESTClientTest(object):
         client.set_test_info(test_client, base_uri)
         return (patcher, client)
 
-    def __init__(self, service):
+    def __init__(self, _):
         """ Create a new instance of RESTClientTest, service parameter is
             ignored.
         """

@@ -9,6 +9,7 @@ from collections import defaultdict
 from .singleton import singleton
 
 
+#pylint: disable=no-member
 @singleton
 class ConfigSystem(object):
     """Config system singleton."""
@@ -27,6 +28,13 @@ class ConfigSystem(object):
     def sections(self):
         """Get list of sections."""
         return self._config.keys()
+
+    @staticmethod
+    def get_instance():
+        """ WARNING: This is a fake function to keep pylint happy.
+                     Real implementation is in singleton decorator.
+        """
+        return ConfigSystem()
 
     def get_section(self, section):
         """Return a given section."""
@@ -47,6 +55,7 @@ class ConfigSystem(object):
                 with open(filename, 'rb') as config_file:
                     config_parser.readfp(config_file)
                 self._logger.info("Read config file: %s", filename)
+            #pylint: disable=broad-except
             except Exception:
                 self._logger.warning("Failed to read config file: %s", filename)
                 if not ignore_errors:

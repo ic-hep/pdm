@@ -95,10 +95,14 @@ class Daemon(object):
         """Called on daemon exit."""
         self._logger.info("Daemon shutting down...")
 
-    def terminate(self, signum, frame):
+    def terminate(self, signum, _):
         """Called on receiving SIGTERM."""
-        self._logger.warning("Daemon received SIGTERM.")
+        if signum == signal.SIGTERM:
+            self._logger.warning("Daemon received SIGTERM.")
+        else:
+            self._logger.warning("Daemon received signal %u.", signum)
 
+    #pylint: disable=too-many-branches, too-many-statements
     def start(self):
         """Start daemon process."""
         try:
@@ -127,8 +131,10 @@ class Daemon(object):
                         pid = os.fork()
                     except OSError:
                         self._logger.exception("Error forking for the second time.")
+                        #pylint: disable=protected-access
                         os._exit(1)
                     if pid != 0:
+                        #pylint: disable=protected-access
                         os._exit(0)
 
                     # Change current working directory.
