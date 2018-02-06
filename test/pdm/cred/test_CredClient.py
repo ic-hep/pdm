@@ -33,7 +33,7 @@ class test_CredClient(unittest.TestCase):
 
     def test_ca(self):
         """ Just get the CA PEM. """
-        ca_pem = self._inst.ca()
+        ca_pem = self._inst.get_ca()
         self.assertIn('BEGIN CERTIFICATE', ca_pem)
 
     def test_workflow(self):
@@ -76,6 +76,8 @@ class test_MockCredClient(test_CredClient):
         """
         # Delete invalid user
         self.assertRaises(RuntimeError, self._inst.del_user, 999)
+        # Get expiry of invalid user
+        self.assertRaises(RuntimeError, self._inst.user_expiry, 999)
         # Add cred to invalid user
         self.assertRaises(RuntimeError, self._inst.add_cred, 999, "X", 1)
         # User with invalid password

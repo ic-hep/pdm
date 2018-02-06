@@ -14,7 +14,7 @@ class CredClient(RESTClient):
         """ Create the credential client. """
         super(CredClient, self).__init__('cred')
 
-    def ca(self):
+    def get_ca(self):
         """ Get the user CA certificate.
             Returns CA cert in PEM format.
         """
@@ -45,7 +45,7 @@ class CredClient(RESTClient):
             Returns a datetime.datetime object with the expiry time.
         """
         res = self.get('user/%u' % user_id)
-        expiry = datetime.datetime.strptime(res['valid_until'], 
+        expiry = datetime.datetime.strptime(res['valid_until'],
                                             "%Y-%m-%dT%H:%M:%S")
         return expiry
 
@@ -95,13 +95,14 @@ class MockCredClient(object):
         self.__valid_users = {}
         self.__creds = []
 
-    def ca(self):
+    #pylint: disable=no-self-use
+    def get_ca(self):
         """ Get the user CA certificate.
             Returns CA cert in PEM format.
         """
         return MockCredClient.CA_STR
 
-    def add_user(self, user_id, user_key, user_email=None):
+    def add_user(self, user_id, user_key, _=None):
         """ Adds a set of user credentials.
             user_id - The numeric user ID.
             user_key - An encryption key for the creds.
@@ -118,15 +119,18 @@ class MockCredClient(object):
             raise RuntimeError("Request failed with code 404.")
         del self.__valid_users[user_id]
 
+    #pylint: disable=no-self-use
     def user_expiry(self, user_id):
         """ Get the expiry time of user creds.
             Returns a datetime.datetime object with the expiry time.
         """
+        if not user_id in self.__valid_users:
+            raise RuntimeError("Request failed with code 404.")
         next_day = datetime.datetime.now() \
                        + datetime.timedelta(days=1)
         return next_day
 
-    def add_cred(self, user_id, user_key, cred_type):
+    def add_cred(self, user_id, user_key, _):
         """ Adds a credential of a given type for a job.
             user_id - The user ID int.
             user_key - The credential key, matching the value given to
