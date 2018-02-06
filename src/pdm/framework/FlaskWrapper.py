@@ -5,6 +5,7 @@
 
 import os
 import json
+import fnmatch
 import logging
 import functools
 
@@ -106,20 +107,21 @@ class FlaskServer(Flask):
             Returns True if the request should be allowed.
                     False if the request should be denied.
         """
-        rules = current_app.policy.get(resource, [])
-        for rule in rules:
-            if rule == 'ALL':
-                return True
-            if rule == 'ANY' and (client_dn or client_token):
-                return True
-            if rule == 'TOKEN' and client_token:
-                return True
-            if rule == 'CERT' and client_dn:
-                return True
-            if rule.startswith('CERT:'):
-                _, check_dn = rule.split(':', 1)
-                if client_dn == check_dn:
-                    return True
+        for policy_path, policy_rules in current_app.policy.iteritems():
+            if fnmatch.fnmatch(resource, policy_path):
+                for rule in policy_rules:
+                    if rule == 'ALL':
+                        return True
+                    if rule == 'ANY' and (client_dn or client_token):
+                        return True
+                    if rule == 'TOKEN' and client_token:
+                        return True
+                    if rule == 'CERT' and client_dn:
+                        return True
+                    if rule.startswith('CERT:'):
+                        _, check_dn = rule.split(':', 1)
+                        if client_dn == check_dn:
+                            return True
         # No rules matched => Access denied
         return False
 
