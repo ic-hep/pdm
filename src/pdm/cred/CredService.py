@@ -232,7 +232,8 @@ class CredService(object):
         db = request.db
         UserCred = db.tables.UserCred
         # This will cascade delete on the JobCred table
-        UserCred.query.filter_by(user_id=user_id).delete()
+        for old_cred in UserCred.query.filter_by(user_id=user_id).all():
+            db.session.delete(old_cred)
         db.session.commit()
         return ""
 

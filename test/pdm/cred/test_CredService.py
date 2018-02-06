@@ -273,8 +273,7 @@ class test_CredService(unittest.TestCase):
         ret_users = UserCred.query.all()
         self.assertFalse(ret_users)
         ret_jobs = JobCred.query.all()
-        # TODO: Cascade delete for job creds isn't working, but it should
-        #self.assertFalse(ret_jobs)
+        self.assertFalse(ret_jobs)
 
     def test_get_user(self):
         """ Add a user directly to DB and check GET user/ID verb works. """
