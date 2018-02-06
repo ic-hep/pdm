@@ -3,6 +3,7 @@
 
 import json
 import unittest
+from copy import deepcopy
 
 from pdm.cred.CredService import CredService
 from pdm.framework.FlaskWrapper import FlaskServer
@@ -11,13 +12,18 @@ from pdm.framework.FlaskWrapper import FlaskServer
 class test_CredService(unittest.TestCase):
     """ Test the CredService service. """
 
+    DEF_CONFIG = {'ca_dn': '/C=XX/OU=Test CA',
+                  'ca_key': 'weakCAPass',
+                  'user_dn_base': '/C=XX/OU=Test Users',
+                  'user_cred_secret': 'weakUserPass'}
+
     def setUp(self):
         """ Configure the basic test service with some
             sensible default parameters.
         """
-        conf = {}
         self.__service = FlaskServer("pdm.cred.CredService")
-        self.__service.test_mode(CredService, conf)
+        self.__service.test_mode(CredService,
+                                 deepcopy(test_CredService.DEF_CONFIG))
         self.__service.fake_auth("ALL")
         self.__client = self.__service.test_client()
 
@@ -30,8 +36,8 @@ class test_CredService(unittest.TestCase):
         CAEntry = db.tables.CAEntry
         ca_info1 = CAEntry.query.filter_by(cred_id=CredService.USER_CA_INDEX) \
                           .first()
-        # Re-run the start-up with empty config
-        self.__service.before_startup({})
+        # Re-run the start-up
+        self.__service.before_startup(deepcopy(test_CredService.DEF_CONFIG))
         ca_info2 = CAEntry.query.filter_by(cred_id=CredService.USER_CA_INDEX) \
                           .first()
         self.assertEqual(ca_info1.pub_cert, ca_info2.pub_cert)
@@ -72,7 +78,7 @@ class test_CredService(unittest.TestCase):
                       'user_key': TEST_USER_KEY}
         json_input = json.dumps(TEST_INPUT)
         res = self.__client.post('/cred/api/v1.0/user', data=json_input)
-        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.status_code, 200, "Server returned: %s" % res.data)
         # TODO: Check response object matches spec
         # TODO: Check credentials in database
         # TODO: Check CA serial was stored correctly
