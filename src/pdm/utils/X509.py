@@ -150,10 +150,10 @@ class X509CA(object):
         return (rsa_key, evp_key, req)
 
     @staticmethod
-    def __gen_basic_cert(req, valid_days, serial, issuer):
+    def __gen_basic_cert(req, valid_hours, serial, issuer):
         """ Generate a cert template from a CSR.
             req - The M2Crypto.X509.Request object.
-            valid_days - Lifetime of new cert in days (from now).
+            valid_hours - Lifetime of new cert in hours (from now).
             serial - Serial of new certificate.
             issuer - CA's M2Crypto.X509.X509 object.
         """
@@ -171,7 +171,7 @@ class X509CA(object):
         not_before = m2.x509_get_not_before(cert.x509)
         m2.x509_gmtime_adj(not_before, 0)
         not_after = m2.x509_get_not_after(cert.x509)
-        m2.x509_gmtime_adj(not_after, valid_days * 24 * 3600)
+        m2.x509_gmtime_adj(not_after, valid_hours * 3600)
         return cert
 
     #pylint: disable=unused-argument
@@ -204,7 +204,8 @@ class X509CA(object):
             Returns an X509.X509 object.
             Raises a RuntimeError if anything goes wrong.
         """
-        cert = X509CA.__gen_basic_cert(req, valid_days, serial, req)
+        valid_hours = valid_days * 24
+        cert = X509CA.__gen_basic_cert(req, valid_hours, serial, req)
         # Add CA extensions
         X509CA.__add_basic_exts(cert, req, True)
         # Finally sign the cert
@@ -225,7 +226,8 @@ class X509CA(object):
             sign_key - EVP.PKey object to sign cert with.
             Returns signed X509.X509 object.
         """
-        cert = X509CA.__gen_basic_cert(req, valid_days, serial, issuer)
+        valid_hours = valid_days * 24
+        cert = X509CA.__gen_basic_cert(req, valid_hours, serial, issuer)
         X509CA.__add_basic_exts(cert, issuer, False)
         for alt_name in alt_names:
             an_ext = X509.new_extension('subjectAltName', alt_name, 0)
@@ -372,7 +374,7 @@ class X509CA(object):
         return (cert_pem, key_pem)
 
     @staticmethod
-    def __gen_proxy(usercert, sign_key, valid_days):
+    def __gen_proxy(usercert, sign_key, valid_hours):
         """ Internal method for generating an RFC proxy.
             cert - X509.X509 object of user cert.
             sign_key - EVP.PKey object to sign the proxy with.
@@ -384,7 +386,7 @@ class X509CA(object):
         # Note: While it's unused, evp_key must stay in memory while
         #       rsa_key is valid otherwise it may cause a segfault.
         rsa_key, evp_key, req = X509CA.__gen_csr(proxy_dn)
-        cert = X509CA.__gen_basic_cert(req, valid_days, proxy_serial, usercert)
+        cert = X509CA.__gen_basic_cert(req, valid_hours, proxy_serial, usercert)
         key_use_ext = X509.new_extension('keyUsage', X509CA.DEFAULT_KEY_USE)
         if not cert.add_ext(key_use_ext):
             raise RuntimeError("Failed to proxy key usage ext")
@@ -397,10 +399,10 @@ class X509CA(object):
         return (cert, evp_key, rsa_key)
 
     @staticmethod
-    def gen_proxy(cert_pem, key_pem, valid_days, passphrase=None):
+    def gen_proxy(cert_pem, key_pem, valid_hours, passphrase=None):
         """ Generates an RFC3820 proxy for the supplied user cert.
             cert_pem & key_pem - User cery & key PEM files.
-            valid_days - How long the proxy should be valid for.
+            valid_hours - How long the proxy should be valid for.
             passphrase - Passphrase to use for encrypted user key.
             Returns a tuple of PEM strings (proxycert, proxykey)
             proxykey is unencrypted.
@@ -415,7 +417,7 @@ class X509CA(object):
         #pylint: disable=unused-variable
         proxy_cert, evp_key, proxy_key = X509CA.__gen_proxy(user_cert,
                                                             sign_key,
-                                                            valid_days)
+                                                            valid_hours)
         proxy_cert_pem = proxy_cert.as_pem()
         proxy_key_pem = proxy_key.as_pem(cipher=None)
         return (proxy_cert_pem, proxy_key_pem)
