@@ -169,6 +169,9 @@ class FlaskServer(Flask):
             parts of the app context into the request proxy object for ease of
             use.
         """
+        # Requests for static content don't have authentication
+        if request.path.startswith('/static/'):
+            return # Allow access
         if current_app.test_auth:
             # We are in test mode and want fake authentication
             return FlaskServer.__test_init_handler()
