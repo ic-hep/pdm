@@ -129,7 +129,8 @@ class FlaskServer(Flask):
             real_path = request.url_rule.rule.split('<')[0]
         else:
             real_path = request.path
-        if real_path.endswith('/'):
+        # Strip a trailing slash, as long as it isn't the only char
+        if real_path.endswith('/') and len(real_path) > 1:
             real_path = real_path[:-1]
         resource = "%s%%%s" % (real_path, request.method)
         return FlaskServer.__check_req(resource, client_dn, client_token)

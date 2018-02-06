@@ -1,0 +1,14 @@
+<html>
+<head>
+  <title>Turtle Databse</title>
+  <link rel="stylesheet" href="/static/turtles.css">
+</head>
+<body>
+  <h1>Turtle Listing</h1>
+  <table border="1">
+    <tr><th>Turtle Name</th></tr>
+  {% for item in turtles %}
+    <tr><td>{{ item }}</td></tr>
+  {% endfor %}
+</body>
+</html>

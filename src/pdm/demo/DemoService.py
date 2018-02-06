@@ -39,6 +39,14 @@ class DemoService(object):
         db.session.commit()
 
     @staticmethod
+    @export_ext("/")
+    def website():
+        db = request.db
+        Turtle = db.tables.Turtle
+        turtles = [x.name for x in db.session.query(Turtle).all()]
+        return flask.render_template("turtles.html", turtles=turtles)
+
+    @staticmethod
     @export
     def hello():
         """ Return a test string. """
