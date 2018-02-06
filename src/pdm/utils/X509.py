@@ -172,6 +172,7 @@ class X509CA(object):
         m2.x509_gmtime_adj(not_before, 0)
         not_after = m2.x509_get_not_after(cert.x509)
         m2.x509_gmtime_adj(not_after, valid_hours * 3600)
+        # TODO: Pin valid_hours to not exceed issuer lifetime
         return cert
 
     #pylint: disable=unused-argument
@@ -374,7 +375,7 @@ class X509CA(object):
         return (cert_pem, key_pem)
 
     @staticmethod
-    def __gen_proxy(usercert, sign_key, valid_hours):
+    def __gen_proxy(usercert, sign_key, valid_hours, limited):
         """ Internal method for generating an RFC proxy.
             cert - X509.X509 object of user cert.
             sign_key - EVP.PKey object to sign the proxy with.
@@ -390,8 +391,12 @@ class X509CA(object):
         key_use_ext = X509.new_extension('keyUsage', X509CA.DEFAULT_KEY_USE)
         if not cert.add_ext(key_use_ext):
             raise RuntimeError("Failed to proxy key usage ext")
-        proxy_ext = X509.new_extension('proxyCertInfo',
-                                       X509CA.PROXY_UNLIMITED, 1)
+        if limited:
+            proxy_ext = X509.new_extension('proxyCertInfo',
+                                           X509CA.PROXY_LIMITED, 1)
+        else:
+            proxy_ext = X509.new_extension('proxyCertInfo',
+                                           X509CA.PROXY_UNLIMITED, 1)
         if not cert.add_ext(proxy_ext):
             raise RuntimeError("Failed to add proxy info ext")
         if not cert.sign(sign_key, X509CA.SIG_ALGO):
@@ -399,11 +404,13 @@ class X509CA(object):
         return (cert, evp_key, rsa_key)
 
     @staticmethod
-    def gen_proxy(cert_pem, key_pem, valid_hours, passphrase=None):
+    def gen_proxy(cert_pem, key_pem, valid_hours, passphrase=None,
+                  limited=False):
         """ Generates an RFC3820 proxy for the supplied user cert.
             cert_pem & key_pem - User cery & key PEM files.
             valid_hours - How long the proxy should be valid for.
             passphrase - Passphrase to use for encrypted user key.
+            limited - Set to True to get a limited proxy.
             Returns a tuple of PEM strings (proxycert, proxykey)
             proxykey is unencrypted.
         """
@@ -417,7 +424,8 @@ class X509CA(object):
         #pylint: disable=unused-variable
         proxy_cert, evp_key, proxy_key = X509CA.__gen_proxy(user_cert,
                                                             sign_key,
-                                                            valid_hours)
+                                                            valid_hours,
+                                                            limited)
         proxy_cert_pem = proxy_cert.as_pem()
         proxy_key_pem = proxy_key.as_pem(cipher=None)
         return (proxy_cert_pem, proxy_key_pem)
