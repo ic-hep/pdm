@@ -353,7 +353,6 @@ class TestX509CA(unittest.TestCase):
         usercert, userkey = self.__ca.gen_cert(USER_DN, 4)
         proxycert, proxykey = self.__ca.gen_proxy(usercert, userkey,
                                                   TEST_HOURS)
-        # TODO: Actually check proxy here!
         # Check proxy looks fine
         proxy_obj = X509.load_cert_string(proxycert)
         proxy_serial = proxy_obj.get_serial_number()
@@ -379,6 +378,8 @@ class TestX509CA(unittest.TestCase):
                           userkey, 1, "wrongtest")
         proxycert, proxykey = self.__ca.gen_proxy(usercert, userkey,
                                                   1, USER_PASSPHRASE)
+        # TODO: Check proxy extension
+        # TODO: Add limited proxy test
 
     @mock.patch('M2Crypto.m2.x509_get_not_after')
     @mock.patch('M2Crypto.m2.x509_get_not_before')
