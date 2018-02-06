@@ -362,6 +362,9 @@ class FlaskServer(Flask):
         inst = main_cls()
         self.enable_db("sqlite:///")
         self.attach_obj(inst)
+        # Put flask into test mode
+        # This causes exceptions to pass to the client directly
+        self.testing = True
         if conf is not None:
             self.build_db()
             self.before_startup(conf)

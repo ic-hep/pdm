@@ -1,0 +1,15 @@
+# Demo application authentication
+
+[groups/cred]
+user_service = ["CERT:C = XX, L = Default City, O = Default Company Ltd, OU = Test CA, CN = localhost"]
+job_service = ["CERT:C = XX, L = Default City, O = Default Company Ltd, OU = Test CA, CN = localhost"]
+
+[auth/cred]
+/cred/api/v1.0/ca = "ALL"
+/cred/api/v1.0/user%GET = "@user_service"
+/cred/api/v1.0/user%POST = "@user_service"
+/cred/api/v1.0/user%DELETE = "@user_service"
+/cred/api/v1.0/cred%GET = "@job_service"
+/cred/api/v1.0/cred%POST = "@user_service"
+/cred/api/v1.0/cred%DELETE = "@job_service"
+

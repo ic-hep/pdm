@@ -347,13 +347,12 @@ class TestX509CA(unittest.TestCase):
     def test_gen_proxy(self):
         """ Test generating a user proxy. """
         from M2Crypto import X509, RSA
-        TEST_DAYS = 1
+        TEST_HOURS = 14
         USER_DN = "C = XX, CN = Test User"
         self.__ca.gen_ca("C = XX, CN = Test CA", 5)
         usercert, userkey = self.__ca.gen_cert(USER_DN, 4)
         proxycert, proxykey = self.__ca.gen_proxy(usercert, userkey,
-                                                  TEST_DAYS)
-        # TODO: Actually check proxy here!
+                                                  TEST_HOURS)
         # Check proxy looks fine
         proxy_obj = X509.load_cert_string(proxycert)
         proxy_serial = proxy_obj.get_serial_number()
@@ -367,8 +366,8 @@ class TestX509CA(unittest.TestCase):
         start_time = proxy_obj.get_not_before().get_datetime()
         end_time = proxy_obj.get_not_after().get_datetime()
         valid_time = end_time - start_time
-        self.assertEqual(valid_time.days,TEST_DAYS)
-        self.assertEqual(valid_time.seconds, 0)
+        self.assertEqual(valid_time.days, 0)
+        self.assertEqual(valid_time.seconds, TEST_HOURS * 3600)
         # Test generating proxy with passphrase
         USER_PASSPHRASE = "weaktest"
         usercert, userkey = self.__ca.gen_cert("/C=XX, CN=Test User", 4,
@@ -379,6 +378,8 @@ class TestX509CA(unittest.TestCase):
                           userkey, 1, "wrongtest")
         proxycert, proxykey = self.__ca.gen_proxy(usercert, userkey,
                                                   1, USER_PASSPHRASE)
+        # TODO: Check proxy extension
+        # TODO: Add limited proxy test
 
     @mock.patch('M2Crypto.m2.x509_get_not_after')
     @mock.patch('M2Crypto.m2.x509_get_not_before')
