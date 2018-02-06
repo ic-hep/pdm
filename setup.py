@@ -14,5 +14,6 @@ setup(name='pdm',
                         'requests==2.6.0',
                         'sqlalchemy==0.9.8',
                         'twisted==12.1.0'],
+      include_package_data=True,
      )
 
