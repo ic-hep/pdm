@@ -10,9 +10,9 @@ disable=locally-disabled
 # Add "db" to standard name list
 good-names=i,j,k,ex,Run,_,db
 
-# Allow variable names to start with capital
+# Allow variable names to start with or contain capital letters
 # To only be used with Table class references
-variable-rgx=(([a-zA-Z][a-z0-9_]{2,30})|(_[a-z0-9_]*))$
+variable-rgx=(([a-zA-Z][a-zA-Z0-9_]{2,30})|(_[a-z0-9_]*))$
 
 [TYPECHECK]
 
