@@ -5,6 +5,7 @@
 
 import os
 import json
+import fnmatch
 import logging
 import functools
 
@@ -106,20 +107,21 @@ class FlaskServer(Flask):
             Returns True if the request should be allowed.
                     False if the request should be denied.
         """
-        rules = current_app.policy.get(resource, [])
-        for rule in rules:
-            if rule == 'ALL':
-                return True
-            if rule == 'ANY' and (client_dn or client_token):
-                return True
-            if rule == 'TOKEN' and client_token:
-                return True
-            if rule == 'CERT' and client_dn:
-                return True
-            if rule.startswith('CERT:'):
-                _, check_dn = rule.split(':', 1)
-                if client_dn == check_dn:
-                    return True
+        for policy_path, policy_rules in current_app.policy.iteritems():
+            if fnmatch.fnmatch(resource, policy_path):
+                for rule in policy_rules:
+                    if rule == 'ALL':
+                        return True
+                    if rule == 'ANY' and (client_dn or client_token):
+                        return True
+                    if rule == 'TOKEN' and client_token:
+                        return True
+                    if rule == 'CERT' and client_dn:
+                        return True
+                    if rule.startswith('CERT:'):
+                        _, check_dn = rule.split(':', 1)
+                        if client_dn == check_dn:
+                            return True
         # No rules matched => Access denied
         return False
 
@@ -129,7 +131,8 @@ class FlaskServer(Flask):
             real_path = request.url_rule.rule.split('<')[0]
         else:
             real_path = request.path
-        if real_path.endswith('/'):
+        # Strip a trailing slash, as long as it isn't the only char
+        if real_path.endswith('/') and len(real_path) > 1:
             real_path = real_path[:-1]
         resource = "%s%%%s" % (real_path, request.method)
         return FlaskServer.__check_req(resource, client_dn, client_token)
@@ -169,6 +172,9 @@ class FlaskServer(Flask):
             parts of the app context into the request proxy object for ease of
             use.
         """
+        # Requests for static content don't have authentication
+        if request.path.startswith('/static/'):
+            return # Allow access
         if current_app.test_auth:
             # We are in test mode and want fake authentication
             return FlaskServer.__test_init_handler()

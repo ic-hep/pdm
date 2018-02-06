@@ -1,0 +1,2 @@
+include src/pdm/*/static/*
+include src/pdm/*/templates/*

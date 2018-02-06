@@ -3,6 +3,9 @@
 [groups/demo]
 
 [auth/demo]
+# Home page
+/ = "ALL"
+/web/* = "ALL"
 # Matches GET method as no method specified
 /demo/api/v1.0/hello = "ALL"
 # Note that this rule also matches the ones ending with turtles/<int:tid>

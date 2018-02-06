@@ -39,6 +39,16 @@ class TestDemoService(unittest.TestCase):
         assert(res.status_code == 200)
         assert(len(json.loads(res.data)) == 1)
 
+    def test_web(self):
+        """ Check that the basic website redirect + index page work. """
+        res = self.__test.get('/')
+        assert(res.status_code == 302)
+        assert('/web/turtles' in res.location)
+        self.__service.testing = True
+        res = self.__test.get('/web/turtles')
+        assert(res.status_code == 200)
+        assert("<html>" in res.data)
+
     def test_hello(self):
         res = self.__test.get('/demo/api/v1.0/hello')
         assert(res.status_code == 200)

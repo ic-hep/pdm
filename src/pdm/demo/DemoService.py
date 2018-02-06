@@ -39,6 +39,21 @@ class DemoService(object):
         db.session.commit()
 
     @staticmethod
+    @export_ext("/")
+    def web_entry():
+        """ Redirect clients to the turtles page. """
+        return flask.redirect("/web/turtles")
+
+    @staticmethod
+    @export_ext("/web/turtles")
+    def website():
+        """ Render the turtles page. """
+        db = request.db
+        Turtle = db.tables.Turtle
+        turtles = [x.name for x in db.session.query(Turtle).all()]
+        return flask.render_template("turtles.html", turtles=turtles)
+
+    @staticmethod
     @export
     def hello():
         """ Return a test string. """
