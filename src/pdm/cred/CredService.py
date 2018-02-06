@@ -11,6 +11,8 @@ from pdm.cred.CredDB import CredDBModel
 from pdm.utils.X509 import X509CA, X509Utils
 from pdm.utils.sshkey import SSHKeyUtils
 
+# TODO: Remove old credentials periodically
+
 @export_ext('/cred/api/v1.0')
 @db_model(CredDBModel)
 class CredService(object):
@@ -124,22 +126,30 @@ class CredService(object):
         if base_cred.cred_type == CredService.CRED_TYPE_SSH:
             # There isn't much we can do for SSH delegation,
             # we just return the base keys
-            return (base_cred.cred_pub,
-                    base_cred.cred_priv,
+            # Although at this point, cred_priv is probably
+            # encrypted, so we much decrypt it.
+            priv_key = SSHKeyUtils.remove_pass(str(base_cred.cred_priv),
+                                               base_key)
+            return (str(base_cred.cred_pub),
+                    priv_key,
                     base_cred.expiry_date)
         if base_cred.cred_type != CredService.CRED_TYPE_X509:
             raise RuntimeError("Unknown credential type %u!" % \
                                    base_cred.cred_type)
         # We have to do X509 proxy delegation here
         valid_hours = current_app.ca_config['proxy_max_hours']
-        proxy_cert, proxy_key = X509CA.gen_proxy(base_cred.cred_pub,
-                                                 base_cred.cred_priv,
+        proxy_cert, proxy_key = X509CA.gen_proxy(str(base_cred.cred_pub),
+                                                 str(base_cred.cred_priv),
                                                  valid_hours,
                                                  base_key,
                                                  limited)
         # Get real proxy expiry
         expiry = X509Utils.get_cert_expiry(proxy_cert)
-        return (proxy_cert, proxy_key, expiry)
+        # Because we've created a new proxy, we need to include
+        # the public part of the old proxy so the remote service can
+        # verify the whole chain
+        full_pub = "%s%s" % (proxy_cert, str(base_cred.cred_pub))
+        return (full_pub, proxy_key, expiry)
 
     @staticmethod
     @export_ext("ca")
@@ -153,15 +163,17 @@ class CredService(object):
             ca_cert = ca_obj.get_cert()
         finally:
             db.session.rollback() # Close the lock on the CA table
-        if not ca_cert:
-            request.log.error("Failed to open CA cert in get_ca.")
-            return "Internal Error", 500
+        # If CA is missing, 404 should be sent by __load_ca.
         res = {'ca': ca_cert}
         return jsonify(res)
 
+    #pylint: disable=too-many-locals
     @staticmethod
     @export_ext("user", ["POST"])
     def add_user():
+        """ Builds all base credentials for a new user or renews an
+            existing set of credentials if user already exists.
+        """
         db = request.db
         UserCred = db.tables.UserCred
         # Decode POST data
@@ -175,7 +187,8 @@ class CredService(object):
             if user_email:
                 # It may be unicode, convert to string
                 user_email = str(user_email)
-        except ValueError, KeyError:
+        #pylint: disable=broad-except
+        except Exception: # Key or Value Error
             return "Malformed POST data", 500
         # Generate a new DN for the user
         random_num = random.randint(1000000000, 9999999999)
@@ -215,39 +228,44 @@ class CredService(object):
     @staticmethod
     @export_ext("user/<int:user_id>", ["DELETE"])
     def del_user(user_id):
+        """ Deletes all credentials for a given user_id. """
         db = request.db
         UserCred = db.tables.UserCred
         # This will cascade delete on the JobCred table
         UserCred.query.filter_by(user_id=user_id).delete()
         db.session.commit()
+        return ""
 
     @staticmethod
     @export_ext("user/<int:user_id>")
     def get_user(user_id):
+        """ Gets minimal details about a user's credentials. """
         db = request.db
         UserCred = db.tables.UserCred
         newest_cred = UserCred.query.filter_by(user_id=user_id) \
-                                    .order_by(UserCred.expires.desc()) \
+                                    .order_by(UserCred.expiry_date.desc()) \
                                     .first_or_404()
-        ret = {'valid_until': newest_cred.expires}
+        res = {'valid_until': newest_cred.expiry_date}
         return jsonify(res)
 
     @staticmethod
     @export_ext("cred", ["POST"])
     def add_cred():
+        """ Creates a new proxy credential for a user. """
         try:
             # Decode the POST data
             if not request.data:
                 raise ValueError("Missing POST data")
             user_data = json.loads(request.data)
             user_id = int(user_data["user_id"])
-            user_key = user_data["user_key"]
+            user_key = str(user_data["user_key"])
             cred_type = user_data["cred_type"]
             max_lifetime = int(user_data["max_lifetime"])
             # Cap max_lifetime to within config
             max_lifetime = min(max_lifetime,
                                current_app.ca_config['proxy_max_hours'])
-        except ValueError, KeyError:
+        #pylint: disable=broad-except
+        except Exception:
             return "Malformed POST data", 500
         # Now prepare the DB
         db = request.db
@@ -256,26 +274,32 @@ class CredService(object):
         # We have to get the user's newest credential of the type specified.
         base_cred = UserCred.query.filter_by(user_id=user_id,
                                              cred_type=cred_type) \
-                                  .order_by(UserCred.expires.desc()) \
+                                  .order_by(UserCred.expiry_date.desc()) \
                                   .first_or_404()
         # Create new credentials
-        new_details = CredService.__delegate_cred(base_cred,
-                                                  base_key=user_key,
-                                                  limited=False)
+        try:
+            new_details = CredService.__delegate_cred(base_cred,
+                                                      base_key=user_key,
+                                                      limited=False)
+        except RuntimeError:
+            return "Credential delegation failed", 500
         new_pub, new_priv, expiry = new_details
         new_cred = JobCred(base_id=base_cred.cred_id,
+                           cred_type=base_cred.cred_type,
                            expiry_date=expiry,
                            cred_pub=new_pub,
-                           cred_priv=new_prev)
+                           cred_priv=new_priv)
         db.session.add(new_cred)
         db.session.commit()
         # Generate the token for retrieving this credential
         token = current_app.ca_token_svc.issue(new_cred.cred_id)
-        return token
+        res = {'token': token}
+        return jsonify(res)
 
     @staticmethod
     @export_ext("cred/<string:token>", ["DELETE"])
     def del_cred(token):
+        """ Deletes a specific proxy credential for a user. """
         try:
             cred_id = current_app.ca_token_svc.check(token)
         except ValueError:
@@ -288,7 +312,10 @@ class CredService(object):
 
     @staticmethod
     @export_ext("cred/<string:token>")
-    def get_cred():
+    def get_cred(token):
+        """ Gets a proxy credential for a user.
+            The returned proxy will be limited if possible.
+        """
         try:
             cred_id = current_app.ca_token_svc.check(token)
         except ValueError:

@@ -54,3 +54,15 @@ class SSHKeyUtils(object):
             key_pem = key.as_pem(cipher=SSHKeyUtils.DEF_ENC_ALGO,
                                  callback=pw_cb)
         return (pub_str, key_pem)
+
+    @staticmethod
+    def remove_pass(key_in, passphrase=None):
+        """ Removes the password from an SSH key.
+            key_in - The PEM encoded input key.
+            passphrase - The password of the input key.
+            Returns PEM encoded key with no password.
+        """
+        # TODO: Write test case for this.
+        pw_cb = lambda x: passphrase
+        key = RSA.load_key_string(key_in, callback=pw_cb)
+        return key.as_pem(cipher=None)
