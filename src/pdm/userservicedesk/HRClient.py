@@ -2,6 +2,7 @@ __author__ = 'martynia'
 
 from pdm.framework.RESTClient import RESTClient
 
+
 class HRClient(RESTClient):
     def __init__(self):
         RESTClient.__init__(self, 'users')
@@ -11,21 +12,14 @@ class HRClient(RESTClient):
         """
         return self.get('hello')
 
-    def get_users(self):
-        """ Returns a dict of users.
-        """
-        return self.get('users')
+    def get_user(self):
+        return self.get('users/self')
 
-    def get_user(self, uid):
-        uri = 'users/%s' % uid
-        return self.get(uri)
-
-    def del_user(self, tid):
+    def del_user(self):
         """ Deletes a user by username.
             Returns None
         """
-        target = 'users/%u' % tid
-        return self.delete(target)
+        return self.delete('users/self')
 
     def add_user(self, userdict):
         """ Adds a user.
@@ -40,7 +34,22 @@ class HRClient(RESTClient):
         :return: user token
         """
 
-        cred = {"username":username, "passwd": password}
+        cred = {"username": username, "passwd": password}
 
         return self.post("login", cred)
 
+    def change_password(self, password, newpassword):
+        """
+        Request user password change
+        :param password: original password
+        :param newpassword: new password
+        :return:
+        """
+        cred = {"newpasswd": newpassword, "passwd": password}
+        return self.put("passwd", cred)
+
+### not for now
+#    def get_users(self):
+#        """ Returns a dict of users.
+#        """
+#        return self.get('users')
