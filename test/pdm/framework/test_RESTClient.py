@@ -274,6 +274,15 @@ class TestRESTClientTest(unittest.TestCase):
         ret = self.__client.get('file')
         self.assertDictEqual(ret, RET_DATA)
 
+    def test_no_errors(self):
+        """ Check that codes 200 and 201 don't cause an exception. """
+        for code in (200, 201):
+            res_obj = mock.Mock()
+            res_obj.status_code = code
+            res_obj.data = ""
+            self.__tc.get.return_value = res_obj
+            self.__client.get('file')
+
     def test_errors(self):
         """ Check that error codes raise exceptions. """
         res_obj = mock.Mock()
