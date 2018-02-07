@@ -204,6 +204,7 @@ class X509CA(object):
         # TODO: Check results
         #cert.add_ext(X509.new_extension('subjectKeyIdentifier', 'hash'))
         #cert.add_ext(X509.new_extension('authorityKeyIdentifier', 'keyid'))
+        # TODO: CA should have CA style key usage, not client one.
         cert.add_ext(X509.new_extension('keyUsage', X509CA.DEFAULT_KEY_USE))
 
     @staticmethod
