@@ -244,12 +244,12 @@ class FlaskServer(Flask):
         self.__startup_funcs = []
         self.__test_auth = None
         self.__logger = logger
-        self.__token_svc = TokenService(token_key, server_name)
+        self.token_svc = TokenService(token_key, server_name)
         with self.app_context():
             current_app.test_auth = self.__test_auth
             current_app.log = logger
             current_app.policy = {}
-            current_app.token_svc = self.__token_svc
+            current_app.token_svc = self.token_svc
 
     def enable_db(self, db_uri):
         """ Enables a database connection pool for this server.
