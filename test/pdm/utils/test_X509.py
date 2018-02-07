@@ -174,8 +174,11 @@ class TestX509CA(unittest.TestCase):
             correctly converted into exceptions.
         """
         constr_params = ("/C=ZZ/CN=Another CA", 5)
+        pkey = mock.MagicMock()
+        pkey.as_der.return_value = ""
         x509_obj = mock.MagicMock()
         x509_constr.return_value = x509_obj
+        x509_obj.get_pubkey.return_value = pkey
         not_before.return_value = None
         not_after.return_value = None
         X509_FN = [
@@ -203,8 +206,11 @@ class TestX509CA(unittest.TestCase):
             This only does the non-CA cert specific errors, everything else
             should be covered by test_gen_ca_errors.
         """
+        pkey = mock.MagicMock()
+        pkey.as_der.return_value = ""
         x509_obj = mock.MagicMock()
         x509_constr.return_value = x509_obj
+        x509_obj.get_pubkey.return_value = pkey
         not_before.return_value = None
         not_after.return_value = None
         # Create CA certificate

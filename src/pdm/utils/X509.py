@@ -3,6 +3,7 @@
 """
 
 import random
+import hashlib
 #pylint: disable=no-member
 from M2Crypto import m2
 from M2Crypto import ASN1, EVP, RSA, X509
@@ -111,6 +112,8 @@ class X509CA(object):
     # Encryption algorithm for private keys
     # (if passphrase specified)
     ENC_ALGO = 'aes_256_cbc'
+    # Hash algorithm to use for certificate fingerprints
+    FP_ALGO = SIG_ALGO
     # Proxy extension constants
     ## DER encoded proxy cert info extension for unlimited proxy
     ## (unlimited path length with no restrictions)
@@ -119,6 +122,8 @@ class X509CA(object):
     PROXY_LIMITED = 'DER:30:0F:30:0D:06:0B:2B:06:01:04:01:9B:50:01:01:01:09'
     # Allowed cert & proxy key use
     DEFAULT_KEY_USE = 'digitalSignature,keyEncipherment,dataEncipherment'
+    # Allowed CA use
+    DEFAULT_CAKEY_USE = 'keyCertSign,cRLSign'
 
     @staticmethod
     def __gen_csr(req_dn):
@@ -200,12 +205,27 @@ class X509CA(object):
             ca_ext = X509.new_extension('basicConstraints', bc_str, 1)
             if not cert.add_ext(ca_ext):
                 raise RuntimeError("Failed to add CA cert constraints ext")
-        # TODO: Add subject/auth key ID fields, as well as keyUsage
-        # TODO: Check results
-        #cert.add_ext(X509.new_extension('subjectKeyIdentifier', 'hash'))
-        #cert.add_ext(X509.new_extension('authorityKeyIdentifier', 'keyid'))
-        # TODO: CA should have CA style key usage, not client one.
-        cert.add_ext(X509.new_extension('keyUsage', X509CA.DEFAULT_KEY_USE))
+        # TODO: Add test unit for subject/auth key ID fields
+        sub_hasher = hashlib.new(X509CA.FP_ALGO)
+        sub_hasher.update(cert.get_pubkey().as_der())
+        sub_hash = sub_hasher.hexdigest()
+        if not cert.add_ext(X509.new_extension('subjectKeyIdentifier',
+                                               sub_hash)):
+            raise RuntimeError("Failed to add subjectKeyId ext")
+        if not is_ca:
+            auth_hasher = hashlib.new(X509CA.FP_ALGO)
+            #auth_hasher.update(auth_pubkey.as_der())
+            # TODO: Enable authKeyId
+            #auth_hash = "keyid,issuer:%s" % auth_hasher.hexdigest()
+            #if not cert.add_ext(X509.new_extension('authorityKeyIdentifier',
+            #                                       auth_hash)):
+            #    raise RuntimeError("Failed to add authKeyId ext")
+        # TODO: Test unit for this
+        key_use = X509CA.DEFAULT_KEY_USE
+        if is_ca:
+            key_use = X509CA.DEFAULT_CAKEY_USE
+        if not cert.add_ext(X509.new_extension('keyUsage', key_use)):
+            raise RuntimeError("Failed to add keyUsage ext")
 
     @staticmethod
     def __gen_ca(req, evp_key, valid_days, serial=1):
