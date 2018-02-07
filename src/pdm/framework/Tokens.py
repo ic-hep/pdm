@@ -39,7 +39,7 @@ class TokenService(object):
 
     def check(self, token):
         """ Checks a token has a valid signature.
-            Returns the token value. 
+            Returns the token value.
             If the token is not valid, a ValueError will be raised.
         """
         try:

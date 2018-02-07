@@ -5,6 +5,7 @@
 
 import os
 import json
+import fnmatch
 import logging
 import functools
 
@@ -94,6 +95,7 @@ class DBContainer(object):
     """
     pass
 
+#pylint: disable=too-many-instance-attributes
 class FlaskServer(Flask):
     """ A wrapper around a flask application server providing additional
         configuration & runtime helpers.
@@ -105,20 +107,21 @@ class FlaskServer(Flask):
             Returns True if the request should be allowed.
                     False if the request should be denied.
         """
-        rules = current_app.policy.get(resource, [])
-        for rule in rules:
-            if rule == 'ALL':
-                return True
-            if rule == 'ANY' and (client_dn or client_token):
-                return True
-            if rule == 'TOKEN' and client_token:
-                return True
-            if rule == 'CERT' and client_dn:
-                return True
-            if rule.startswith('CERT:'):
-                _, check_dn = rule.split(':', 1)
-                if client_dn == check_dn:
-                    return True
+        for policy_path, policy_rules in current_app.policy.iteritems():
+            if fnmatch.fnmatch(resource, policy_path):
+                for rule in policy_rules:
+                    if rule == 'ALL':
+                        return True
+                    if rule == 'ANY' and (client_dn or client_token):
+                        return True
+                    if rule == 'TOKEN' and client_token:
+                        return True
+                    if rule == 'CERT' and client_dn:
+                        return True
+                    if rule.startswith('CERT:'):
+                        _, check_dn = rule.split(':', 1)
+                        if client_dn == check_dn:
+                            return True
         # No rules matched => Access denied
         return False
 
@@ -128,7 +131,8 @@ class FlaskServer(Flask):
             real_path = request.url_rule.rule.split('<')[0]
         else:
             real_path = request.path
-        if real_path.endswith('/'):
+        # Strip a trailing slash, as long as it isn't the only char
+        if real_path.endswith('/') and len(real_path) > 1:
             real_path = real_path[:-1]
         resource = "%s%%%s" % (real_path, request.method)
         return FlaskServer.__check_req(resource, client_dn, client_token)
@@ -168,9 +172,12 @@ class FlaskServer(Flask):
             parts of the app context into the request proxy object for ease of
             use.
         """
+        # Requests for static content don't have authentication
+        if request.path.startswith('/static/'):
+            return # Allow access
         if current_app.test_auth:
-          # We are in test mode and want fake authentication
-          return FlaskServer.__test_init_handler()
+            # We are in test mode and want fake authentication
+            return FlaskServer.__test_init_handler()
         client_dn = None
         client_token = False
         token_value = None
@@ -237,12 +244,12 @@ class FlaskServer(Flask):
         self.__startup_funcs = []
         self.__test_auth = None
         self.__logger = logger
-        self.__token_svc = TokenService(token_key, server_name)
+        self.token_svc = TokenService(token_key, server_name)
         with self.app_context():
             current_app.test_auth = self.__test_auth
             current_app.log = logger
             current_app.policy = {}
-            current_app.token_svc = self.__token_svc
+            current_app.token_svc = self.token_svc
 
     def enable_db(self, db_uri):
         """ Enables a database connection pool for this server.
@@ -343,7 +350,7 @@ class FlaskServer(Flask):
         with self.app_context():
             current_app.policy.update(real_rules)
 
-    def test_mode(self, main_cls, conf={}):
+    def test_mode(self, main_cls, conf=""):
         """ Configures this app instance in test mode.
             An in-memory Sqlite database is used for the DB.
             main_cls is the class to use for endpoints.
@@ -354,14 +361,21 @@ class FlaskServer(Flask):
             are not called (and should be called manually).
             Returns None.
         """
+        if not conf and conf is not None:
+            # Specfiying conf={} as default parameter is unsafe
+            # Instead we use a string and change it to a dict here.
+            conf = {}
         inst = main_cls()
         self.enable_db("sqlite:///")
         self.attach_obj(inst)
+        # Put flask into test mode
+        # This causes exceptions to pass to the client directly
+        self.testing = True
         if conf is not None:
-          self.build_db()
-          self.before_startup(conf)
-          # Config should have been completely consumed
-          assert(not conf)
+            self.build_db()
+            self.before_startup(conf)
+            # Config should have been completely consumed
+            assert not conf
 
     def test_db(self):
         """ Gets an instance to the internal DB object.
@@ -382,8 +396,8 @@ class FlaskServer(Flask):
             "ALL" - No auth, all request anyway.
         """
         if auth_mode:
-          self.__test_auth = (auth_mode, auth_data)
+            self.__test_auth = (auth_mode, auth_data)
         else:
-          self.__test_auth = None
+            self.__test_auth = None
         with self.app_context():
             current_app.test_auth = self.__test_auth

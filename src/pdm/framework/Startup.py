@@ -12,6 +12,7 @@ from pdm.framework.WSGIServer import WSGIServer
 from pdm.framework.FlaskWrapper import FlaskServer
 
 
+#pylint: disable=too-few-public-methods
 class ExecutableServer(object):
     """ A base object for starting a WSGI+Flask debug server.
     """
@@ -103,7 +104,8 @@ class ExecutableServer(object):
         secret = wsgi_config.get("secret", None)
         # Create Flask server & config basics
         logger = logging.getLogger()
-        app_server = FlaskServer(wsgi_name, logger, self.__debug, secret)
+        server_name = wsgi_config.get("static", wsgi_name)
+        app_server = FlaskServer(server_name, logger, self.__debug, secret)
         db_uri = wsgi_config.get("db", None)
         if db_uri:
             app_server.enable_db(db_uri)

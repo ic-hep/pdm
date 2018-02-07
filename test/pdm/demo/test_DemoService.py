@@ -39,6 +39,16 @@ class TestDemoService(unittest.TestCase):
         assert(res.status_code == 200)
         assert(len(json.loads(res.data)) == 1)
 
+    def test_web(self):
+        """ Check that the basic website redirect + index page work. """
+        res = self.__test.get('/')
+        assert(res.status_code == 302)
+        assert('/web/turtles' in res.location)
+        self.__service.testing = True
+        res = self.__test.get('/web/turtles')
+        assert(res.status_code == 200)
+        assert("<html>" in res.data)
+
     def test_hello(self):
         res = self.__test.get('/demo/api/v1.0/hello')
         assert(res.status_code == 200)
@@ -102,6 +112,9 @@ class TestDemoService(unittest.TestCase):
         assert(res.status_code == 200)
         assert(len(res.data) > 10)
         assert("." in res.data)
+        # Actually check token content
+        token_data = self.__service.token_svc.check(json.loads(res.data))
+        assert(token_data == "Hello")
 
     def test_verifyTokenGood(self):
         self.__service.fake_auth("TOKEN", "TTest")
