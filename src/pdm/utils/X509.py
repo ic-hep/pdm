@@ -172,7 +172,14 @@ class X509CA(object):
         m2.x509_gmtime_adj(not_before, 0)
         not_after = m2.x509_get_not_after(cert.x509)
         m2.x509_gmtime_adj(not_after, valid_hours * 3600)
-        # TODO: Pin valid_hours to not exceed issuer lifetime
+        # Only check issuer expiry if it's an X509 cert
+        # (i.e. not a self-signed (CA) request).
+        if hasattr(issuer, 'x509'):
+            issuer_na = m2.x509_get_not_after(issuer.x509)
+            if issuer_na < not_after:
+                # Issuer cert expires before child, cap child
+                # expiry date to match.
+                not_after = issuer_na
         return cert
 
     #pylint: disable=unused-argument

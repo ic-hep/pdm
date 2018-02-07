@@ -344,6 +344,23 @@ class TestX509CA(unittest.TestCase):
         key_obj = RSA.load_key_string(key, callback=lambda x: "weakpass")
         self.assertIsInstance(key_obj, RSA.RSA)
 
+    def test_gen_cert_lifetime(self):
+        """ Check that issuing a cert with a lifetime greater than the CA
+            correctly caps the child cert expiry date to match the CA.
+        """
+        from M2Crypto import X509
+        TEST_ISSUER = "C = ZZ, L = YY, O = Test CA, CN = Basic Test CA"
+        TEST_SUBJECT = "C = ZZ, L = YY, CN = Test User"
+        TEST_CA_DAYS = 3
+        self.__ca.gen_ca(TEST_ISSUER, TEST_CA_DAYS)
+        cert, key = self.__ca.gen_cert(TEST_SUBJECT,
+                                       valid_days=TEST_CA_DAYS + 10)
+        cert_obj = X509.load_cert_string(cert)
+        cert_exp = cert_obj.get_not_after().get_datetime()
+        ca_obj = X509.load_cert_string(self.__ca.get_cert())
+        ca_exp = cert_obj.get_not_after().get_datetime()
+        self.assertEqual(cert_exp, ca_exp)
+
     def test_gen_proxy(self):
         """ Test generating a user proxy. """
         from M2Crypto import X509, RSA
