@@ -112,6 +112,9 @@ class TestDemoService(unittest.TestCase):
         assert(res.status_code == 200)
         assert(len(res.data) > 10)
         assert("." in res.data)
+        # Actually check token content
+        token_data = self.__service.token_svc.check(json.loads(res.data))
+        assert(token_data == "Hello")
 
     def test_verifyTokenGood(self):
         self.__service.fake_auth("TOKEN", "TTest")
