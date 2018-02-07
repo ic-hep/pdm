@@ -5,7 +5,8 @@ from pdm.framework.RESTClient import RESTClient
 
 class HRClient(RESTClient):
     def __init__(self):
-        RESTClient.__init__(self, 'users')
+        super(HRClient, self).__init__('demo')
+        #RESTClient.__init__(self, 'users')
 
     def hello(self):
         """ Call the hello function on the server and return the result.
@@ -29,12 +30,12 @@ class HRClient(RESTClient):
 
     def login(self, username, password):
         """
-        :param username: username or email address
+        :param username: email address
         :param password: password
         :return: user token
         """
 
-        cred = {"username": username, "passwd": password}
+        cred = {"email": username, "passwd": password}
 
         return self.post("login", cred)
 

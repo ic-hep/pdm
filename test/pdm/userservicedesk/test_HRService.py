@@ -151,7 +151,9 @@ class TestHRService(unittest.TestCase):
         login_creds = json.dumps({'email': 'Johnny@example.com', 'passwd': 'very_secret'})
         res = self.__test.post('/users/api/v1.0/login', data=login_creds)
         assert(res.status_code == 200)
-        # TODO check the token
+        # TODO check the token content
+        token_data = self.__service.token_svc.check(json.loads(res.data))
+        assert(token_data == 'User_1')
 
         login_creds = json.dumps({'email': 'Johnny@example.com'})
         res = self.__test.post('/users/api/v1.0/login', data=login_creds)
