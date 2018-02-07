@@ -142,7 +142,7 @@ class RESTClientTest(object):
         """
         full_uri = "%s/%s" % (self.__base, uri)
         res = call_fn(full_uri, data=json.dumps(data))
-        if res.status_code != 200:
+        if res.status_code not in (200, 201):
             raise RuntimeError("Request failed with code %u" % \
                                res.status_code)
         if res.data:
