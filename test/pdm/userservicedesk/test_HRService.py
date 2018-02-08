@@ -4,7 +4,7 @@ import unittest
 
 from pdm.userservicedesk.HRService import HRService
 from pdm.framework.FlaskWrapper import FlaskServer
-
+from pdm.utils.hashing import hash_pass, check_hash
 
 class TestHRService(unittest.TestCase):
     def setUp(self):
@@ -17,10 +17,10 @@ class TestHRService(unittest.TestCase):
         self.__service.build_db()  # build manually
         #
         db = self.__service.test_db()
-        new_user = db.tables.User(username='guest',
-                                  name='John', surname='Smith',
-                                  email='Johnny@example.com', state=0,
-                                  password='very_secret')
+        new_user = db.tables.User(
+            name='John', surname='Smith',
+            email='Johnny@example.com', state=0,
+            password=hash_pass('very_secret'))
         db.session.add(new_user)
         db.session.commit()
         self.__service.before_startup(conf)  # to continue startup
@@ -37,7 +37,7 @@ class TestHRService(unittest.TestCase):
         assert (res.status_code == 200)
         user = json.loads(res.data)
         print user
-        assert (user[0]['id'] == 1)
+        # assert (user[0]['id'] == 1)
         assert (user[0]['name'] == 'John')
         assert (user[0]['surname'] == 'Smith')
         assert (user[0]['email'] == 'Johnny@example.com')
@@ -53,20 +53,19 @@ class TestHRService(unittest.TestCase):
         :return:
         """
         self.__service.fake_auth("ALL")
-        fred = {'username': 'fred',
-                'surname': 'Flintstone',
-                'name': 'Fred',
-                'email': 'fred@flintstones.com',
-                'state': 0, 'password': 'Wilma007'}
+        fred = {
+            'surname': 'Flintstone',
+            'name': 'Fred',
+            'email': 'fred@flintstones.com',
+            'state': 0, 'password': 'Wilma007'}
 
-        barney = {'username': 'barney',
-                  'surname': 'Rubble',
-                  'name': 'Barney',
-                  'email': 'barney@rubbles.com',
-                  'state': 0, 'password': 'Betty'}
+        barney = {
+            'surname': 'Rubble',
+            'name': 'Barney',
+            'email': 'barney@rubbles.com',
+            'state': 0, 'password': 'Betty'}
 
         new_user = json.dumps(fred)
-        print "clientside:", new_user
 
         res = self.__test.post('/users/api/v1.0/users', data=new_user)
 
@@ -75,7 +74,7 @@ class TestHRService(unittest.TestCase):
         db = self.__service.test_db()
         dbuser = db.tables.User.query.filter_by(email=fred['email']).first()
         assert (dbuser.name == fred['name'])
-        assert (dbuser.password == fred['password'])
+        assert (check_hash(dbuser.password,fred['password']))
         assert (dbuser.email == fred['email'])
         response = json.loads(res.data)
         assert (response[0]['name'] == fred['name'])
@@ -83,7 +82,22 @@ class TestHRService(unittest.TestCase):
         assert (response[0]['email'] == fred['email'])
         assert (response[0]['state'] == fred['state'])
 
+        # try to duplicate the user:
+        res = self.__test.post('/users/api/v1.0/users', data=new_user)
+        assert (res.status_code == 403)
+
         new_user = json.dumps(barney)  # pass too short !
+        res = self.__test.post('/users/api/v1.0/users', data=new_user)
+        assert (res.status_code == 404)
+        #
+        b_email = barney.pop('email')
+        new_user = json.dumps(barney)
+        res = self.__test.post('/users/api/v1.0/users', data=new_user)
+        assert (res.status_code == 404)
+
+        barney['email'] = b_email
+        password = barney.pop('password')
+        new_user = json.dumps(barney)
         res = self.__test.post('/users/api/v1.0/users', data=new_user)
         assert (res.status_code == 404)
 
@@ -100,7 +114,7 @@ class TestHRService(unittest.TestCase):
         db = self.__service.test_db()
         dbuser = db.tables.User.query.filter_by(email='Johnny@example.com').first()
         assert (dbuser.name == "John")
-        assert (dbuser.password == 'even_more_secret')
+        assert (check_hash(dbuser.password,'even_more_secret'))
         # TODO (response)
 
         # wrong password
@@ -113,6 +127,12 @@ class TestHRService(unittest.TestCase):
         assert (res.status_code == 403)
         # no pass
         no_pass = json.dumps({'passwd': None, 'newpasswd': 'even_more_secret'})
+        res = self.__test.put('/users/api/v1.0/passwd', data=no_pass)
+        assert (res.status_code == 403)
+        no_pass = json.dumps({'newpasswd': 'even_more_secret'})
+        res = self.__test.put('/users/api/v1.0/passwd', data=no_pass)
+        assert (res.status_code == 403)
+        no_pass = json.dumps({'passwd': 'even_more_secret'})
         res = self.__test.put('/users/api/v1.0/passwd', data=no_pass)
         assert (res.status_code == 403)
         #
@@ -150,10 +170,10 @@ class TestHRService(unittest.TestCase):
         """
         login_creds = json.dumps({'email': 'Johnny@example.com', 'passwd': 'very_secret'})
         res = self.__test.post('/users/api/v1.0/login', data=login_creds)
-        assert(res.status_code == 200)
+        assert (res.status_code == 200)
         # TODO check the token content
         token_data = self.__service.token_svc.check(json.loads(res.data))
-        assert(token_data == 'User_1')
+        assert (token_data == 'User_1')
 
         login_creds = json.dumps({'email': 'Johnny@example.com'})
         res = self.__test.post('/users/api/v1.0/login', data=login_creds)
@@ -167,3 +187,9 @@ class TestHRService(unittest.TestCase):
         res = self.__test.post('/users/api/v1.0/login',
                                data=json.dumps({'email': 'johnny@example.com', 'passwd': None}))
         assert (res.status_code == 403)
+
+    def test_hello(self):
+        res = self.__test.get('/users/api/v1.0/hello')
+        assert (res.status_code == 200)
+        res_str = json.loads(res.data)
+        assert (res_str == 'User Service Desk at your service !\n')

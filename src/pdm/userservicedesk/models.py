@@ -13,13 +13,14 @@ class UserModel(object):
         class User(db_base, JSONMixin):
             __tablename__ = "user"
             id = Column(Integer, primary_key=True, autoincrement=True)
-            username = Column(String(80), unique=True, nullable=False)
+            #username = Column(String(80), unique=True, nullable=False)
             name = Column(String(80), unique=False, nullable=False)
             surname = Column(String(80), unique=False, nullable=False)
             state = Column(Integer)
             #dn = db.Column(db.String(200), unique=True, nullable=False)
             password = Column(String(80), unique=False, nullable=False)
             email = Column(String(120), unique=True, nullable=False)
+            last_login = Column(DateTime, default=None)
             date_created = Column(DateTime, default=func.current_timestamp())
             date_modified = Column(
                 DateTime, default=func.current_timestamp(),
@@ -45,7 +46,7 @@ class UserModel(object):
                     #db.session.commit()
 
             def __repr__(self):
-                return '<User %r>' % self.username
+                return '<User %r>' % self.email
 
             def __str__(self):
-                return 'User: %s, surname: %s, name: %s, email: %s ' % (self.username, self.surname, self.name, self.email)
+                return 'User: %s, surname: %s, name: %s' % (self.email, self.surname, self.name)
