@@ -36,14 +36,9 @@ class UserModel(object):
                 with managed_session(db) as m_session:
                     m_session.add(self)
 
-                    #db.session.add(self)
-                    #db.session.commit()
-
             def delete(self, db):
                 with managed_session(db) as m_session:
                     m_session.delete(self)
-                    #db.session.delete(self)
-                    #db.session.commit()
 
             def __repr__(self):
                 return '<User %r>' % self.email
