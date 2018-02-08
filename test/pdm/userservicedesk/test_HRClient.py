@@ -1,7 +1,6 @@
 """
 RESTful test client API for the HRService service
 """
-__author__ = 'martynia'
 
 import json
 import unittest

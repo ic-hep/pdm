@@ -2,7 +2,6 @@
 """
 User Interface Service
 """
-__author__ = 'martynia'
 
 import sys
 import logging

@@ -1,4 +1,3 @@
-__author__ = 'martynia'
 import json
 import unittest
 

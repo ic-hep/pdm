@@ -1,4 +1,3 @@
-__author__ = 'martynia'
 
 from  pdm.utils.db import managed_session
 from flask import Flask

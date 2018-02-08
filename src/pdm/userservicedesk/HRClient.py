@@ -1,7 +1,6 @@
 """
 RESTful client API for the HRService service
 """
-__author__ = 'martynia'
 
 from pdm.framework.RESTClient import RESTClient
 
