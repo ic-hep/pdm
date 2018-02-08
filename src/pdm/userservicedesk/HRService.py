@@ -70,9 +70,10 @@ class HRService(object):
     def add_user():
         """
         Add a new user.
-        :return: json document with added user data. An HTTPException with a 403 status code is
-        thrown when the user already exists. User email address and a password are obligatory (404 is
-        emitted otherwise).
+        :return: json document with added user data. An HTTPException with a
+                 403 status code is thrown when the user already exists. User
+                 email address and a password are obligatory (404 is emitted
+                 otherwise).
         """
         data = json.loads(request.data)
 
@@ -95,6 +96,7 @@ class HRService(object):
         db = request.db
         try:
             user.save(db)
+        #pylint: disable=broad-except
         except Exception:
             HRService._logger.error("Failed to add user: %s ", sys.exc_info())
             abort(403)
@@ -137,8 +139,11 @@ class HRService(object):
             password = data['passwd']
             newpasswd = data['newpasswd']
 
-            if not (password and newpasswd and HRService.check_passwd(password) and HRService.check_passwd(newpasswd)):
-                HRService._logger.error("passwd change request:null password and/or new password, supplied: %s  ",
+            if not (password and newpasswd \
+               and HRService.check_passwd(password) \
+               and HRService.check_passwd(newpasswd)):
+                HRService._logger.error("passwd change request:" \
+                                        "null password and/or new password, supplied: %s  ",
                                         request.json)
                 abort(403)
 
@@ -277,7 +282,8 @@ class HRService(object):
 
         return user_id
 
-        ### Quarantine below this line. Code which might be cosidered in the future version of the interface
+        ### Quarantine below this line.
+        ### Code which might be cosidered in the future version of the service
 
         # @staticmethod
         # @export_ext("users")
