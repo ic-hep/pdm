@@ -24,3 +24,15 @@ class TestHashing(unittest.TestCase):
         self.assertRaises(ValueError, check_hash, "Not Hashed!", "X")
         self.assertRaises(ValueError, check_hash, "$4$ABC$DEF", "X")
         self.assertRaises(ValueError, check_hash, "$5$123$123", "X")
+
+    def test_hash_salt(self):
+        """ Test that hashing with a fixed salt works correctly. """
+        test_hash1 = hash_pass("Test", "my salt")
+        test_hash2 = hash_pass("Test", "my salt")
+        self.assertEqual(test_hash1, test_hash2)
+        test_hash3 = hash_pass("Test", "my salt2")
+        self.assertNotEqual(test_hash1, test_hash3)
+        # Extract actual hash and check that it's really different
+        real_hash1 = test_hash1.split("$")[-1]
+        real_hash3 = test_hash3.split("$")[-1]
+        self.assertNotEqual(real_hash1, real_hash3)
