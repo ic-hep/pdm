@@ -100,6 +100,8 @@ class HRService(object):
         except Exception:
             HRService._logger.error("Failed to add user: %s ", sys.exc_info())
             abort(403)
+        # TODO: Exclude fields in DB model rather than manually constructing
+        # dict
         response = jsonify([{
             'id': user.id,
             'name': user.name,
@@ -261,6 +263,7 @@ class HRService(object):
         :param passwd:
         :return: True of False
         """
+        # TODO: Password requirements should be use configurable
         if len(passwd) < 8:
             return False
 
@@ -273,6 +276,7 @@ class HRService(object):
         :return: user id from the token or None.
         """
 
+        # TODO: Update token to just contain a dictionary
         if request.token_ok:
             user_id = request.token[5:]
         else:
