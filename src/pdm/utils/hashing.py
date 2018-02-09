@@ -10,15 +10,17 @@ HASH_SALT_LEN = 16
 HASH_ALGO = 'sha256'
 HASH_ITER = 10000
 
-def hash_pass(password):
+def hash_pass(password, salt=None):
     """ A helper function to convert a password to a hash.
         password - Input password string to hash.
+        salt - (Optional) Use fixed salt instead of random one.
         Returns a string of the hashed password.
         Note: The hashes are salted and are therefore different
               every time. Use check_hash to check an existing hash
               against a password.
     """
-    salt = os.urandom(HASH_SALT_LEN)
+    if not salt:
+        salt = os.urandom(HASH_SALT_LEN)
     hashed_pass = hashlib.pbkdf2_hmac(HASH_ALGO, password,
                                       salt, HASH_ITER)
     hash_str = "$5$%s$%s" % (binascii.hexlify(salt),
