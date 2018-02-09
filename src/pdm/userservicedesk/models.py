@@ -4,7 +4,8 @@ from  pdm.utils.db import managed_session
 from pdm.framework.Database import JSONMixin
 from sqlalchemy import Column, Integer, String, DateTime, func
 
-#pylint: disable=too-few-public-methods
+
+# pylint: disable=too-few-public-methods
 class UserModel(object):
     """ User service tables. """
 
@@ -14,12 +15,13 @@ class UserModel(object):
         class User(db_base, JSONMixin):
             """ Main user table. """
             __tablename__ = "user"
+            __excluded_fields__ = ('id', 'password')
             id = Column(Integer, primary_key=True, autoincrement=True)
-            #username = Column(String(80), unique=True, nullable=False)
+            # username = Column(String(80), unique=True, nullable=False)
             name = Column(String(80), unique=False, nullable=False)
             surname = Column(String(80), unique=False, nullable=False)
             state = Column(Integer)
-            #dn = db.Column(db.String(200), unique=True, nullable=False)
+            # dn = db.Column(db.String(200), unique=True, nullable=False)
             password = Column(String(80), unique=False, nullable=False)
             email = Column(String(120), unique=True, nullable=False)
             last_login = Column(DateTime, default=None)
@@ -31,7 +33,7 @@ class UserModel(object):
             @staticmethod
             def get_all():
                 """ Get all defined users. """
-                #pylint: disable=no-member
+                # pylint: disable=no-member
                 return User.query.all()
 
             def save(self, db):

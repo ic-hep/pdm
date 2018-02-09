@@ -68,7 +68,7 @@ class TestHRClient(unittest.TestCase):
             'password': 'very_secret'}
         res = self.__client.add_user(userdict)
         # result is a list containing a user dict
-        assert (res[0]['email'] == userdict['email'])
+        assert (res['email'] == userdict['email'])
 
         with self.assertRaises(Exception) as add_ex:
             res = self.__client.add_user(userdict)
@@ -81,7 +81,7 @@ class TestHRClient(unittest.TestCase):
         # client takes plain passwords
         res = self.__client.change_password('very_secret', 'newpassword')
         print res
-        assert (res[0]['email'] == self.__userdict['email'])
+        assert (res['email'] == self.__userdict['email'])
 
         with self.assertRaises(Exception) as pwd_ex:
             res = self.__client.change_password('newpassword', None)
@@ -92,7 +92,7 @@ class TestHRClient(unittest.TestCase):
     def test_get_user(self):
         self.__service.fake_auth("TOKEN", "User_1")
         res = self.__client.get_user()
-        assert (res[0]['email'] == self.__userdict['email'])
+        assert (res['email'] == self.__userdict['email'])
 
     def test_del_user(self):
         self.__service.fake_auth("TOKEN", "User_1")
