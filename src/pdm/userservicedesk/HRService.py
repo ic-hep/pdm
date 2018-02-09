@@ -6,11 +6,13 @@ User Interface Service
 import sys
 import logging
 import json
-from flask import request, abort
-from pdm.framework.FlaskWrapper import export, export_ext, db_model, jsonify
+from flask import request, abort, current_app
+from pdm.framework.FlaskWrapper import export, export_ext, db_model, jsonify, startup
 from pdm.utils.hashing import hash_pass, check_hash
 import pdm.userservicedesk.models
 from sqlalchemy import func
+from pdm.cred.CredClient import MockCredClient
+
 
 @export_ext("/users/api/v1.0")
 @db_model(pdm.userservicedesk.models.UserModel)
@@ -20,6 +22,15 @@ class HRService(object):
 
     """
     _logger = logging.getLogger(__name__)
+
+    @staticmethod
+    @startup
+    def load_userconfig(config):
+        """ Configure the HRService application.
+            Gets the key needed to contact the Credential Service
+        """
+        current_app.cs_key = config.pop("CS_secret", "XkjgscdJ")
+        current_app.cs_client = MockCredClient()
 
     @staticmethod
     @export
@@ -46,7 +57,7 @@ class HRService(object):
 
         if not user:
             # Raise an HTTPException with a 404 not found status code
-            HRService._logger.error("GET: requested user for id %s doesn't not exist ", user_id)
+            HRService._logger.error("GET: requested user for id %s doesn't exist ", user_id)
             abort(404)
 
         response = jsonify(user)
@@ -77,32 +88,35 @@ class HRService(object):
             abort(404)
 
         data['password'] = hash_pass(data['password'])
+        cs_hashed_key = hash_pass(data['password'], current_app.cs_key)
 
         User = request.db.tables.User
         user = User.from_json(json.dumps(data))
 
         db = request.db
+
         try:
-            user.save(db)
-        #pylint: disable=broad-except
+            # user.save(db)
+            db.session.add(user)
+            user_id = db.session.query(User.id).filter_by(email=data['email']).scalar()
+            if user_id:
+                current_app.cs_client.add_user(user_id, cs_hashed_key)
+            else:
+                HRService._logger.error(
+                    "Failed to get user id from the db for just added user:%s %s ",
+                    user.email, sys.exc_info())
+                raise
+
+            db.session.commit()
+
+        # pylint: disable=broad-except
         except Exception:
-            HRService._logger.error("Failed to add user: %s ", sys.exc_info())
+            HRService._logger.error("Failed to add user: %s or post to the CS", sys.exc_info())
+            db.session.rollback()
             abort(403)
-        # TODO: Exclude fields in DB model rather than manually constructing
+
         # dict
         response = jsonify(user)
-        # response = jsonify([{
-        #     'id': user.id,
-        #     'name': user.name,
-        #     # 'username': user.username,
-        #     'surname': user.surname,
-        #     'state': user.state,
-        #     # 'dn' : user.dn,
-        #     'email': user.email,
-        #     # 'password' :user.password,
-        #     'date_created': str(user.date_created),
-        #     'date_modified': str(user.date_modified)
-        # }])
         response.status_code = 201
         return response
 
@@ -131,8 +145,8 @@ class HRService(object):
             newpasswd = data['newpasswd']
 
             if not (password and newpasswd \
-               and HRService.check_passwd(password) \
-               and HRService.check_passwd(newpasswd)):
+                            and HRService.check_passwd(password) \
+                            and HRService.check_passwd(newpasswd)):
                 HRService._logger.error("passwd change request:" \
                                         "null password and/or new password, supplied: %s  ",
                                         request.json)

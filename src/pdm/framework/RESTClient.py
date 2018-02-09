@@ -68,7 +68,7 @@ class RESTClient(object):
         resp = requests.request(method, full_url, json=data, headers=headers,
                                 verify=cafile, cert=client_cert)
         #pylint: disable=no-member
-        if resp.status_code != requests.codes.ok:
+        if resp.status_code not in (requests.codes.ok, requests.codes.created):
             # TODO: Better excpetions here
             raise RuntimeError("Request failed with code %u" % \
                                resp.status_code)

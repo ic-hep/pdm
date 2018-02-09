@@ -10,7 +10,7 @@ class HRClient(RESTClient):
     RESTful user management client API
     """
     def __init__(self):
-        super(HRClient, self).__init__('demo')
+        super(HRClient, self).__init__('users')
         #RESTClient.__init__(self, 'users')
 
     def hello(self):
