@@ -8,7 +8,7 @@ disable=locally-disabled
 [BASIC]
 
 # Add "db" to standard name list
-good-names=i,j,k,ex,Run,_,db
+good-names=i,j,k,ex,Run,_,db,id
 
 # Allow variable names to start with or contain capital letters
 # To only be used with Table class references
