@@ -49,19 +49,7 @@ class HRService(object):
             HRService._logger.error("GET: requested user for id %s doesn't not exist ", user_id)
             abort(404)
 
-        result = [{
-            # 'id': user.id,
-            'name': user.name,
-            'surname': user.surname,
-            'state': user.state,
-            # 'dn' : user.dn,
-            'email': user.email,
-            # 'password' : user.password,
-            'last_login': str(user.last_login),
-            'date_created': str(user.date_created),
-            'date_modified': str(user.date_modified)
-        }]
-        response = jsonify(result)
+        response = jsonify(user)
         response.status_code = 200
         return response
 
@@ -102,18 +90,19 @@ class HRService(object):
             abort(403)
         # TODO: Exclude fields in DB model rather than manually constructing
         # dict
-        response = jsonify([{
-            'id': user.id,
-            'name': user.name,
-            # 'username': user.username,
-            'surname': user.surname,
-            'state': user.state,
-            # 'dn' : user.dn,
-            'email': user.email,
-            # 'password' :user.password,
-            'date_created': str(user.date_created),
-            'date_modified': str(user.date_modified)
-        }])
+        response = jsonify(user)
+        # response = jsonify([{
+        #     'id': user.id,
+        #     'name': user.name,
+        #     # 'username': user.username,
+        #     'surname': user.surname,
+        #     'state': user.state,
+        #     # 'dn' : user.dn,
+        #     'email': user.email,
+        #     # 'password' :user.password,
+        #     'date_created': str(user.date_created),
+        #     'date_modified': str(user.date_modified)
+        # }])
         response.status_code = 201
         return response
 
@@ -173,12 +162,7 @@ class HRService(object):
             HRService._logger.error("Password update FAILED for user %s (wrong password)", email)
             abort(403)
 
-        response = jsonify([{
-            'email': user.email,
-            'name': user.name,
-            'surname': user.surname,
-            'last_login': str(user.last_login),
-            'date_modified': str(user.date_modified)}])
+        response = jsonify(user)
         response.status_code = 200
         return response
 

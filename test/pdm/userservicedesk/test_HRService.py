@@ -5,6 +5,7 @@ from pdm.userservicedesk.HRService import HRService
 from pdm.framework.FlaskWrapper import FlaskServer
 from pdm.utils.hashing import hash_pass, check_hash
 
+
 class TestHRService(unittest.TestCase):
     def setUp(self):
         conf = {}
@@ -35,12 +36,13 @@ class TestHRService(unittest.TestCase):
         res = self.__test.get('/users/api/v1.0/users/self')
         assert (res.status_code == 200)
         user = json.loads(res.data)
-        print user
-        # assert (user[0]['id'] == 1)
-        assert (user[0]['name'] == 'John')
-        assert (user[0]['surname'] == 'Smith')
-        assert (user[0]['email'] == 'Johnny@example.com')
-        assert (user[0]['state'] == 0)
+
+        assert ('id' not in user)
+        assert (user['name'] == 'John')
+        assert (user['surname'] == 'Smith')
+        assert (user['email'] == 'Johnny@example.com')
+        assert (user['state'] == 0)
+        assert ('password' not in user)
         #
         self.__service.fake_auth("TOKEN", "User_2")
         res = self.__test.get('/users/api/v1.0/users/self')
@@ -73,14 +75,14 @@ class TestHRService(unittest.TestCase):
         db = self.__service.test_db()
         dbuser = db.tables.User.query.filter_by(email=fred['email']).first()
         assert (dbuser.name == fred['name'])
-        assert (check_hash(dbuser.password,fred['password']))
+        assert (check_hash(dbuser.password, fred['password']))
         assert (dbuser.email == fred['email'])
         response = json.loads(res.data)
-        assert (response[0]['name'] == fred['name'])
-        assert (response[0]['surname'] == fred['surname'])
-        assert (response[0]['email'] == fred['email'])
-        assert (response[0]['state'] == fred['state'])
-
+        assert (response['name'] == fred['name'])
+        assert (response['surname'] == fred['surname'])
+        assert (response['email'] == fred['email'])
+        assert (response['state'] == fred['state'])
+        assert ('password' not in response)
         # try to duplicate the user:
         res = self.__test.post('/users/api/v1.0/users', data=new_user)
         assert (res.status_code == 403)
@@ -113,9 +115,11 @@ class TestHRService(unittest.TestCase):
         db = self.__service.test_db()
         dbuser = db.tables.User.query.filter_by(email='Johnny@example.com').first()
         assert (dbuser.name == "John")
-        assert (check_hash(dbuser.password,'even_more_secret'))
-        # TODO (response)
-
+        assert (check_hash(dbuser.password, 'even_more_secret'))
+        #
+        response = json.loads(res.data)
+        assert ('password' not in response)
+        # TODO check last login timestamp later than the time before changing the password.
         # wrong password
         wrong_pass_data = json.dumps({'passwd': 'very_sercet', 'newpasswd': 'even_more_secret'})
         res = self.__test.put('/users/api/v1.0/passwd', data=wrong_pass_data)
