@@ -92,3 +92,11 @@ All calls return usual HTTP error codes:
 
   Returns:
     - None
+
+.. function:: DELETE /sitemap/all>/<user_id(int)>
+
+  Removes a local user mapping from all sites. For use when a user
+  is completely deleted.
+
+  Returns:
+    - None
