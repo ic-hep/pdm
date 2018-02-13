@@ -151,6 +151,8 @@ class TestX509CA(unittest.TestCase):
         subject_keyid = ca_obj.get_ext('subjectKeyIdentifier').get_value()
         # Hard to get keyid fields without just checking they look about right
         self.assertIn(':', subject_keyid)
+        # 20 bytes of hash = 40 chars + 19 ':' chars
+        self.assertEqual(len(subject_keyid), 59)
 
     def test_get_dn(self):
         """ Check the get DN function. """
@@ -358,6 +360,17 @@ class TestX509CA(unittest.TestCase):
         self.assertTrue(key_usage.get_critical())
         self.assertIn('Data Encipherment', key_usage.get_value())
         self.assertNotIn('Certificate Sign', key_usage.get_value())
+        # Check cert keyid extensions
+        ca_id = cert_obj.get_ext('authorityKeyIdentifier')
+        self.assertFalse(ca_id.get_critical())
+        key_id = cert_obj.get_ext('subjectKeyIdentifier')
+        self.assertFalse(key_id.get_critical())
+        ca_obj = X509.load_cert_string(self.__ca.get_cert())
+        real_ca_id = ca_obj.get_ext('subjectKeyIdentifier')
+        test_value = "keyid:%s\n" % real_ca_id.get_value()
+        print self.__ca.get_cert()
+        print cert
+        self.assertEqual(ca_id.get_value(), test_value)
         # Check that the CA's serial number increased
         self.assertGreater(self.__ca.get_serial(), start_serial)
         # Issue another cert, but with an encrypted private key
@@ -424,6 +437,16 @@ class TestX509CA(unittest.TestCase):
                       proxy_ext.get_value())
         self.assertIn('Policy Language: Inherit all',
                       proxy_ext.get_value())
+        # Check proxy keyid extensions
+        print proxycert
+        user_id = proxy_obj.get_ext('authorityKeyIdentifier')
+        self.assertFalse(user_id.get_critical())
+        proxy_id = proxy_obj.get_ext('subjectKeyIdentifier')
+        self.assertFalse(proxy_id.get_critical())
+        user_obj = X509.load_cert_string(usercert)
+        real_user_id = user_obj.get_ext('subjectKeyIdentifier')
+        test_value = "keyid:%s\n" % real_user_id.get_value()
+        self.assertEqual(user_id.get_value(), test_value)
         # Test generating proxy with passphrase
         USER_PASSPHRASE = "weaktest"
         usercert, userkey = self.__ca.gen_cert("/C=XX, CN=Test User", 4,
@@ -454,7 +477,10 @@ class TestX509CA(unittest.TestCase):
         """ Test all possible error conditions on generating a proxy.
             Only includes tests not tested by general certificate tests.
         """
+        x509_pubkey = mock.MagicMock()
+        x509_pubkey.as_der.return_value = "ABCD"
         x509_obj = mock.MagicMock()
+        x509_obj.get_pubkey.return_value = x509_pubkey
         x509_constr.return_value = x509_obj
         not_before.return_value = None
         not_after.return_value = None
