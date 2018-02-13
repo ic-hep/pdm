@@ -189,24 +189,24 @@ class X509CA(object):
 
     @staticmethod
     def __add_auth_keyid(cert, auth_pubkey):
-       """ A helper function to add an authKeyId to a cert.
-           cert is an X509.X509 object to add extensions to.
-           auth_pubkey is an EVP.PKey object to hash for the ID.
-           Returns the value of standard X509.add_ext function.
-       """
-       # Get the first 160-bits of the issuer hash
-       auth_hasher = hashlib.new(X509CA.FP_ALGO)
-       auth_hasher.update(auth_pubkey.get_pubkey().as_der())
-       auth_hash = auth_hasher.hexdigest()[:40]
-       # New we have to convert this to a DER style format
-       # Upper-case with : seperater between bytes
-       auth_hash = auth_hash.upper()
-       der_bytes = [auth_hash[x:x+2] for x in xrange(0, len(auth_hash), 2)]
-       der_hash = ':'.join(der_bytes)
-       # Now we have to have to generate a real DER string for key ID
-       raw_value = "DER:30:16:80:%02X:%s" % (len(der_bytes), der_hash)
-       return cert.add_ext(X509.new_extension('authorityKeyIdentifier',
-                                              raw_value))
+        """ A helper function to add an authKeyId to a cert.
+            cert is an X509.X509 object to add extensions to.
+            auth_pubkey is an EVP.PKey object to hash for the ID.
+            Returns the value of standard X509.add_ext function.
+        """
+        # Get the first 160-bits of the issuer hash
+        auth_hasher = hashlib.new(X509CA.FP_ALGO)
+        auth_hasher.update(auth_pubkey.get_pubkey().as_der())
+        auth_hash = auth_hasher.hexdigest()[:40]
+        # New we have to convert this to a DER style format
+        # Upper-case with : seperater between bytes
+        auth_hash = auth_hash.upper()
+        der_bytes = [auth_hash[x:x+2] for x in xrange(0, len(auth_hash), 2)]
+        der_hash = ':'.join(der_bytes)
+        # Now we have to have to generate a real DER string for key ID
+        raw_value = "DER:30:16:80:%02X:%s" % (len(der_bytes), der_hash)
+        return cert.add_ext(X509.new_extension('authorityKeyIdentifier',
+                                               raw_value))
 
     @staticmethod
     def __add_basic_exts(cert, auth_pubkey, is_ca=False):
