@@ -113,6 +113,17 @@ class TestX509Utils(unittest.TestCase):
         # i.e. x509_obj.CN will only return "Test User".
         # Just check that all fields appear if object is converted back:
         self.assertEqual(X509Utils.x509name_to_str(x509_obj), TEST_DN)
+
+    def test_get_cert_expiry(self):
+        """ Test that the get_cert_expiry function works. """
+        from M2Crypto import X509
+        # Just generate a CA and get its expiry time
+        test_ca = X509CA()
+        test_ca.gen_ca("/C=XX/L=YY/CN=Test CA", 1234)
+        ca_pem = test_ca.get_cert()
+        ca_obj = X509.load_cert_string(ca_pem)
+        ca_exp = ca_obj.get_not_after().get_datetime()
+        self.assertEqual(X509Utils.get_cert_expiry(ca_pem), ca_exp)
         
 
 class TestX509CA(unittest.TestCase):
@@ -246,15 +257,28 @@ class TestX509CA(unittest.TestCase):
             self.assertRaises(RuntimeError, self.__ca.gen_cert, *CERT_PARAMS)
             self.assertTrue(getattr(x509_obj, fcn).called)
             getattr(x509_obj, fcn).return_value = 1
-        # We also have to check that adding the altName fails in the correct
-        # way, this is hidden behind another all to add_ext
+        # We also have to check that adding the specific extensions fails in
+        # the correct way, this is hidden behind another all to add_ext
+        for extName in ('subjectAltName', 'subjectKeyIdentifier'):
+            def add_ext_altfail(ext):
+                if ext.get_name() == extName:
+                    return 0
+                return 1
+            x509_obj.add_ext.called = False
+            x509_obj.add_ext.side_effect = add_ext_altfail
+            self.assertRaises(RuntimeError, self.__ca.gen_cert, *CERT_PARAMS)
+            self.assertTrue(x509_obj.add_ext.called)
+            x509_obj.add_ext.side_effect = None
+        # Finally we have to check add_ext with authKeyId fails correctly
+        # This is similar to above, but isn't included on CA certs
+        self.__ca.gen_cert(*CERT_PARAMS)
         def add_ext_altfail(ext):
-            if ext.get_name() == 'subjectAltName':
+            if ext.get_name() == 'authorityKeyIdentifier':
                 return 0
             return 1
         x509_obj.add_ext.called = False
         x509_obj.add_ext.side_effect = add_ext_altfail
-        self.assertRaises(RuntimeError, self.__ca.gen_cert, *CERT_PARAMS)
+        self.assertRaises(RuntimeError, self.__ca.gen_cert, "/C=XX/CN=Test", 5)
         self.assertTrue(x509_obj.add_ext.called)
         x509_obj.add_ext.side_effect = None
 
