@@ -224,7 +224,7 @@ class X509CA(object):
         key_use = X509CA.DEFAULT_KEY_USE
         if is_ca:
             key_use = X509CA.DEFAULT_CAKEY_USE
-        if not cert.add_ext(X509.new_extension('keyUsage', key_use)):
+        if not cert.add_ext(X509.new_extension('keyUsage', key_use, 1)):
             raise RuntimeError("Failed to add keyUsage ext")
 
     @staticmethod
@@ -416,7 +416,7 @@ class X509CA(object):
         #       rsa_key is valid otherwise it may cause a segfault.
         rsa_key, evp_key, req = X509CA.__gen_csr(proxy_dn)
         cert = X509CA.__gen_basic_cert(req, valid_hours, proxy_serial, usercert)
-        key_use_ext = X509.new_extension('keyUsage', X509CA.DEFAULT_KEY_USE)
+        key_use_ext = X509.new_extension('keyUsage', X509CA.DEFAULT_KEY_USE, 1)
         if not cert.add_ext(key_use_ext):
             raise RuntimeError("Failed to proxy key usage ext")
         if limited:

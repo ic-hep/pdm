@@ -135,6 +135,23 @@ class TestX509CA(unittest.TestCase):
         self.assertRaises(RuntimeError, self.__ca.get_dn)
         self.assertRaises(RuntimeError, self.__ca.get_serial)
 
+    def test_ca_props(self):
+        """ Check CA cert properies. """
+        from M2Crypto import X509
+        self.__ca.gen_ca("/C=XX/L=YY/CN=Test CA", 1234)
+        ca_obj = X509.load_cert_string(self.__ca.get_cert())
+        # Check extensions
+        basic_const = ca_obj.get_ext('basicConstraints')
+        self.assertTrue(basic_const.get_critical())
+        self.assertEqual(basic_const.get_value(), 'CA:TRUE')
+        key_usage = ca_obj.get_ext('keyUsage')
+        self.assertTrue(key_usage.get_critical())
+        self.assertIn('Certificate Sign', key_usage.get_value())
+        self.assertNotIn('Data Encipherment', key_usage.get_value())
+        subject_keyid = ca_obj.get_ext('subjectKeyIdentifier').get_value()
+        # Hard to get keyid fields without just checking they look about right
+        self.assertIn(':', subject_keyid)
+
     def test_get_dn(self):
         """ Check the get DN function. """
         self.__ca.gen_ca("/C=XX/L=YY/CN=Test CA", 1234)
@@ -332,10 +349,15 @@ class TestX509CA(unittest.TestCase):
         self.assertEqual(start_diff.days, 0)
         self.assertLess(start_diff.seconds, 60)
         # Check cert extensions
-        self.assertEqual(cert_obj.get_ext('basicConstraints').get_value(),
-                         'CA:FALSE')
+        basic_const = cert_obj.get_ext('basicConstraints')
+        self.assertTrue(basic_const.get_critical())
+        self.assertEqual(basic_const.get_value(), 'CA:FALSE')
         self.assertEqual(cert_obj.get_ext('subjectAltName').get_value(),
                          'email:%s' % TEST_EMAIL)
+        key_usage = cert_obj.get_ext('keyUsage')
+        self.assertTrue(key_usage.get_critical())
+        self.assertIn('Data Encipherment', key_usage.get_value())
+        self.assertNotIn('Certificate Sign', key_usage.get_value())
         # Check that the CA's serial number increased
         self.assertGreater(self.__ca.get_serial(), start_serial)
         # Issue another cert, but with an encrypted private key
@@ -391,6 +413,17 @@ class TestX509CA(unittest.TestCase):
         valid_time = end_time - start_time
         self.assertEqual(valid_time.days, 0)
         self.assertEqual(valid_time.seconds, TEST_HOURS * 3600)
+        # Check proxy extensions
+        key_usage = proxy_obj.get_ext('keyUsage')
+        self.assertTrue(key_usage.get_critical())
+        self.assertIn('Data Encipherment', key_usage.get_value())
+        self.assertNotIn('Certificate Sign', key_usage.get_value())
+        proxy_ext = proxy_obj.get_ext('proxyCertInfo')
+        self.assertTrue(proxy_ext.get_critical())
+        self.assertIn('Path Length Constraint: infinite',
+                      proxy_ext.get_value())
+        self.assertIn('Policy Language: Inherit all',
+                      proxy_ext.get_value())
         # Test generating proxy with passphrase
         USER_PASSPHRASE = "weaktest"
         usercert, userkey = self.__ca.gen_cert("/C=XX, CN=Test User", 4,
@@ -401,8 +434,18 @@ class TestX509CA(unittest.TestCase):
                           userkey, 1, "wrongtest")
         proxycert, proxykey = self.__ca.gen_proxy(usercert, userkey,
                                                   1, USER_PASSPHRASE)
-        # TODO: Check proxy extension
-        # TODO: Add limited proxy test
+        # Test generating a limited proxy
+        proxycert, proxykey = self.__ca.gen_proxy(usercert, userkey,
+                                                  1, USER_PASSPHRASE,
+                                                  limited=True)
+        # Check proxy really is limited
+        proxy_obj = X509.load_cert_string(proxycert)
+        proxy_ext = proxy_obj.get_ext('proxyCertInfo')
+        self.assertTrue(proxy_ext.get_critical())
+        self.assertIn('Path Length Constraint: infinite',
+                      proxy_ext.get_value())
+        self.assertIn('Policy Language: 1.3.6.1.4.1.3536.1.1.1.9',
+                      proxy_ext.get_value())
 
     @mock.patch('M2Crypto.m2.x509_get_not_after')
     @mock.patch('M2Crypto.m2.x509_get_not_before')
