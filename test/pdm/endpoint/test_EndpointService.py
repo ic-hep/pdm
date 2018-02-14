@@ -75,6 +75,9 @@ class test_EndpointService(unittest.TestCase):
         json_data = json.dumps(data)
         res = self.__client.post('/endpoints/api/v1.0/site', data=json_data)
         self.assertEqual(res.status_code, 200)
+        # Check we got an ID number back
+        site_id = json.loads(res.data)
+        self.assertIsInstance(site_id, int)
         # Now get the site list
         res = self.__client.get('/endpoints/api/v1.0/site')
         self.assertEqual(res.status_code, 200)
@@ -156,6 +159,9 @@ class test_EndpointService(unittest.TestCase):
         # Try adding another endpoint to site 1.
         res = self.__client.post('endpoints/api/v1.0/site/1', data=json_data)
         self.assertEqual(res.status_code, 200)
+        # Check we got an ID number back
+        ep_id = json.loads(res.data)
+        self.assertIsInstance(ep_id, int)
         res = self.__client.get('endpoints/api/v1.0/site/1')
         self.assertEqual(res.status_code, 200)
         site_info = json.loads(res.data)

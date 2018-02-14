@@ -48,7 +48,7 @@ class EndpointService(object):
         except Exception:
             # Some kind of other database error?
             return "Failed to add site to DB", 500
-        return ""
+        return jsonify(site.site_id)
 
     @staticmethod
     @export_ext("site/<int:site_id>")
@@ -108,7 +108,7 @@ class EndpointService(object):
                 session.add(new_ep)
         except Exception:
             return "Failed to add endpoint to DB", 500
-        return ""
+        return jsonify(new_ep.ep_id)
 
     @staticmethod
     @export_ext("site/<int:site_id>/<int:ep_id>", ["DELETE"])
