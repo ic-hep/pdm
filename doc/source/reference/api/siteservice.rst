@@ -40,7 +40,7 @@ All calls return usual HTTP error codes:
     - site_id(int): The unique site ID.
     - site_name(str): The short side name.
     - site_desc(str): Longer description for this site.
-    - site_eps(list of dict):
+    - endpoints (dict):
 
       - key(int): ep_id
       - value(str): Full endpoint URI.
