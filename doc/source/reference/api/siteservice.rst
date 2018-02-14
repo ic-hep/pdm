@@ -76,6 +76,9 @@ All calls return usual HTTP error codes:
     - key(int): user_id
     - value(str): The local_user name for this user at this site.
 
+.. note:: JSON dict key values are generally converted to strings, so user_id
+          will be a string representation of an int.
+
 .. function:: POST /sitemap/<site_id(int)>
 
   Adds a local user mapping to a site.
@@ -93,7 +96,7 @@ All calls return usual HTTP error codes:
   Returns:
     - None
 
-.. function:: DELETE /sitemap/all>/<user_id(int)>
+.. function:: DELETE /sitemap/all/<user_id(int)>
 
   Removes a local user mapping from all sites. For use when a user
   is completely deleted.
