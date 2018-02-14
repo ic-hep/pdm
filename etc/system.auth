@@ -1,5 +1,10 @@
 # Demo application authentication
 
+[groups/endpoint]
+
+[auth/endpoint]
+# None Yet!
+
 [groups/cred]
 user_service = ["CERT:C = XX, L = Default City, O = Default Company Ltd, OU = Test CA, CN = localhost"]
 job_service = ["CERT:C = XX, L = Default City, O = Default Company Ltd, OU = Test CA, CN = localhost"]
