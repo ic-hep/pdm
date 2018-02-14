@@ -230,6 +230,10 @@ class test_EndpointService(unittest.TestCase):
         entry = db.tables.UserMap.query.filter_by(site_id=2, user_id=TEST_UID) \
                                        .first()
         self.assertEqual(entry.username, TEST_UNAME)
+        # Check that adding the same mapping again triggers a 409 error
+        res = self.__client.post('endpoints/api/v1.0/sitemap/2',
+                                 data=json_data)
+        self.assertEqual(res.status_code, 409)
 
     def test_add_sitemap_bad_post(self):
         """ Check that add sitemap entry fails gracefully if POST data is

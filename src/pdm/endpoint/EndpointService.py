@@ -3,6 +3,7 @@
 import json
 from flask import request
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import FlushError
 from pdm.framework.FlaskWrapper import db_model, export_ext, jsonify
 from pdm.endpoint.EndpointDB import EndpointDBModel
 from pdm.utils.db import managed_session
@@ -160,6 +161,8 @@ class EndpointService(object):
         try:
             with managed_session(db) as session:
                 session.add(new_map)
+        except FlushError:
+            return "Mapping for user_id already exists", 409
         except Exception:
             return "Failed to add sitemap to DB", 500
         return ""
