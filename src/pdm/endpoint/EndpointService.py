@@ -65,10 +65,9 @@ class EndpointService(object):
         res['site_id'] = site.site_id
         res['site_name'] = site.site_name
         res['site_desc'] = site.site_desc
-        eps = []
+        eps = {}
         for ep_info in site.endpoints:
-            eps.append({'ep_id': ep_info.ep_id,
-                        'ep_uri': ep_info.ep_uri})
+            eps[ep_info.ep_id] = ep_info.ep_uri
         res['endpoints'] = eps
         return jsonify(res)
 

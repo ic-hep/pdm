@@ -168,8 +168,7 @@ class test_EndpointService(unittest.TestCase):
         # Check the site_info matches site 1 from the test data.
         self.assertDictContainsSubset(TEST_SITES[0], site_info)
         # Check the endpoints
-        ep_uris = [x['ep_uri'] for x in site_info['endpoints']]
-        self.assertIn(TEST_URI, ep_uris)
+        self.assertIn(TEST_URI, site_info['endpoints'].itervalues())
 
     @mock.patch("pdm.endpoint.EndpointService.managed_session")
     def test_add_endpoint_dberror(self, mock_session):
