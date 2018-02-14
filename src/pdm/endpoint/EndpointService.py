@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+""" Site/Endpoint service module. """
 
 import json
 from flask import request
@@ -11,6 +12,7 @@ from pdm.utils.db import managed_session
 @export_ext('/endpoints/api/v1.0')
 @db_model(EndpointDBModel)
 class EndpointService(object):
+    """ Endpoint service. """
 
     @staticmethod
     @export_ext("site")
@@ -36,7 +38,7 @@ class EndpointService(object):
             site_data["site_desc"] = raw_site_data["site_desc"]
         #pylint: disable=broad-except
         except Exception:
-           return "Malformed POST data", 400
+            return "Malformed POST data", 400
         # Add the new site
         site = Site(**site_data)
         # TODO: Check for duplicate site_name
@@ -46,7 +48,7 @@ class EndpointService(object):
         except IntegrityError:
             # site_name almost certainly already exists
             return "site_name is not unique", 409
-        except Exception:
+        except Exception: #pylint: disable=broad-except
             # Some kind of other database error?
             return "Failed to add site to DB", 500
         return jsonify(site.site_id)
@@ -81,6 +83,7 @@ class EndpointService(object):
         try:
             with managed_session(db) as session:
                 session.delete(site)
+        #pylint: disable=broad-except
         except Exception:
             return "Failed to remote site from DB", 500
         return ""
@@ -99,13 +102,14 @@ class EndpointService(object):
             ep_uri = raw_ep_data["ep_uri"]
         #pylint: disable=broad-except
         except Exception:
-           return "Malformed POST data", 400
+            return "Malformed POST data", 400
         Site.query.filter_by(site_id=site_id).first_or_404()
         # TODO: Check ep_uri format?
         new_ep = Endpoint(ep_uri=ep_uri, site_id=site_id)
         try:
             with managed_session(db) as session:
                 session.add(new_ep)
+        #pylint: disable=broad-except
         except Exception:
             return "Failed to add endpoint to DB", 500
         return jsonify(new_ep.ep_id)
@@ -121,6 +125,7 @@ class EndpointService(object):
         try:
             with managed_session(db) as session:
                 session.delete(endpoint)
+        #pylint: disable=broad-except
         except Exception:
             return "Failed to delete endpoint from DB", 500
         return ""
@@ -150,7 +155,7 @@ class EndpointService(object):
             local_user = raw_map_data["local_user"]
         #pylint: disable=broad-except
         except Exception:
-           return "Malformed POST data", 400
+            return "Malformed POST data", 400
         # Check that site exists
         Site.query.filter_by(site_id=site_id).first_or_404()
         # Add the mapping
@@ -162,7 +167,7 @@ class EndpointService(object):
                 session.add(new_map)
         except FlushError:
             return "Mapping for user_id already exists", 409
-        except Exception:
+        except Exception: #pylint: disable=broad-except
             return "Failed to add sitemap to DB", 500
         return ""
 
@@ -177,6 +182,7 @@ class EndpointService(object):
         try:
             with managed_session(db) as session:
                 session.delete(entry)
+        #pylint: disable=broad-except
         except Exception:
             return "Failed to del sitemap from DB", 500
         return ""
@@ -195,6 +201,7 @@ class EndpointService(object):
                 mappings = UserMap.query.filter_by(user_id=user_id).all()
                 for entry in mappings:
                     session.delete(entry)
+        #pylint: disable=broad-except
         except Exception:
             return "Failed to del user from sitemaps", 500
         return ""
