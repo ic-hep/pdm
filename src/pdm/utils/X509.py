@@ -3,6 +3,7 @@
 """
 
 import random
+import hashlib
 #pylint: disable=no-member
 from M2Crypto import m2
 from M2Crypto import ASN1, EVP, RSA, X509
@@ -111,6 +112,8 @@ class X509CA(object):
     # Encryption algorithm for private keys
     # (if passphrase specified)
     ENC_ALGO = 'aes_256_cbc'
+    # Hash algorithm to use for certificate fingerprints
+    FP_ALGO = SIG_ALGO
     # Proxy extension constants
     ## DER encoded proxy cert info extension for unlimited proxy
     ## (unlimited path length with no restrictions)
@@ -119,6 +122,8 @@ class X509CA(object):
     PROXY_LIMITED = 'DER:30:0F:30:0D:06:0B:2B:06:01:04:01:9B:50:01:01:01:09'
     # Allowed cert & proxy key use
     DEFAULT_KEY_USE = 'digitalSignature,keyEncipherment,dataEncipherment'
+    # Allowed CA use
+    DEFAULT_CAKEY_USE = 'keyCertSign,cRLSign'
 
     @staticmethod
     def __gen_csr(req_dn):
@@ -172,16 +177,43 @@ class X509CA(object):
         m2.x509_gmtime_adj(not_before, 0)
         not_after = m2.x509_get_not_after(cert.x509)
         m2.x509_gmtime_adj(not_after, valid_hours * 3600)
-        # TODO: Pin valid_hours to not exceed issuer lifetime
+        # Only check issuer expiry if it's an X509 cert
+        # (i.e. not a self-signed (CA) request).
+        if hasattr(issuer, 'x509'):
+            issuer_na = m2.x509_get_not_after(issuer.x509)
+            if issuer_na < not_after:
+                # Issuer cert expires before child, cap child
+                # expiry date to match.
+                not_after = issuer_na
         return cert
 
-    #pylint: disable=unused-argument
+    @staticmethod
+    def __add_auth_keyid(cert, auth_pubkey):
+        """ A helper function to add an authKeyId to a cert.
+            cert is an X509.X509 object to add extensions to.
+            auth_pubkey is an EVP.PKey object to hash for the ID.
+            Returns the value of standard X509.add_ext function.
+        """
+        # Get the first 160-bits of the issuer hash
+        auth_hasher = hashlib.new(X509CA.FP_ALGO)
+        auth_hasher.update(auth_pubkey.get_pubkey().as_der())
+        auth_hash = auth_hasher.hexdigest()[:40]
+        # New we have to convert this to a DER style format
+        # Upper-case with : seperater between bytes
+        auth_hash = auth_hash.upper()
+        der_bytes = [auth_hash[x:x+2] for x in xrange(0, len(auth_hash), 2)]
+        der_hash = ':'.join(der_bytes)
+        # Now we have to have to generate a real DER string for key ID
+        raw_value = "DER:30:16:80:%02X:%s" % (len(der_bytes), der_hash)
+        return cert.add_ext(X509.new_extension('authorityKeyIdentifier',
+                                               raw_value))
+
     @staticmethod
     def __add_basic_exts(cert, auth_pubkey, is_ca=False):
         """ Adds basic extensions to a cert.
             Specifially, basicConstraints, subjectKeyID and AuthKeyID.
             cert - X509.X509 object to add extensions to.
-            auth_pubkey - EVP.PKey object to digest for the authKeyID field.
+            auth_pubkey - X509 object to digest for the authKeyID field.
             is_ca - Used to set the CA basicConstraint, boolean. If set to
                     None then no CA contraint is included.
             Returns None, Raises RuntimeError on failure.
@@ -193,11 +225,21 @@ class X509CA(object):
             ca_ext = X509.new_extension('basicConstraints', bc_str, 1)
             if not cert.add_ext(ca_ext):
                 raise RuntimeError("Failed to add CA cert constraints ext")
-        # TODO: Add subject/auth key ID fields, as well as keyUsage
-        # TODO: Check results
-        #cert.add_ext(X509.new_extension('subjectKeyIdentifier', 'hash'))
-        #cert.add_ext(X509.new_extension('authorityKeyIdentifier', 'keyid'))
-        cert.add_ext(X509.new_extension('keyUsage', X509CA.DEFAULT_KEY_USE))
+        sub_hasher = hashlib.new(X509CA.FP_ALGO)
+        sub_hasher.update(cert.get_pubkey().as_der())
+        sub_hash = sub_hasher.hexdigest()
+        # RFC specifies only using first 160-bits, which is 30 bytes of hash
+        if not cert.add_ext(X509.new_extension('subjectKeyIdentifier',
+                                               sub_hash[:40])):
+            raise RuntimeError("Failed to add subjectKeyId ext")
+        if not is_ca:
+            if not X509CA.__add_auth_keyid(cert, auth_pubkey):
+                raise RuntimeError("Failed to add authKeyId ext")
+        key_use = X509CA.DEFAULT_KEY_USE
+        if is_ca:
+            key_use = X509CA.DEFAULT_CAKEY_USE
+        if not cert.add_ext(X509.new_extension('keyUsage', key_use, 1)):
+            raise RuntimeError("Failed to add keyUsage ext")
 
     @staticmethod
     def __gen_ca(req, evp_key, valid_days, serial=1):
@@ -208,7 +250,7 @@ class X509CA(object):
         valid_hours = valid_days * 24
         cert = X509CA.__gen_basic_cert(req, valid_hours, serial, req)
         # Add CA extensions
-        X509CA.__add_basic_exts(cert, req, True)
+        X509CA.__add_basic_exts(cert, cert, True)
         # Finally sign the cert
         if not cert.sign(evp_key, X509CA.SIG_ALGO):
             raise RuntimeError("Failed to sign CA cert")
@@ -388,9 +430,8 @@ class X509CA(object):
         #       rsa_key is valid otherwise it may cause a segfault.
         rsa_key, evp_key, req = X509CA.__gen_csr(proxy_dn)
         cert = X509CA.__gen_basic_cert(req, valid_hours, proxy_serial, usercert)
-        key_use_ext = X509.new_extension('keyUsage', X509CA.DEFAULT_KEY_USE)
-        if not cert.add_ext(key_use_ext):
-            raise RuntimeError("Failed to proxy key usage ext")
+        X509CA.__add_basic_exts(cert, usercert, None)
+        # Add proxy specific extensions
         if limited:
             proxy_ext = X509.new_extension('proxyCertInfo',
                                            X509CA.PROXY_LIMITED, 1)
