@@ -62,7 +62,6 @@ class SSHKeyUtils(object):
             passphrase - The password of the input key.
             Returns PEM encoded key with no password.
         """
-        # TODO: Write test case for this.
         pw_cb = lambda x: passphrase
         key = RSA.load_key_string(key_in, callback=pw_cb)
         return key.as_pem(cipher=None)
