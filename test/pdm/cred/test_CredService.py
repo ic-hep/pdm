@@ -136,7 +136,8 @@ class test_CredService(unittest.TestCase):
         for cred in creds:
             if cred.cred_type == CredService.CRED_TYPE_X509:
                 found_x509 = True
-                x509_obj = X509.load_cert_string(cred.cred_pub)
+                cred_str= cred.cred_pub.encode('ascii','ignore')
+                x509_obj = X509.load_cert_string(cred_str)
                 user_serial = x509_obj.get_serial_number()
                 user_dn = X509Utils.x509name_to_str(x509_obj.get_subject())
                 templ_dn = "C = XX, OU = Test Users, CN = User_%u " % \
