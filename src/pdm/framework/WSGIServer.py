@@ -45,13 +45,13 @@ class WSGIAuth(wsgi.WSGIResource):
         """
         dn_parts = []
         # E-mail is special as it joins on to CN
-        if hasattr(x509name, 'CN'):
-            if hasattr(x509name, 'emailAddress'):
+        if hasattr(x509name, 'CN') and x509name.CN:
+            if hasattr(x509name, 'emailAddress') and x509name.emailAddress:
                 dn_parts.append("CN=%s/emailAddress=%s" % \
                                 (x509name.CN, x509name.emailAddress))
             else:
                 dn_parts.append("CN=%s" % x509name.CN)
-        elif hasattr(x509name, 'emailAddress'):
+        elif hasattr(x509name, 'emailAddress') and x509name.emailAddress:
             dn_parts.append("emailAddress=%s" % x509name.emailAddress)
         # Now do other, more standard, parts...
         for field in ('OU', 'O', 'L', 'ST', 'C'):
