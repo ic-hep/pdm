@@ -109,7 +109,7 @@ class ExecutableServer(object):
         if all_config:
             # There are => Unused items = typos?
             keys = ', '.join(all_config.keys())
-            raise ValueError("Unused config params for %s: '%s'" % (app_name, keys))
+            raise ValueError("Unused config params: '%s'" % keys)
 
     def __init_wsgi(self, wsgi_name, config):
         """ Creates an instance of FlaskServer, opens a port and configures
