@@ -369,7 +369,7 @@ class FlaskServer(Flask):
         with self.app_context():
             current_app.policy.update(real_rules)
 
-    def test_mode(self, main_cls, conf="", with_test=False):
+    def test_mode(self, main_cls, conf="", with_test=True):
         """ Configures this app instance in test mode.
             An in-memory Sqlite database is used for the DB.
             main_cls is the class to use for endpoints.
