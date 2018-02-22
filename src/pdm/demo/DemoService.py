@@ -2,8 +2,9 @@
 """ A service for demonstrating FlaskWrapper. """
 
 import flask
-from flask import request
-from pdm.framework.FlaskWrapper import export, export_ext, startup, db_model, jsonify
+from flask import request, current_app
+from pdm.framework.FlaskWrapper import (export, export_ext, startup,
+                                        startup_test, db_model, jsonify)
 
 import pdm.demo.DemoDB
 
@@ -15,19 +16,25 @@ class DemoService(object):
     #pylint disable=invalid-name
     @staticmethod
     @startup
-    def preload_turtles(config):
+    def start_turtles(config):
         """ Configure the turtles application.
-            Creates an example database if DB is entry.
             Prints valud of "test_param" from the config.
         """
-        log = flask.current_app.log
+        log = current_app.log
         test_param = config.pop("test_param", 0)
         log.info("Hello Turtles (%u)", test_param)
-        db = flask.current_app.db
+
+    @staticmethod
+    @startup_test
+    def preload_turtles():
+        """ Creates an example database if DB is empty.
+        """
+        log = current_app.log
+        db = current_app.db
         Turtle = db.tables.Turtle
         num = db.session.query(Turtle).count()
         if num:
-            print "%u turtle(s) already exist." % num
+            log.info("%u turtle(s) already exist.", num)
             return
         # No turtles, add some...
         turtles = (Turtle(name='Timmy'),

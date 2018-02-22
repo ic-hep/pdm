@@ -61,6 +61,16 @@ def startup(obj):
     obj.is_startup = True
     return obj
 
+def startup_test(obj):
+    """ Funciton decorator.
+        Marks a function to be called at start-up on the webserver, but
+        only if the service is running in test mode. Generally functions
+        marked with this should pre-load a basic set of service test data.
+        The function should take no parameters.
+    """
+    obj.is_test_func = True
+    return obj
+
 def db_model(db_obj):
     """ Attaches a non-instantiated class as the database model for this class.
         The annotated class should be exported with the export decorator.
@@ -242,6 +252,7 @@ class FlaskServer(Flask):
         self.__db_classes = []
         self.__db_insts = []
         self.__startup_funcs = []
+        self.__test_funcs = []
         self.__test_auth = None
         self.__logger = logger
         self.token_svc = TokenService(token_key, server_name)
@@ -273,17 +284,22 @@ class FlaskServer(Flask):
                 self.__add_tables()
                 self.__db.create_all()
 
-    def before_startup(self, config):
+    def before_startup(self, config, with_test=False):
         """ This function calls any functions registered with the @startup
             constructor. This should be called immediately before starting
             the main request loop. The config parmemter is passed through
             to the registered functions, it should be a dictionary of
             config parameters.
+            with_test is a boolean, if true @startup_test functions will
+            also be run. These are for populating the DB with test data.
             Returns None.
         """
         with self.app_context():
             for func in self.__startup_funcs:
                 func(config)
+            if with_test:
+                for func in self.__test_funcs:
+                    func()
 
     def attach_obj(self, obj_inst, root_path='/'):
         """ Attaches an object tree to this web service.
@@ -313,6 +329,9 @@ class FlaskServer(Flask):
         elif hasattr(obj_inst, 'is_startup'):
             if obj_inst.is_startup:
                 self.__startup_funcs.append(obj_inst)
+        elif hasattr(obj_inst, 'is_test_func'):
+            if obj_inst.is_test_func:
+                self.__test_funcs.append(obj_inst)
 
     @staticmethod
     def __check_rule(auth_rule):
@@ -350,7 +369,7 @@ class FlaskServer(Flask):
         with self.app_context():
             current_app.policy.update(real_rules)
 
-    def test_mode(self, main_cls, conf=""):
+    def test_mode(self, main_cls, conf="", with_test=False):
         """ Configures this app instance in test mode.
             An in-memory Sqlite database is used for the DB.
             main_cls is the class to use for endpoints.
@@ -359,6 +378,8 @@ class FlaskServer(Flask):
             thrown.
             If conf is set to None, the build_db and before_startup functions
             are not called (and should be called manually).
+            The with_test flag sets whether to call the service @startup_test
+            functions or not.
             Returns None.
         """
         if not conf and conf is not None:
@@ -373,7 +394,7 @@ class FlaskServer(Flask):
         self.testing = True
         if conf is not None:
             self.build_db()
-            self.before_startup(conf)
+            self.before_startup(conf, with_test=with_test)
             # Config should have been completely consumed
             assert not conf
 

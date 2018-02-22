@@ -12,9 +12,9 @@ if [ ! -d etc/certs ]; then
   popd
 fi
 
-# Now start the server
+# Now start the server (in test mode)
 echo -e "\n***\nStarting Server...\n***\n" >&2
-python bin/test_server.py etc/demo.conf &
+python bin/test_server.py -t etc/demo.conf &
 SERVER_PID=$!
 # Wait a few seconds for server to start-up
 sleep 5

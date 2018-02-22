@@ -12,7 +12,7 @@ class TestDemoService(unittest.TestCase):
     def setUp(self):
         conf = { 'test_param': 1111 }
         self.__service = FlaskServer("pdm.demo.DemoService")
-        self.__service.test_mode(DemoService, conf)
+        self.__service.test_mode(DemoService, conf, with_test=True)
         self.__service.fake_auth("ALL")
         self.__test = self.__service.test_client()
 
@@ -30,7 +30,7 @@ class TestDemoService(unittest.TestCase):
         db.session.add(new_turtle)
         db.session.commit()
         # Continue service start-up
-        service.before_startup({})
+        service.before_startup({}, with_test=True)
         service.fake_auth("ALL")
         client = service.test_client()
         # Now check that we only have one turtle
