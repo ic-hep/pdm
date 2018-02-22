@@ -1,13 +1,23 @@
 # Demo application authentication
 
 [groups/endpoint]
+rw_func = ["CERT:C = XX, L = Default City, O = Default Company Ltd, OU = Test CA, CN = root"]
+ro_func = ["ALL"]
 
 [auth/endpoint]
-# None Yet!
+/endpoints/api/v1.0/site%GET = "@ro_func"
+/endpoints/api/v1.0/site%POST = "@rw_func"
+/endpoints/api/v1.0/site%DELETE = "@rw_func"
+/endpoints/api/v1.0/sitemap%GET = "@ro_func"
+/endpoints/api/v1.0/sitemap%POST = "@rw_func"
+/endpoints/api/v1.0/sitemap%DELETE = "@rw_func"
+
 
 [groups/cred]
-user_service = ["CERT:C = XX, L = Default City, O = Default Company Ltd, OU = Test CA, CN = localhost"]
-job_service = ["CERT:C = XX, L = Default City, O = Default Company Ltd, OU = Test CA, CN = localhost"]
+user_service = ["CERT:C = XX, L = Default City, O = Default Company Ltd, OU = Test CA, CN = localhost",
+                "CERT:C = XX, L = Default City, O = Default Company Ltd, OU = Test CA, CN = root"]
+job_service = ["CERT:C = XX, L = Default City, O = Default Company Ltd, OU = Test CA, CN = localhost",
+               "CERT:C = XX, L = Default City, O = Default Company Ltd, OU = Test CA, CN = root"]
 
 [auth/cred]
 /cred/api/v1.0/ca = "ALL"
