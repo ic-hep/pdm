@@ -81,12 +81,43 @@ class ExecutableServer(object):
             # We failed to import the client app, we need to raise the inner
             # exception to make debugging easier
             raise err.exc, err.value, err.tb
-        app_server.build_db()
+        return app_inst
+
+    def __config_app(self, app_server, app_name, config):
+        app_config = config.get_section("app/%s" % app_name)
+        # Remove sections used in __init_app.
+        app_config.pop("auth", None)
+        app_config.pop("class", None)
         app_server.before_startup(app_config)
         # Test if there are any unused keys in the dictionary
         if app_config:
             # There are => Unused items = typos?
             keys = ', '.join(app_config.keys())
+            raise ValueError("Unused config params for %s: '%s'" % (app_name, keys))
+
+    def __init_apps(self, app_server, app_names, config):
+        """ Creates instances of all WSGI apps defined in the config. """
+        all_config = {}
+        for app_name in app_names:
+            app_config = config.get_section("app/%s" % app_name)
+            auth_conf = self.__fix_path(app_config.pop("auth"))
+            auth_pol = self.__load_auth(app_name, auth_conf)
+            app_server.add_auth_rules(auth_pol)
+            app_class = app_config.pop("class")
+            try:
+                app_inst = pydoc.locate(app_class)()
+                app_server.attach_obj(app_inst)
+            except pydoc.ErrorDuringImport as err:
+                # We failed to import the client app, we need to raise the inner
+                # exception to make debugging easier
+                raise err.exc, err.value, err.tb
+            all_config.update(app_config)
+        app_server.build_db()
+        app_server.before_startup(all_config)
+        # Test if there are any unused keys in the dictionary
+        if all_config:
+            # There are => Unused items = typos?
+            keys = ', '.join(all_config.keys())
             raise ValueError("Unused config params for %s: '%s'" % (app_name, keys))
 
     def __init_wsgi(self, wsgi_name, config):
@@ -111,8 +142,7 @@ class ExecutableServer(object):
             app_server.enable_db(db_uri)
         # Create child app instances
         app_names = wsgi_config.get("apps", [])
-        for app_name in app_names:
-            self.__init_app(app_server, app_name, config)
+        self.__init_apps(app_server, app_names, config)
         self.__wsgi_server.add_server(port, app_server, cert, key, cafile)
 
     def run(self):
