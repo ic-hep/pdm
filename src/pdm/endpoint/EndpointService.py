@@ -2,10 +2,11 @@
 """ Site/Endpoint service module. """
 
 import json
-from flask import request
+from flask import current_app, request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import FlushError
-from pdm.framework.FlaskWrapper import db_model, export_ext, jsonify
+from pdm.framework.FlaskWrapper import (db_model, export_ext, jsonify, \
+                                        startup_test)
 from pdm.endpoint.EndpointDB import EndpointDBModel
 from pdm.utils.db import managed_session
 
@@ -13,6 +14,38 @@ from pdm.utils.db import managed_session
 @db_model(EndpointDBModel)
 class EndpointService(object):
     """ Endpoint service. """
+
+    @staticmethod
+    @startup_test
+    def test_data():
+        """ Adds test data to the database.
+        """
+        db = current_app.db
+        Site = db.tables.Site
+        Endpoint = db.tables.Endpoint
+        entries = [
+            Site(site_id=1,
+                 site_name='Site1',
+                 site_desc='First Test Site'),
+            Site(site_id=2,
+                 site_name='Site2',
+                 site_desc='Second Test Site'),
+            Endpoint(ep_id=1,
+                     site_id=1,
+                     ep_uri='gsiftp://localhost/site1'),
+            Endpoint(ep_id=2,
+                     site_id=1,
+                     ep_uri='ssh://localhost/site1'),
+            Endpoint(ep_id=3,
+                     site_id=2,
+                     ep_uri='gsiftp://localhost/site2'),
+            Endpoint(ep_id=4,
+                     site_id=2,
+                     ep_uri='ssh://localhost/site2'),
+        ]
+        for entry in entries:
+            db.session.add(entry)
+        db.session.commit()
 
     @staticmethod
     @export_ext("site")

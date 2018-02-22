@@ -12,7 +12,7 @@ class test_EndpointClient(unittest.TestCase):
 
     def setUp(self):
         self._service = FlaskServer("pdm.endpoint.EndpointService")
-        self._service.test_mode(EndpointService, {})
+        self._service.test_mode(EndpointService, {}, with_test=False)
         self._service.fake_auth("ALL")
         self._test = self._service.test_client()
         patcher, inst = RESTClientTest.patch_client(EndpointClient,
