@@ -19,8 +19,6 @@ class EndpointDBModel(object):
             site_id = Column(Integer, primary_key=True)
             site_name = Column(TEXT, nullable=False, unique=True)
             site_desc = Column(TEXT, nullable=False)
-            endpoints = relationship("Endpoint", cascade="delete")
-            users = relationship("UserMap", cascade="delete")
 
         #pylint: disable=too-few-public-methods, unused-variable
         class Endpoint(db_base):
@@ -39,3 +37,6 @@ class EndpointDBModel(object):
             site_id = Column(Integer, ForeignKey(Site.site_id),
                              primary_key=True)
             username = Column(TEXT, nullable=False)
+
+        Site.endpoints = relationship(Endpoint, cascade="delete")
+        Site.users = relationship(UserMap, cascade="delete")
