@@ -10,28 +10,28 @@ from pdm.framework.FlaskWrapper import FlaskServer
 
 # Test data, prepopulated into the DB in setUp
 TEST_SITES = [
-    { 'site_id': 1, 'site_name': 'Test1', 'site_desc': 'Test Site 1' },
-    { 'site_id': 2, 'site_name': 'Test2', 'site_desc': 'Test Site 2' },
-    { 'site_id': 3, 'site_name': 'TestC', 'site_desc': 'Test Site C' },
-    { 'site_id': 4, 'site_name': 'Test4', 'site_desc': 'Test Site, No EPs' },
+    { 'site_id': 10, 'site_name': 'Test1', 'site_desc': 'Test Site 1' },
+    { 'site_id': 20, 'site_name': 'Test2', 'site_desc': 'Test Site 2' },
+    { 'site_id': 30, 'site_name': 'TestC', 'site_desc': 'Test Site C' },
+    { 'site_id': 40, 'site_name': 'Test4', 'site_desc': 'Test Site, No EPs' },
 ]
 TEST_EPS = [
-    { 'ep_id': 1, 'site_id': 1, 'ep_uri': 'https://localhost/1' },
-    { 'ep_id': 2, 'site_id': 1, 'ep_uri': 'https://localhost/1' },
-    { 'ep_id': 3, 'site_id': 1, 'ep_uri': 'https://localhost/blah' },
-    { 'ep_id': 4, 'site_id': 2, 'ep_uri': 'https://localhost/2' },
-    { 'ep_id': 5, 'site_id': 2, 'ep_uri': 'https://localhost/2' },
-    { 'ep_id': 6, 'site_id': 3, 'ep_uri': 'https://localhost/../' },
-    { 'ep_id': 7, 'site_id': 3, 'ep_uri': 'http://localhost/insecure' },
+    { 'ep_id': 10, 'site_id': 10, 'ep_uri': 'https://localhost/1' },
+    { 'ep_id': 20, 'site_id': 10, 'ep_uri': 'https://localhost/1' },
+    { 'ep_id': 30, 'site_id': 10, 'ep_uri': 'https://localhost/blah' },
+    { 'ep_id': 40, 'site_id': 20, 'ep_uri': 'https://localhost/2' },
+    { 'ep_id': 50, 'site_id': 20, 'ep_uri': 'https://localhost/2' },
+    { 'ep_id': 60, 'site_id': 30, 'ep_uri': 'https://localhost/../' },
+    { 'ep_id': 70, 'site_id': 30, 'ep_uri': 'http://localhost/insecure' },
 ]
 TEST_MAPPINGS = [
-    { 'site_id': 1, 'user_id': 10, 'username': 'user001' },
-    { 'site_id': 1, 'user_id': 20, 'username': 'turtle' },
-    { 'site_id': 2, 'user_id': 30, 'username': 'timmy' },
-    { 'site_id': 2, 'user_id': 40, 'username': 'jimmy' },
-    { 'site_id': 4, 'user_id': 50, 'username': 'longusername' },
-    { 'site_id': 4, 'user_id': 60, 'username': 'bill' },
-    { 'site_id': 4, 'user_id':  4, 'username': 'gates' },
+    { 'site_id': 10, 'user_id': 10, 'username': 'user001' },
+    { 'site_id': 10, 'user_id': 20, 'username': 'turtle' },
+    { 'site_id': 20, 'user_id': 30, 'username': 'timmy' },
+    { 'site_id': 20, 'user_id': 40, 'username': 'jimmy' },
+    { 'site_id': 40, 'user_id': 50, 'username': 'longusername' },
+    { 'site_id': 40, 'user_id': 60, 'username': 'bill' },
+    { 'site_id': 40, 'user_id':  4, 'username': 'gates' },
 ]
 
 class test_EndpointService(unittest.TestCase):
@@ -82,7 +82,8 @@ class test_EndpointService(unittest.TestCase):
         res = self.__client.get('/endpoints/api/v1.0/site')
         self.assertEqual(res.status_code, 200)
         site_list = json.loads(res.data)
-        self.assertEqual(len(site_list), len(TEST_SITES) + 1)
+        # Check length, but there may be other test data
+        self.assertGreaterEqual(len(site_list), len(TEST_SITES) + 1)
         # Most recently added site should be the last one
         site_out = site_list[-1]
         self.assertIn('site_id', site_out)
@@ -156,13 +157,13 @@ class test_EndpointService(unittest.TestCase):
         TEST_URI = "gsiftp://test_host/test"
         data = {'ep_uri': TEST_URI}
         json_data = json.dumps(data)
-        # Try adding another endpoint to site 1.
-        res = self.__client.post('endpoints/api/v1.0/site/1', data=json_data)
+        # Try adding another endpoint to site 10.
+        res = self.__client.post('endpoints/api/v1.0/site/10', data=json_data)
         self.assertEqual(res.status_code, 200)
         # Check we got an ID number back
         ep_id = json.loads(res.data)
         self.assertIsInstance(ep_id, int)
-        res = self.__client.get('endpoints/api/v1.0/site/1')
+        res = self.__client.get('endpoints/api/v1.0/site/10')
         self.assertEqual(res.status_code, 200)
         site_info = json.loads(res.data)
         # Check the site_info matches site 1 from the test data.
