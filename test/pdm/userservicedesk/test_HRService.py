@@ -1,5 +1,7 @@
 import json
 import unittest
+import mock
+import pdm
 
 from pdm.userservicedesk.HRService import HRService
 from pdm.framework.FlaskWrapper import FlaskServer
@@ -101,6 +103,50 @@ class TestHRService(unittest.TestCase):
         new_user = json.dumps(barney)
         res = self.__test.post('/users/api/v1.0/users', data=new_user)
         assert (res.status_code == 404)
+
+    @mock.patch('pdm.cred.CredClient.MockCredClient.add_user')
+    def test_add_user_CS_OK(self, mock_add_user):
+        fred = {
+            'surname': 'Flintstone',
+            'name': 'Fred',
+            'email': 'fred@flintstones.com',
+            'state': 0, 'password': 'Wilma007'}
+
+        new_user = json.dumps(fred)
+        res = self.__test.post('/users/api/v1.0/users', data=new_user)
+        assert (res.status_code == 201)
+        assert mock_add_user.called
+
+    @mock.patch('pdm.cred.CredClient.MockCredClient.add_user')
+    def test_add_user_HR_fail(self, mock_add_user):
+        # now we fail the HRSErvice call (no password)
+        barney = {
+            'surname': 'Rubble',
+            'name': 'Barney',
+            'email': 'barney@rubbles.com',
+            'state': 0,}
+        new_user = json.dumps(barney)
+        res = self.__test.post('/users/api/v1.0/users', data=new_user)
+        assert (res.status_code == 404)
+        assert not mock_add_user.called
+
+    @mock.patch('pdm.cred.CredClient.MockCredClient.add_user')
+    def test_add_user_CS_fail(self, mock_add_user):
+        # now we fail the CS SErvice call
+        barney = {
+            'surname': 'Rubble',
+            'name': 'Barney',
+            'email': 'barney@rubbles.com',
+            'state': 0, 'password' : 'Wilma007'}
+        new_user = json.dumps(barney)
+        mock_add_user.side_effect = Exception()
+        res = self.__test.post('/users/api/v1.0/users', data=new_user)
+        assert (res.status_code == 403)
+        assert mock_add_user.called # so the HR did not throw !
+        # check if we rolled Barney back !
+        db = self.__service.test_db()
+        dbuser = db.tables.User.query.filter_by(email=barney['email']).first()
+        assert (dbuser is None)
 
     def test_changePassword(self):
         """

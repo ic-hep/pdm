@@ -99,6 +99,7 @@ class HRService(object):
             # user.save(db)
             db.session.add(user)
             user_id = db.session.query(User.id).filter_by(email=data['email']).scalar()
+            # add a user to the Credential Service:
             if user_id:
                 current_app.cs_client.add_user(user_id, cs_hashed_key)
             else:
