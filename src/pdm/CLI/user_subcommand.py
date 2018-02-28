@@ -31,7 +31,7 @@ class UserCommand(object):
         password = getpass()
         client  = HRClient()
         userdict = {'surname':args.surname, 'name':args.name, 'email':args.email, 'password':password}
-        client.add_user(self, userdict)
+        client.add_user(userdict)
         print "User registered %s %s %s " % (args.name, args.surname, args.email)
 
     def login(self, args):
