@@ -76,7 +76,7 @@ class RESTClient(object):
         request_args['timeout'] = self.__timeout
         resp = requests.request(method, full_url, **request_args)
         #pylint: disable=no-member
-        if resp.status_code != requests.codes.ok:
+        if resp.status_code not in (requests.codes.ok, requests.codes.created):
             # TODO: Better excpetions here
             raise RuntimeError("Request failed with code %u" % \
                                resp.status_code)
