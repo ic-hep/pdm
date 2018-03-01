@@ -6,11 +6,11 @@ User Interface Service
 import sys
 import logging
 import json
+from sqlalchemy import func
 from flask import request, abort, current_app
 from pdm.framework.FlaskWrapper import export, export_ext, db_model, jsonify, startup
 from pdm.utils.hashing import hash_pass, check_hash
 import pdm.userservicedesk.models
-from sqlalchemy import func
 from pdm.cred.CredClient import MockCredClient
 
 
@@ -174,7 +174,7 @@ class HRService(object):
             # User update and CS update in a single transaction
             try:
                 db.session.add(user)
-                # user_id = db.session.query(User.id).filter_by(email=data['email']).scalar() # got it from the token.
+                # user_id = db.session.query(User.id).filter_by(email=data['email']).scalar()
                 # add a user to the Credential Service:
                 cs_hashed_key = hash_pass(newpasswd, current_app.cs_key)
                 current_app.cs_client.add_user(user_id, cs_hashed_key)
@@ -182,7 +182,8 @@ class HRService(object):
                 HRService._logger.info("CS and assword updated successfully for user %s ", email)
             # pylint: disable=broad-except
             except Exception:
-                HRService._logger.error("Failed to change passwd: %s or post to the CS", sys.exc_info())
+                HRService._logger.error("Failed to change passwd: %s or post to the CS",
+                                        sys.exc_info())
                 db.session.rollback()
                 abort(403)
 
