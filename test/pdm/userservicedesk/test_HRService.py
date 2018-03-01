@@ -253,7 +253,7 @@ class TestHRService(unittest.TestCase):
         self.__service.fake_auth("TOKEN", "User_1")  # fake auth John, which is id=1
         mock_del_user.side_effect = Exception()
         res = self.__test.delete('/users/api/v1.0/users/self')
-        assert (res.status_code == 403)
+        assert (res.status_code == 500)
         assert mock_del_user.called
         # check if we rolled John  back !
         db = self.__service.test_db()
@@ -267,7 +267,7 @@ class TestHRService(unittest.TestCase):
         self.__service.fake_auth("TOKEN", "User_1")  # fake auth John, which is id=1
         mock_del.side_effect = Exception()
         res = self.__test.delete('/users/api/v1.0/users/self')
-        assert (res.status_code == 403)
+        assert (res.status_code == 500)
         assert not mock_del_user.called
 
     def test_loginUser(self):

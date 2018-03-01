@@ -224,8 +224,8 @@ class HRService(object):
             # pylint: disable=broad-except
         except Exception:
             db.session.rollback()
-            HRService._logger.error(" Failed to delete a user %s", user_id)
-            abort(403)
+            HRService._logger.error(" Failed to delete a user %s (%s)", user_id, sys.exc_info())
+            abort(500)
 
         response = jsonify([{
             'message': "user %s deleted successfully" % (user.email,)
