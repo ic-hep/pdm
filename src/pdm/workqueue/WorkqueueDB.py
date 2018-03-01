@@ -84,22 +84,22 @@ class WorkqueueModels(object):
                             CheckConstraint('status in (0, 1, 2)'),
                             nullable=False,
                             default=JobStatus.NEW)
-            logs = relationship("Log", back_populates="job")
+            logs = relationship("Log", back_populates="job", cascade="all, delete-orphan")
             CheckConstraint('retries <= max_tries')
 
             def add(self):
                 """Add job to session."""
-                with managed_session(current_app.db) as session:
+                with managed_session(current_app) as session:
                     session.add(self)
 
             def remove(self):
                 """Remove job from session."""
-                with managed_session(current_app.db) as session:
+                with managed_session(current_app) as session:
                     session.delete(self)
 
             def update(self):
                 """Update session with current job."""
-                with managed_session(current_app.db) as session:
+                with managed_session(current_app) as session:
                     session.merge(self)
 
             @staticmethod
@@ -121,7 +121,7 @@ class WorkqueueModels(object):
                 """Remove jobs from database."""
                 if isinstance(ids, int):
                     ids = (ids,)
-                with managed_session(current_app.db) as session:
+                with managed_session(current_app) as session:
                     session.query.filter(Job.id.in_(set(ids))).delete()
 
         class Log(db_base):  # pylint: disable=unused-variable
@@ -135,15 +135,15 @@ class WorkqueueModels(object):
 
             def add(self):
                 """Add log to session."""
-                with managed_session(current_app.db) as session:
+                with managed_session(current_app) as session:
                     session.add(self)
 
             def remove(self):
                 """Remove log from session."""
-                with managed_session(current_app.db) as session:
+                with managed_session(current_app) as session:
                     session.delete(self)
 
             def update(self):
                 """Update session with current log."""
-                with managed_session(current_app.db) as session:
+                with managed_session(current_app) as session:
                     session.merge(self)

@@ -1,13 +1,16 @@
 """App."""
 import os
 import uuid
+import json
 
-from flask import request
+from flask import request, abort
 
 from pdm.framework.FlaskWrapper import export_ext, db_model
+from pdm.framework.Database import JSONTableEncoder
 from pdm.utils.config import getConfig
+from pdm.utils.db import managed_session
 
-from .WorkqueueDB import WorkqueueModels, JobStatus
+from .WorkqueueDB import WorkqueueModels, JobStatus, JobType
 
 
 @export_ext("/workqueue/api/v1.0")
@@ -59,3 +62,54 @@ class WorkqueueService(object):
         with open(os.path.join(dir_, 'attempt%i.log' % job.attempts), 'wb') as logfile:
             logfile.write("Job run on host: %s\n" % request.data['host'])
             logfile.write(request.data['log'])
+
+    @staticmethod
+    @export_ext('list', ['POST'])
+    def list():
+        """List a remote dir."""
+        Job = request.db.tables.Job
+        allowed_attrs = ('src_siteid', 'credentials',
+                         'max_tries', 'priority', 'protocol')
+        # user_id to be replaced with one extracted via token from Janusz's service.
+        job = Job(user_id=1, type=JobType.LIST, **subdict(request.data, allowed_attrs))
+        job.add()
+        return json.dumps(job, cls=JSONTableEncoder)
+
+    @staticmethod
+    @export_ext('copy', ['POST'])
+    def copy():
+        """Copy."""
+        Job = request.db.tables.Job
+        allowed_attrs = ('src_siteid', 'dst_siteid', 'credentials',
+                         'max_tries', 'priority', 'protocol')
+        job = Job(user_id=1, type=JobType.COPY, **subdict(request.data, allowed_attrs))
+        return json.dumps(job, cls=JSONTableEncoder)
+
+    @staticmethod
+    @export_ext('remove', ['POST'])
+    def remove():
+        """Remove."""
+        Job = request.db.tables.Job
+        allowed_attrs = ('src_siteid', 'credentials',
+                         'max_tries', 'priority', 'protocol')
+        job = Job(user_id=1, type=JobType.REMOVE, **subdict(request.data, allowed_attrs))
+        job.add()
+        return json.dumps(job, cls=JSONTableEncoder)
+
+    @staticmethod
+    @export_ext('output/<int:job_id>', ['GET'])
+    def get_output(job_id):
+        """Get job output"""
+        Job = request.db.tables.Job  # pylint: disable=invalid-name
+        job = Job.query.filter(Job.status.in_(JobStatus.DONE, JobStatus.FAILED))\
+                       .get_or_404()
+        dir_ = os.path.join(getConfig("app/workqueue").get('workerlogs', '/tmp/workers'),
+                            job.log.guid[:2],
+                            job.log.guid)
+        with open(os.path.join(dir_, "attempt%i.log" % job.attempts, 'rb')) as logfile:
+            return json.dumps({'jobid': job.id, 'log': logfile.read()})
+
+
+def subdict(dct, keys):
+    """Create a sub dictionary."""
+    return {k: dct[k] for k in keys if k in dct}
