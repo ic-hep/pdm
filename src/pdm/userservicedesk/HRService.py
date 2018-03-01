@@ -171,8 +171,21 @@ class HRService(object):
 
             user.password = hash_pass(newpasswd)
             user.last_login = func.current_timestamp()
-            user.save(db)
-            HRService._logger.info("Password updated successfully for user %s ", email)
+            # User update and CS update in a single transaction
+            try:
+                db.session.add(user)
+                # user_id = db.session.query(User.id).filter_by(email=data['email']).scalar() # got it from the token.
+                # add a user to the Credential Service:
+                cs_hashed_key = hash_pass(newpasswd, current_app.cs_key)
+                current_app.cs_client.add_user(user_id, cs_hashed_key)
+                db.session.commit()
+                HRService._logger.info("CS and assword updated successfully for user %s ", email)
+            # pylint: disable=broad-except
+            except Exception:
+                HRService._logger.error("Failed to change passwd: %s or post to the CS", sys.exc_info())
+                db.session.rollback()
+                abort(403)
+
         else:
             HRService._logger.error("Password update FAILED for user %s (wrong password)", email)
             abort(403)
@@ -190,18 +203,28 @@ class HRService(object):
         """
 
         user_id = HRService.check_token()
-        db = request.db
+        # exception thrown if no user_id
 
-        if user_id:
-            User = request.db.tables.User
-            user = User.query.filter_by(id=user_id).first()
+        db = request.db
+        User = request.db.tables.User
+        user = User.query.filter_by(id=user_id).first()
 
         if not user:
             # Raise an HTTPException with a 404 not found status code
             HRService._logger.error("GET: requested user for id %s doesn't exist ", user_id)
             abort(404)
 
-        user.delete(db)
+        try:
+            #user.delete(db)
+            db.session.delete(user)
+            current_app.cs_client.del_user(user_id)
+            db.session.commit()
+            HRService._logger.info(" User %s deleted successfully", user_id)
+            # pylint: disable=broad-except
+        except Exception:
+            db.session.rollback()
+            HRService._logger.error(" Failed to delete a user %s", user_id)
+            abort(403)
 
         response = jsonify([{
             'message': "user %s deleted successfully" % (user.email,)
