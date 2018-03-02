@@ -29,7 +29,10 @@ class HRService(object):
         """ Configure the HRService application.
             Gets the key needed to contact the Credential Service
         """
-        current_app.cs_key = config.pop("CS_secret", "XkjgscdJ")
+        current_app.cs_key = config.pop("CS_secret", None)
+        if current_app.cs_key is None:
+            HRService._logger.error(" CS secret was not provided in the config file . Aborting.")
+            raise ValueError(" CS secret was not provided in the config file . Aborting.")
         current_app.cs_client = MockCredClient()
 
     @staticmethod

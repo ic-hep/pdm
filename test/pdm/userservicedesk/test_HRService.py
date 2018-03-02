@@ -9,7 +9,7 @@ from pdm.utils.hashing import hash_pass, check_hash
 
 class TestHRService(unittest.TestCase):
     def setUp(self):
-        conf = {}
+        conf = {'CS_secret':'HJGnbfdsV'}
         self.__service = FlaskServer("pdm.userservicedesk.HRService")
         self.__service.test_mode(HRService, None)  # to skip DB auto build
         self.__service.fake_auth("ALL")

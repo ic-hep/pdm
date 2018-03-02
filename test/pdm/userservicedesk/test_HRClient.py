@@ -17,7 +17,7 @@ class TestHRClient(unittest.TestCase):
 
     def setUp(self):
         # Get an instance of HRService to test against
-        conf = {}
+        conf = {'CS_secret':'HJGnbfdsV'}
         self.__service = FlaskServer("pdm.userservicedesk.HRService")
         self.__service.test_mode(HRService, None)
         self.__service.fake_auth("ALL")

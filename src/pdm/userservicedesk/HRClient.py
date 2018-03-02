@@ -34,7 +34,7 @@ class HRClient(RESTClient):
 
     def add_user(self, userdict):
         """
-
+        Add a new user.
         :param userdict: user input data dictionary.
         The required fields (strings) are:
         key: 'email'    value: a valid user email which server as a username
