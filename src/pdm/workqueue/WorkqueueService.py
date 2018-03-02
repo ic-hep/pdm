@@ -68,9 +68,10 @@ class WorkqueueService(object):
     def list():
         """List a remote dir."""
         Job = request.db.tables.Job
-        allowed_attrs = ('user_id', 'src_siteid', 'credentials',
+        allowed_attrs = ('src_siteid', 'credentials',
                          'max_tries', 'priority', 'protocol')
-        job = Job(type=JobType.LIST, **subdict(request.data, allowed_attrs))
+        # user_id to be replaced with one extracted via token from Janusz's service.
+        job = Job(user_id=1, type=JobType.LIST, **subdict(request.data, allowed_attrs))
         job.add()
         return json.dumps(job, cls=JSONTableEncoder)
 
@@ -79,9 +80,9 @@ class WorkqueueService(object):
     def copy():
         """Copy."""
         Job = request.db.tables.Job
-        allowed_attrs = ('user_id', 'src_siteid', 'dst_siteid', 'credentials',
+        allowed_attrs = ('src_siteid', 'dst_siteid', 'credentials',
                          'max_tries', 'priority', 'protocol')
-        job = Job(type=JobType.COPY, **subdict(request.data, allowed_attrs))
+        job = Job(user_id=1, type=JobType.COPY, **subdict(request.data, allowed_attrs))
         return json.dumps(job, cls=JSONTableEncoder)
 
     @staticmethod
@@ -89,9 +90,9 @@ class WorkqueueService(object):
     def remove():
         """Remove."""
         Job = request.db.tables.Job
-        allowed_attrs = ('user_id', 'src_siteid', 'credentials',
+        allowed_attrs = ('src_siteid', 'credentials',
                          'max_tries', 'priority', 'protocol')
-        job = Job(type=JobType.REMOVE, **subdict(request.data, allowed_attrs))
+        job = Job(user_id=1, type=JobType.REMOVE, **subdict(request.data, allowed_attrs))
         job.add()
         return json.dumps(job, cls=JSONTableEncoder)
 
