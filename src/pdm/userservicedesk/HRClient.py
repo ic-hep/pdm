@@ -40,6 +40,7 @@ class HRClient(RESTClient):
         key: 'email'    value: a valid user email which server as a username
         key: 'name'     value: user given name e.g. 'John'
         key: 'surname'  value: user surname e.g. 'Smith'
+        key: 'password' value: password
         :return: Returns a dict with user data for convenience.
         """
         return self.post('users', userdict)
