@@ -179,7 +179,7 @@ class HRService(object):
                 cs_hashed_key = hash_pass(newpasswd, current_app.cs_key)
                 current_app.cs_client.add_user(user_id, cs_hashed_key)
                 db.session.commit()
-                HRService._logger.info("CS and assword updated successfully for user %s ", email)
+                HRService._logger.info("CS and password updated successfully for user %s ", email)
             # pylint: disable=broad-except
             except Exception:
                 HRService._logger.error("Failed to change passwd: %s or post to the CS",
