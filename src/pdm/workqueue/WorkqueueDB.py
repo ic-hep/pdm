@@ -4,7 +4,7 @@ from datetime import datetime
 
 from enum import unique, IntEnum
 from flask import current_app
-from sqlalchemy import (Column, Integer, SmallInteger, ForeignKey,
+from sqlalchemy import (Column, Integer, SmallInteger,
                         String, TEXT, TIMESTAMP, CheckConstraint)
 from sqlalchemy.orm import relationship
 
@@ -65,6 +65,7 @@ class WorkqueueModels(object):
             dst_siteid = Column(Integer)
             extra_opts = Column(TEXT)
             credentials = Column(TEXT)
+            log_uid = Column(String(36), nullable=False, default=lambda: str(uuid.uuid4))
             max_tries = Column(SmallInteger, nullable=False, default=2)
             attempts = Column(SmallInteger, nullable=False, default=0)
             timestamp = Column(TIMESTAMP, nullable=False,
@@ -124,26 +125,3 @@ class WorkqueueModels(object):
                 with managed_session(current_app) as session:
                     session.query.filter(Job.id.in_(set(ids))).delete()
 
-        class Log(db_base):  # pylint: disable=unused-variable
-            """Logs table."""
-
-            __tablename__ = 'logs'
-            id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-            job_id = Column(Integer, ForeignKey('jobs.id'), nullable=False)
-            guid = Column(String(36), nullable=False, default=lambda: str(uuid.uuid4))
-            job = relationship("Job", back_populates="logs")
-
-            def add(self):
-                """Add log to session."""
-                with managed_session(current_app) as session:
-                    session.add(self)
-
-            def remove(self):
-                """Remove log from session."""
-                with managed_session(current_app) as session:
-                    session.delete(self)
-
-            def update(self):
-                """Update session with current log."""
-                with managed_session(current_app) as session:
-                    session.merge(self)

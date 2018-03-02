@@ -1,14 +1,12 @@
 """App."""
 import os
-import uuid
 import json
 
-from flask import request, abort
+from flask import request
 
 from pdm.framework.FlaskWrapper import export_ext, db_model
 from pdm.framework.Database import JSONTableEncoder
 from pdm.utils.config import getConfig
-from pdm.utils.db import managed_session
 
 from .WorkqueueDB import WorkqueueModels, JobStatus, JobType
 
@@ -38,26 +36,19 @@ class WorkqueueService(object):
         """Return a job."""
         db = request.db
         Job = db.tables.Job  # pylint: disable=invalid-name
-        Log = db.tables.Log  # pylint: disable=invalid-name
 
         # Update job status.
-        job = Job.query.filter_by(id=job_id).one()
+        job = Job.query.filter_by(id=job_id).get_or_404()
         job.attempts += 1
         job.status = JobStatus.DONE
         if request.data['returncode'] != 0:
             job.status = JobStatus.FAILED
         job.update()
 
-        # Add log record to DB.
-        log = Log.query.filter_by(job_id=job_id).one_or_none()
-        if log is None:
-            log = Log(job_id=job_id, guid=uuid.uuid4())
-            log.add()
-
         # Write log file.
         dir_ = os.path.join(getConfig("app/workqueue").get('workerlogs', '/tmp/workers'),
-                            log.guid[:2],
-                            log.guid)
+                            job.log_uid[:2],
+                            job.log_uid)
         os.makedirs(dir_)
         with open(os.path.join(dir_, 'attempt%i.log' % job.attempts), 'wb') as logfile:
             logfile.write("Job run on host: %s\n" % request.data['host'])
