@@ -1,5 +1,6 @@
 import json
 import unittest
+import mock
 
 from pdm.userservicedesk.HRService import HRService
 from pdm.framework.FlaskWrapper import FlaskServer
@@ -8,7 +9,7 @@ from pdm.utils.hashing import hash_pass, check_hash
 
 class TestHRService(unittest.TestCase):
     def setUp(self):
-        conf = {}
+        conf = {'CS_secret':'HJGnbfdsV'}
         self.__service = FlaskServer("pdm.userservicedesk.HRService")
         self.__service.test_mode(HRService, None)  # to skip DB auto build
         self.__service.fake_auth("ALL")
@@ -102,7 +103,51 @@ class TestHRService(unittest.TestCase):
         res = self.__test.post('/users/api/v1.0/users', data=new_user)
         assert (res.status_code == 404)
 
-    def test_changePassword(self):
+    @mock.patch('pdm.cred.CredClient.MockCredClient.add_user')
+    def test_add_user_CS_OK(self, mock_add_user):
+        fred = {
+            'surname': 'Flintstone',
+            'name': 'Fred',
+            'email': 'fred@flintstones.com',
+            'state': 0, 'password': 'Wilma007'}
+
+        new_user = json.dumps(fred)
+        res = self.__test.post('/users/api/v1.0/users', data=new_user)
+        assert (res.status_code == 201)
+        assert mock_add_user.called
+
+    @mock.patch('pdm.cred.CredClient.MockCredClient.add_user')
+    def test_add_user_HR_fail(self, mock_add_user):
+        # now we fail the HRSErvice call (no password)
+        barney = {
+            'surname': 'Rubble',
+            'name': 'Barney',
+            'email': 'barney@rubbles.com',
+            'state': 0,}
+        new_user = json.dumps(barney)
+        res = self.__test.post('/users/api/v1.0/users', data=new_user)
+        assert (res.status_code == 404)
+        assert not mock_add_user.called
+
+    @mock.patch('pdm.cred.CredClient.MockCredClient.add_user')
+    def test_add_user_CS_fail(self, mock_add_user):
+        # now we fail the CS SErvice call
+        barney = {
+            'surname': 'Rubble',
+            'name': 'Barney',
+            'email': 'barney@rubbles.com',
+            'state': 0, 'password' : 'Wilma007'}
+        new_user = json.dumps(barney)
+        mock_add_user.side_effect = Exception()
+        res = self.__test.post('/users/api/v1.0/users', data=new_user)
+        assert (res.status_code == 403)
+        assert mock_add_user.called # so the HR did not throw !
+        # check if we rolled Barney back !
+        db = self.__service.test_db()
+        dbuser = db.tables.User.query.filter_by(email=barney['email']).first()
+        assert (dbuser is None)
+
+    def test_change_password(self):
         """
         Test the password changing operation
         :return:
@@ -151,20 +196,79 @@ class TestHRService(unittest.TestCase):
         res = self.__test.put('/users/api/v1.0/passwd', data=new_pass_data)
         assert (res.status_code == 404)
 
-    def test_deleteUser(self):
+    @mock.patch('pdm.cred.CredClient.MockCredClient.add_user')
+    def test_change_password_CS_OK(self, mock_add_user):
         """
-        Test updating user data
+        :param mock_add_user: Only test HR, CS transaction, not the password detail
+        :return:
+        """
+        self.__service.fake_auth("TOKEN", "User_1")  # fake auth John, which is id=1
+        new_pass_data = json.dumps({'passwd': 'very_secret', 'newpasswd': 'even_more_secret'})
+        res = self.__test.put('/users/api/v1.0/passwd', data=new_pass_data)
+        assert (res.status_code == 200)
+        assert mock_add_user.called
+
+
+    @mock.patch('pdm.cred.CredClient.MockCredClient.add_user')
+    def test_change_password_CS_fail(self, mock_add_user):
+        self.__service.fake_auth("TOKEN", "User_1")  # fake auth John, which is id=1
+        new_pass_data = json.dumps({'passwd': 'very_secret', 'newpasswd': 'even_more_secret'})
+        mock_add_user.side_effect = Exception()
+        res = self.__test.put('/users/api/v1.0/passwd', data=new_pass_data)
+        assert (res.status_code == 403)
+        assert mock_add_user.called
+        # check if the password was NOT modified:
+        db = self.__service.test_db()
+        dbuser = db.tables.User.query.filter_by(email='Johnny@example.com').first()
+        assert (dbuser.name == "John")
+        assert (check_hash(dbuser.password, 'very_secret'))
+
+    @mock.patch('pdm.cred.CredClient.MockCredClient.del_user')
+    def test_delete_user(self, mock_del_user):
+        """
+        Test deleting user data
         :return:
         """
         # not existing user:
         self.__service.fake_auth("TOKEN", "User_7")
         res = self.__test.delete('/users/api/v1.0/users/self')
         assert (res.status_code == 404)
+        assert not mock_del_user.called
 
         # delete poor Johny ;-(
         self.__service.fake_auth("TOKEN", "User_1")  # fake auth John, which is id=1
         res = self.__test.delete('/users/api/v1.0/users/self')
         assert (res.status_code == 200)
+        assert mock_del_user.called
+
+    @mock.patch('pdm.cred.CredClient.MockCredClient.del_user')
+    def test_deleteUser_CS_fail(self, mock_del_user):
+        """
+        Test if the user is put back when CS fails
+        :param mock_del_user:
+        :return:
+        """
+
+        # delete poor Johny ;-(
+        self.__service.fake_auth("TOKEN", "User_1")  # fake auth John, which is id=1
+        mock_del_user.side_effect = Exception()
+        res = self.__test.delete('/users/api/v1.0/users/self')
+        assert (res.status_code == 500)
+        assert mock_del_user.called
+        # check if we rolled John  back !
+        db = self.__service.test_db()
+        dbuser = db.tables.User.query.filter_by(email='Johnny@example.com').first()
+        assert (dbuser is not None)
+
+    #@mock.patch('sqlalchemy.orm.session.sessionmaker')
+    @mock.patch('sqlalchemy.orm.scoping.scoped_session.delete')
+    @mock.patch('pdm.cred.CredClient.MockCredClient.del_user')
+    def test_deleteUser_HR_fail(self, mock_del_user, mock_del):
+        self.__service.fake_auth("TOKEN", "User_1")  # fake auth John, which is id=1
+        mock_del.side_effect = Exception()
+        res = self.__test.delete('/users/api/v1.0/users/self')
+        assert (res.status_code == 500)
+        assert not mock_del_user.called
 
     def test_loginUser(self):
         """
