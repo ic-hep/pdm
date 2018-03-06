@@ -125,3 +125,4 @@ def require_attrs(*attrs):
     if set(attrs).difference_update(request.data):
         abort(400)
     return attrs
+
