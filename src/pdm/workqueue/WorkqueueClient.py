@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """ Client for Workqueue application. """
+from requests.exceptions import HTTPError
 
 from pdm.framework.RESTClient import RESTClient
 from .WorkqueueDB import JobProtocol
@@ -27,13 +28,16 @@ class WorkqueueClient(RESTClient):
         Returns:
             dict: The job object as stored in the workqueue database.
         """
-        return self.post('list', data={'user': user,
-                                       'src_siteid': src_siteid,
-                                       'src_filepath': src_filepath,
-                                       'credentials': credentials,
-                                       'max_tries': max_tries,
-                                       'priority':  priority,
-                                       'protocol': protocol}).data
+        req = self.post('list', data={'user': user,
+                                      'src_siteid': src_siteid,
+                                      'src_filepath': src_filepath,
+                                      'credentials': credentials,
+                                      'max_tries': max_tries,
+                                      'priority':  priority,
+                                      'protocol': protocol})
+        if req.status_code != 200:
+            raise HTTPError(req.status_code)
+        return req.data
 
     def copy(self, user, src_siteid, src_filepath, dst_siteid, dst_filepath, credentials, max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
         """
@@ -53,15 +57,18 @@ class WorkqueueClient(RESTClient):
         Returns:
             dict: The job object as stored in the workqueue database.
         """
-        return self.post('copy', data={'user': user,
-                                       'src_siteid': src_siteid,
-                                       'src_filepath': src_filepath,
-                                       'dst_siteid': dst_siteid,
-                                       'dst_filepath': dst_filepath,
-                                       'credentials': credentials,
-                                       'max_tries': max_tries,
-                                       'priority':  priority,
-                                       'protocol': protocol}).data
+        req = self.post('copy', data={'user': user,
+                                      'src_siteid': src_siteid,
+                                      'src_filepath': src_filepath,
+                                      'dst_siteid': dst_siteid,
+                                      'dst_filepath': dst_filepath,
+                                      'credentials': credentials,
+                                      'max_tries': max_tries,
+                                      'priority':  priority,
+                                      'protocol': protocol})
+        if req.status_code != 200:
+            raise HTTPError(req.status_code)
+        return req.data
 
     def remove(self, user, src_siteid, src_filepath, credentials, max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
         """
@@ -79,10 +86,13 @@ class WorkqueueClient(RESTClient):
         Returns:
             dict: The job object as stored in the workqueue database.
         """
-        return self.post('remove', data={'user': user,
-                                         'src_siteid': src_siteid,
-                                         'src_filepath': src_filepath,
-                                         'credentials': credentials,
-                                         'max_tries': max_tries,
-                                         'priority':  priority,
-                                         'protocol': protocol}).data
+        req = self.post('remove', data={'user': user,
+                                        'src_siteid': src_siteid,
+                                        'src_filepath': src_filepath,
+                                        'credentials': credentials,
+                                        'max_tries': max_tries,
+                                        'priority':  priority,
+                                        'protocol': protocol})
+        if req.status_code != 200:
+            raise HTTPError(req.status_code)
+        return req.data
