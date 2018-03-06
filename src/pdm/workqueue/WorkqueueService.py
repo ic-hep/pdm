@@ -116,12 +116,14 @@ def subdict(dct, keys):
 
 
 def shellpath_sanitise(path):
+    """Sanitise the path for use in bash shell."""
     if SHELLPATH_REGEX.match(path) is None:
         abort(400)
     return path
 
 
 def require_attrs(*attrs):
+    """Require the given attrs."""
     if set(attrs).difference_update(request.data):
         abort(400)
     return attrs
