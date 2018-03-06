@@ -17,7 +17,6 @@ class WorkqueueClient(RESTClient):
         List a given path.
 
         Args:
-            user (str): A token allowing access to a given user from the users service.
             src_siteid (int): The id of the site containing the path to be listed.
             src_filepath (str): The path to list.
             credentials (str): A token allowing access to the users credentials from the cred service.
@@ -40,7 +39,6 @@ class WorkqueueClient(RESTClient):
         Copy a one path to another.
 
         Args:
-            user (str): A token allowing access to a given user from the users service.
             src_siteid (int): The id of the site containing the path to be copied from.
             src_filepath (str): The path to copy from.
             dst_siteid (int): The id of the site containing the path to be copied to.
@@ -67,7 +65,6 @@ class WorkqueueClient(RESTClient):
         Remove a given path.
 
         Args:
-            user (str): A token allowing access to a given user from the users service.
             src_siteid (int): The id of the site containing the path to be removed.
             src_filepath (str): The path to remove.
             credentials (str): A token allowing access to the users credentials from the cred service.
