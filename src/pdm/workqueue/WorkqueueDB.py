@@ -80,11 +80,11 @@ class WorkqueueModels(object):
                           CheckConstraint('type in (0, 1, 2)'),
                           nullable=False)
             protocol = Column(SmallInteger,
-                              CheckConstraint('protocol in (1, 2)'),
+                              CheckConstraint('protocol in (0, 1)'),
                               nullable=False,
                               default=JobProtocol.GRIDFTP)
             status = Column(SmallInteger,
-                            CheckConstraint('status in (0, 1, 2)'),
+                            CheckConstraint('status in (0, 1, 2, 3)'),
                             nullable=False,
                             default=JobStatus.NEW)
             logs = relationship("Log", back_populates="job", cascade="all, delete-orphan")
