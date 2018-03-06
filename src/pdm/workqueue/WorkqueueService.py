@@ -67,7 +67,7 @@ class WorkqueueService(object):
                         + ('credentials', 'max_tries', 'priority', 'protocol')
         request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
         # user_id to be replaced with one extracted via token from Janusz's service.
-        job = Job(user_id=1, type=JobType.LIST, **subdict(request.data, allowed_attrs))
+        job = Job(user_id=get_user_id(), type=JobType.LIST, **subdict(request.data, allowed_attrs))
         job.add()
         return json.dumps(job, cls=JSONTableEncoder)
 
@@ -80,7 +80,7 @@ class WorkqueueService(object):
                         +('credentials', 'max_tries', 'priority', 'protocol')
         request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
         request.data['dst_filepath'] = shellpath_sanitise(request.data['dst_filepath'])
-        job = Job(user_id=1, type=JobType.COPY, **subdict(request.data, allowed_attrs))
+        job = Job(user_id=get_user_id(), type=JobType.COPY, **subdict(request.data, allowed_attrs))
         job.add()
         return json.dumps(job, cls=JSONTableEncoder)
 
@@ -92,7 +92,7 @@ class WorkqueueService(object):
         allowed_attrs = require_attrs('src_siteid', 'src_filepath') +\
                         ('credentials', 'max_tries', 'priority', 'protocol')
         request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
-        job = Job(user_id=1, type=JobType.REMOVE, **subdict(request.data, allowed_attrs))
+        job = Job(user_id=get_user_id(), type=JobType.REMOVE, **subdict(request.data, allowed_attrs))
         job.add()
         return json.dumps(job, cls=JSONTableEncoder)
 
@@ -128,3 +128,8 @@ def require_attrs(*attrs):
         abort(400)
     return attrs
 
+
+def get_user_id():
+    """Placeholder for Janusz code to get token from request and return id."""
+    #request.token -> id
+    return 1
