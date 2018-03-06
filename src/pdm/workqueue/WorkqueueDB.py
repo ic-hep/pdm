@@ -11,9 +11,17 @@ from sqlalchemy.orm import relationship
 from pdm.framework.Database import JSONMixin
 from pdm.utils.db import managed_session
 
+class EnumBase(IntEnum):
+    """Base enum."""
+
+    @classmethod
+    def values(cls):
+        """Return tuple of all possible enum values."""
+        return tuple(enu.value for enu in cls)
+
 
 @unique
-class JobStatus(IntEnum):
+class JobStatus(EnumBase):
     """Job status enum."""
 
     NEW = 0
@@ -23,7 +31,7 @@ class JobStatus(IntEnum):
 
 
 @unique
-class JobType(IntEnum):
+class JobType(EnumBase):
     """Job type enum."""
 
     LIST = 0
@@ -32,7 +40,7 @@ class JobType(IntEnum):
 
 
 @unique
-class JobProtocol(IntEnum):
+class JobProtocol(EnumBase):
     """Job protocol enum."""
 
     GRIDFTP = 0
@@ -73,18 +81,18 @@ class WorkqueueModels(object):
             timestamp = Column(TIMESTAMP, nullable=False,
                                default=datetime.utcnow, onupdate=datetime.utcnow)
             priority = Column(SmallInteger,
-                              CheckConstraint('priority in (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)'),
+                              CheckConstraint('priority in {0}'.format(tuple(xrange(10)))),
                               nullable=False,
                               default=5)
             type = Column(SmallInteger,  # pylint: disable=invalid-name
-                          CheckConstraint('type in (0, 1, 2)'),
+                          CheckConstraint('type in {0}'.format(JobType.values())),
                           nullable=False)
             protocol = Column(SmallInteger,
-                              CheckConstraint('protocol in (0, 1)'),
+                              CheckConstraint('protocol in {0}'.format(JobProtocol.values())),
                               nullable=False,
                               default=JobProtocol.GRIDFTP)
             status = Column(SmallInteger,
-                            CheckConstraint('status in (0, 1, 2, 3)'),
+                            CheckConstraint('status in {0}'.format(JobType.values())),
                             nullable=False,
                             default=JobStatus.NEW)
             logs = relationship("Log", back_populates="job", cascade="all, delete-orphan")
