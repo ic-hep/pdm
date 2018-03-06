@@ -39,8 +39,8 @@ class JobProtocol(IntEnum):
     SSH = 1
 
 
-PROTOCOLMAP = {JobProtocol.GRIDFTP: 'gsiftp://',
-               JobProtocol.SSH: 'ssh://'}
+PROTOCOLMAP = {JobProtocol.GRIDFTP: 'gsiftp',
+               JobProtocol.SSH: 'ssh'}
 
 COMMANDMAP = {JobType.LIST: {JobProtocol.GRIDFTP: 'gfal-ls',
                              JobProtocol.SSH: 'sftp'},
@@ -63,6 +63,8 @@ class WorkqueueModels(object):
             user_id = Column(Integer, nullable=False)
             src_siteid = Column(Integer, nullable=False)
             dst_siteid = Column(Integer)
+            src_filepath = Column(TEXT, nullable=False)
+            dst_filepath = Column(TEXT)
             extra_opts = Column(TEXT)
             credentials = Column(TEXT)
             log_uid = Column(String(36), nullable=False, default=lambda: str(uuid.uuid4))

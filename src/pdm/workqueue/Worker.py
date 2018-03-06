@@ -6,6 +6,7 @@ import random
 # import shlex
 import socket
 import subprocess
+from urlparse import urlsplit, urlunsplit
 from tempfile import NamedTemporaryFile
 from contextlib import contextmanager
 
@@ -65,11 +66,11 @@ class Worker(RESTClient, Daemon):
             except Timeout:
                 continue
 
-            src_endpoints = endpoint_client.get_mappings(job['src_siteid']).itervalues()
-            dst_endpoints = endpoint_client.get_mappings(job['dst_siteid']).itervalues()
+            src_endpoints = (urlsplit(site) for site in endpoint_client.get_mappings(job['src_siteid']).itervalues())
+            dst_endpoints = (urlsplit(site) for site in endpoint_client.get_mappings(job['dst_siteid']).itervalues())
 
-            src = [site for site in src_endpoints if site.startswith(PROTOCOLMAP[job['protocol']])]
-            dst = [site for site in dst_endpoints if site.startswith(PROTOCOLMAP[job['protocol']])]
+            src = [urlunsplit(site._replace(path=job['src_filepath'])) for site in src_endpoints if site.schema == PROTOCOLMAP[job['protocol']]]
+            dst = [urlunsplit(site._replace(path=job['dst_filepath'])) for site in dst_endpoints if site.schema == PROTOCOLMAP[job['protocol']]]
             if not src:
                 raise Exception("no src")
             with TempX509Files(job['credentials']) as (certfile, keyfile):

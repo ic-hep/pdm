@@ -1,14 +1,18 @@
 """App."""
 import os
 import json
+import re
 
-from flask import request
+from flask import request, abort
 
 from pdm.framework.FlaskWrapper import export_ext, db_model
 from pdm.framework.Database import JSONTableEncoder
 from pdm.utils.config import getConfig
 
 from .WorkqueueDB import WorkqueueModels, JobStatus, JobType
+
+
+SHELLPATH_REGEX = re.compile(r'^/[a-zA-Z0-9/-_.]*$')
 
 
 @export_ext("/workqueue/api/v1.0")
@@ -59,8 +63,9 @@ class WorkqueueService(object):
     def list():
         """List a remote dir."""
         Job = request.db.tables.Job
-        allowed_attrs = ('src_siteid', 'credentials',
-                         'max_tries', 'priority', 'protocol')
+        allowed_attrs = require_attrs('src_siteid', 'src_filepath')\
+                        + ('credentials', 'max_tries', 'priority', 'protocol')
+        request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
         # user_id to be replaced with one extracted via token from Janusz's service.
         job = Job(user_id=1, type=JobType.LIST, **subdict(request.data, allowed_attrs))
         job.add()
@@ -71,9 +76,12 @@ class WorkqueueService(object):
     def copy():
         """Copy."""
         Job = request.db.tables.Job
-        allowed_attrs = ('src_siteid', 'dst_siteid', 'credentials',
-                         'max_tries', 'priority', 'protocol')
+        allowed_attrs = require_attrs('src_siteid', 'src_filepath', 'dst_siteid', 'dst_filepath')\
+                        +('credentials', 'max_tries', 'priority', 'protocol')
+        request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
+        request.data['dst_filepath'] = shellpath_sanitise(request.data['dst_filepath'])
         job = Job(user_id=1, type=JobType.COPY, **subdict(request.data, allowed_attrs))
+        job.add()
         return json.dumps(job, cls=JSONTableEncoder)
 
     @staticmethod
@@ -81,8 +89,9 @@ class WorkqueueService(object):
     def remove():
         """Remove."""
         Job = request.db.tables.Job
-        allowed_attrs = ('src_siteid', 'credentials',
-                         'max_tries', 'priority', 'protocol')
+        allowed_attrs = require_attrs('src_siteid', 'src_filepath') +\
+                        ('credentials', 'max_tries', 'priority', 'protocol')
+        request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
         job = Job(user_id=1, type=JobType.REMOVE, **subdict(request.data, allowed_attrs))
         job.add()
         return json.dumps(job, cls=JSONTableEncoder)
@@ -104,3 +113,15 @@ class WorkqueueService(object):
 def subdict(dct, keys):
     """Create a sub dictionary."""
     return {k: dct[k] for k in keys if k in dct}
+
+
+def shellpath_sanitise(path):
+    if SHELLPATH_REGEX.match(path) is None:
+        abort(400)
+    return path
+
+
+def require_attrs(*attrs):
+    if set(attrs).difference_update(request.data):
+        abort(400)
+    return attrs
