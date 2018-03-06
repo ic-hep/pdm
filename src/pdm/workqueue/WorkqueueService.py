@@ -21,8 +21,8 @@ class WorkqueueService(object):
     """Workqueue Service."""
 
     @staticmethod
-    @export_ext('jobs', ["POST"])
-    def get_job():
+    @export_ext('worker', ["POST"])
+    def get_next_job():
         """Get the next job."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
         job = Job.query.filter(Job.status.in_(JobStatus.NEW, JobStatus.FAILED),
@@ -35,7 +35,7 @@ class WorkqueueService(object):
         return job.json()
 
     @staticmethod
-    @export_ext('jobs/<int:job_id>', ['PUT'])
+    @export_ext('worker/<int:job_id>', ['PUT'])
     def return_output(job_id):
         """Return a job."""
         db = request.db
@@ -59,49 +59,80 @@ class WorkqueueService(object):
             logfile.write(request.data['log'])
 
     @staticmethod
+    @export_ext("jobs", ['POST'])
+    def post_job():
+        """Add a job."""
+        Job = request.db.tables.Job
+        allowed_attrs = require_attrs('type', 'src_siteid', 'src_filepath') +\
+                        ('credentials', 'max_tries', 'priority', 'protocol')
+        request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
+        if request.data['type'] == JobType.COPY:
+            allowed_attrs += require_attrs('dst_siteid', 'dst_filepath')
+            request.data['dst_filepath'] = shellpath_sanitise(request.data['dst_filepath'])
+        job = Job(user_id=get_user_id(), **subdict(request.data, allowed_attrs))
+        job.add()
+        return job.json()
+
+    @staticmethod
     @export_ext('list', ['POST'])
     def list():
         """List a remote dir."""
-        Job = request.db.tables.Job
-        allowed_attrs = require_attrs('src_siteid', 'src_filepath')\
-                        + ('credentials', 'max_tries', 'priority', 'protocol')
-        request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
-        # user_id to be replaced with one extracted via token from Janusz's service.
-        job = Job(user_id=get_user_id(), type=JobType.LIST, **subdict(request.data, allowed_attrs))
-        job.add()
-        return json.dumps(job, cls=JSONTableEncoder)
+        request.data['type'] = JobType.LIST
+        return WorkqueueService.post_job()
+#        Job = request.db.tables.Job
+#        allowed_attrs = require_attrs('src_siteid', 'src_filepath')\
+#                        + ('credentials', 'max_tries', 'priority', 'protocol')
+#        request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
+#        # user_id to be replaced with one extracted via token from Janusz's service.
+#        job = Job(user_id=get_user_id(), type=JobType.LIST, **subdict(request.data, allowed_attrs))
+#        job.add()
+#        return json.dumps(job, cls=JSONTableEncoder)
 
     @staticmethod
     @export_ext('copy', ['POST'])
     def copy():
         """Copy."""
-        Job = request.db.tables.Job
-        allowed_attrs = require_attrs('src_siteid', 'src_filepath', 'dst_siteid', 'dst_filepath')\
-                        +('credentials', 'max_tries', 'priority', 'protocol')
-        request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
-        request.data['dst_filepath'] = shellpath_sanitise(request.data['dst_filepath'])
-        job = Job(user_id=get_user_id(), type=JobType.COPY, **subdict(request.data, allowed_attrs))
-        job.add()
-        return json.dumps(job, cls=JSONTableEncoder)
+        request.data['type'] = JobType.COPY
+        return WorkqueueService.post_job()
+#        Job = request.db.tables.Job
+#        allowed_attrs = require_attrs('src_siteid', 'src_filepath', 'dst_siteid', 'dst_filepath')\
+#                        +('credentials', 'max_tries', 'priority', 'protocol')
+#        request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
+#        request.data['dst_filepath'] = shellpath_sanitise(request.data['dst_filepath'])
+#        job = Job(user_id=get_user_id(), type=JobType.COPY, **subdict(request.data, allowed_attrs))
+#        job.add()
+#        return json.dumps(job, cls=JSONTableEncoder)
 
     @staticmethod
     @export_ext('remove', ['POST'])
     def remove():
         """Remove."""
-        Job = request.db.tables.Job
-        allowed_attrs = require_attrs('src_siteid', 'src_filepath') +\
-                        ('credentials', 'max_tries', 'priority', 'protocol')
-        request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
-        job = Job(user_id=get_user_id(), type=JobType.REMOVE, **subdict(request.data, allowed_attrs))
-        job.add()
-        return json.dumps(job, cls=JSONTableEncoder)
+        request.data['type'] = JobType.REMOVE
+        return WorkqueueService.post_job()
+#        Job = request.db.tables.Job
+#        allowed_attrs = require_attrs('src_siteid', 'src_filepath') +\
+#                        ('credentials', 'max_tries', 'priority', 'protocol')
+#        request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
+#        job = Job(user_id=get_user_id(), type=JobType.REMOVE, **subdict(request.data, allowed_attrs))
+#        job.add()
+#        return json.dumps(job, cls=JSONTableEncoder)
 
     @staticmethod
-    @export_ext('output/<int:job_id>', ['GET'])
-    def get_output(job_id):
-        """Get job output"""
+    @export_ext("jobs/<int:job_id>", ['GET'])
+    def get_job(job_id):
+        """Get job."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
-        job = Job.query.filter(Job.status.in_(JobStatus.DONE, JobStatus.FAILED))\
+        job = Job.query.filter_by(id=job_id)\
+                       .get_or_404()
+        return job.json()
+
+    @staticmethod
+    @export_ext('jobs/<int:job_id>/output', ['GET'])
+    def get_output(job_id):
+        """Get job output."""
+        Job = request.db.tables.Job  # pylint: disable=invalid-name
+        job = Job.query.filter_by(id=job_id)\
+                       .filter(Job.status.in_(JobStatus.DONE, JobStatus.FAILED))\
                        .get_or_404()
         dir_ = os.path.join(getConfig("app/workqueue").get('workerlogs', '/tmp/workers'),
                             job.log.guid[:2],
@@ -109,6 +140,14 @@ class WorkqueueService(object):
         with open(os.path.join(dir_, "attempt%i.log" % job.attempts, 'rb')) as logfile:
             return json.dumps({'jobid': job.id, 'log': logfile.read()})
 
+    @staticmethod
+    @export_ext("jobs/<int:job_id>/status", ['GET'])
+    def get_status(job_id):
+        """Get job status."""
+        Job = request.db.tables.Job  # pylint: disable=invalid-name
+        job = Job.query.filter_by(id=job_id)\
+                       .get_or_404()
+        return json.dumps({'jobid': job.id, 'status': job.status.name})
 
 def subdict(dct, keys):
     """Create a sub dictionary."""

@@ -57,26 +57,54 @@ class Worker(RESTClient, Daemon):
         if self._current_process is not None:
             self._current_process.terminate()
 
+    def _abort(self, job_id, message):
+        """Abort job cycle."""
+        self._logger.error("Error with job %d: %s", job_id, message)
+        try:
+            self.put('worker/%s' % job_id,
+                     data={'log': message,
+                           'returncode': 1,
+                           'host': socket.gethostbyaddr(socket.getfqdn)})
+        except:
+            self._logger.exception("Error trying to PUT back abort message")
+
     def run(self):
         """Daemon main method."""
         endpoint_client = EndpointClient()
         while True:
             try:
-                job = self.post('jobs', data={'types': [type_.value for type_ in self._types]})
+                job = self.post('worker', data={'types': [type_.value for type_ in self._types]})
             except Timeout:
+                continue
+            except:
+                self._logger.exception("Error getting job from workqueue.")
                 continue
 
             src_endpoints = (urlsplit(site) for site in endpoint_client.get_mappings(job['src_siteid']).itervalues())
-            dst_endpoints = (urlsplit(site) for site in endpoint_client.get_mappings(job['dst_siteid']).itervalues())
-
             src = [urlunsplit(site._replace(path=job['src_filepath'])) for site in src_endpoints if site.schema == PROTOCOLMAP[job['protocol']]]
-            dst = [urlunsplit(site._replace(path=job['dst_filepath'])) for site in dst_endpoints if site.schema == PROTOCOLMAP[job['protocol']]]
             if not src:
-                raise Exception("no src")
+                self._abort(job['id'], "Protocol '%s' not supported at src site with id %d"
+                            % (job['protocol'], job['src_siteid']))
+                continue
+            command = "%s %s" % (COMMANDMAP[job['type']][job['protocol']], random.choice(src))
+
+            if job['type'] == JobType.COPY:
+                if job['dst_siteid'] is None:
+                    self._abort(job['id'], "No dst site id set for copy operation")
+                    continue
+                if job['dst_filepath'] is None:
+                    self._abort(job['id'], "No dst site filepath set for copy operation")
+                    continue
+
+                dst_endpoints = (urlsplit(site) for site in endpoint_client.get_mappings(job['dst_siteid']).itervalues())
+                dst = [urlunsplit(site._replace(path=job['dst_filepath'])) for site in dst_endpoints if site.schema == PROTOCOLMAP[job['protocol']]]
+                if not dst:
+                    self._abort(job['id'], "Protocol '%s' not supported at dst site with id %d"
+                                % (job['protocol'], job['dst_siteid']))
+                    continue
+                command += " %s" % random.choice(dst)
+
             with TempX509Files(job['credentials']) as (certfile, keyfile):
-                command = "%s %s" % (COMMANDMAP[job['type']][job['protocol']], random.choice(src))
-                if job['type'] == JobType.COPY and dst:
-                    command += " %s" % random.choice(dst)
                 # self._current_porcess = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=dict(os.environ, X509_USER_CERT=certfile.name, X509_USER_KEY=keyfile.name))
                 # stdout, stderr = self._current_process.communicate(timeout=2)
                 # self.put('jobs/%s' % job['id'], data={'stdout': stdout, 'stderr': stderr})
@@ -88,10 +116,13 @@ class Worker(RESTClient, Daemon):
                                                                   X509_USER_CERT=certfile.name,
                                                                   X509_USER_KEY=keyfile.name))
                 log, _ = self._current_process.communicate()
-                self.put('jobs/%s' % job['id'],
-                         data={'log': log,
-                               'returncode': self._current_process.returncode,
-                               'host': socket.gethostbyaddr(socket.getfqdn)})
+                try:
+                    self.put('worker/%s' % job['id'],
+                             data={'log': log,
+                                   'returncode': self._current_process.returncode,
+                                   'host': socket.gethostbyaddr(socket.getfqdn)})
+                except:
+                    self._logger.exception("Error trying to PUT back output from subcommand.")
 
 
 if __name__ == '__main__':
