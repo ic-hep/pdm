@@ -148,8 +148,9 @@ class WorkqueueService(object):
 
         return_dict = {'jobid': job.id, 'log': log}
         if job.type == JobType.LIST:
-            return_dict.update(listing=[match.groupdict() for match in
-                                        LISTPARSE_REGEX.finditer(log)])
+            return_dict.update(listing=[dict(match.groupdict(),
+                                             is_directory=match.group('permissions').startswith('d'))
+                                        for match in LISTPARSE_REGEX.finditer(log)])
         return json.dumps(return_dict)
 
     @staticmethod
