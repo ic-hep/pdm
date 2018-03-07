@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Client for Workqueue application."""
 from pdm.framework.RESTClient import RESTClient
+
 from .WorkqueueDB import JobProtocol
 
 
