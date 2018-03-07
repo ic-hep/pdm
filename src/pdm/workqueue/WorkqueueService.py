@@ -12,7 +12,7 @@ from pdm.userservicedesk.HRService import HRService
 from .WorkqueueDB import WorkqueueModels, JobStatus, JobType
 
 
-SHELLPATH_REGEX = re.compile(r'^/[a-zA-Z0-9/-_.]*$')
+SHELLPATH_REGEX = re.compile(r'^/[a-zA-Z0-9/-_.*]*$')
 LISTPARSE_REGEX = re.compile(r'^(?P<permissions>\S+)\s+'
                              '(?P<nlinks>\S+)\s+'
                              '(?P<userid>\S+)\s+'
