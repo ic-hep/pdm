@@ -2,19 +2,15 @@
 import logging
 from contextlib import contextmanager
 
-from flask import abort
-
 
 @contextmanager
-def managed_session(request,
-                    message="Error in database session... rolling back!",
-                    logger=logging.getLogger(__name__),
-                    http_error_code=404):
+def managed_session(db):
     """Managed database session context."""
     try:
-        yield request.db.session
-        request.db.session.commit()
+        yield db.session
+        db.session.commit()
     except Exception:  # pylint: disable=broad-except
-        logger.exception(message)
-        request.db.session.rollback()
-        abort(http_error_code)
+        logging.getLogger('managed_session')\
+               .exception("Error in database session... rolling back!")
+        db.session.rollback()
+        raise
