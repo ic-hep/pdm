@@ -13,6 +13,13 @@ from .WorkqueueDB import WorkqueueModels, JobStatus, JobType
 
 
 SHELLPATH_REGEX = re.compile(r'^/[a-zA-Z0-9/-_.]*$')
+LISTPARSE_REGEX = re.compile(r'^(?P<permissions>\S+)\s+'
+                             '(?P<nlinks>\S+)\s+'
+                             '(?P<userid>\S+)\s+'
+                             '(?P<groupid>\S+)\s+'
+                             '(?P<size>\S+)\s+'
+                             '(?P<datestamp>\S+\s+\S+\s+\S+)\s+'
+                             '(?P<name>.*)$', re.MULTILINE)
 
 
 @export_ext("/workqueue/api/v1.0")
@@ -137,7 +144,13 @@ class WorkqueueService(object):
                             job.log.guid[:2],
                             job.log.guid)
         with open(os.path.join(dir_, "attempt%i.log" % job.attempts, 'rb')) as logfile:
-            return json.dumps({'jobid': job.id, 'log': logfile.read()})
+            log = logfile.read()
+
+        return_dict = {'jobid': job.id, 'log': log}
+        if job.type == JobType.LIST:
+            return_dict.update(listing=[match.groupdict() for match in
+                                        LISTPARSE_REGEX.finditer(log)])
+        return json.dumps(return_dict)
 
     @staticmethod
     @export_ext("jobs/<int:job_id>/status", ['GET'])
