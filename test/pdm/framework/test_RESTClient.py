@@ -139,6 +139,7 @@ class TestRESTClient(unittest.TestCase):
         headers = mock_req.request.call_args[1]['headers']
         self.assertIn('X-Token', headers)
         self.assertEqual('TESTTOKEN2', headers['X-Token'])
+        self.assertEqual(client.get_token(),"TESTTOKEN2")
 
     @mock.patch("pdm.framework.RESTClient.requests")
     def test_conf_ssl(self, mock_req):
