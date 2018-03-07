@@ -10,7 +10,7 @@ class HRClient(RESTClient):
     RESTful user management client API
     """
     def __init__(self):
-        super(HRClient, self).__init__('demo')
+        super(HRClient, self).__init__('users')
         #RESTClient.__init__(self, 'users')
 
     def hello(self):
@@ -21,26 +21,34 @@ class HRClient(RESTClient):
     def get_user(self):
         """
         Get user's own data
-        :return:
+        :return: a dictionary containing user data
         """
         return self.get('users/self')
 
     def del_user(self):
-        """ Deletes a user by username.
-            Returns None
+        """
+        Deletes a user.
+        :return: None
         """
         return self.delete('users/self')
 
     def add_user(self, userdict):
-        """ Adds a user.
-            Returns user data.
+        """
+        Add a new user.
+        :param userdict: user input data dictionary.
+        The required fields (strings) are:
+        key: 'email'    value: a valid user email which server as a username
+        key: 'name'     value: user given name e.g. 'John'
+        key: 'surname'  value: user surname e.g. 'Smith'
+        key: 'password' value: password
+        :return: Returns a dict with user data for convenience.
         """
         return self.post('users', userdict)
 
     def login(self, username, password):
         """
         User login procedure. Gets a token issued by a service.
-        The client has to passed the token received to the set_token()
+        The client has to pass the token received to the set_token()
         operation in order to be able to use operations which require
         a token (e.g. get_user() )
         :param username: email address
@@ -57,7 +65,7 @@ class HRClient(RESTClient):
         Request user password change
         :param password: original password
         :param newpassword: new password
-        :return:
+        :return: a dictionary with user data
         """
         cred = {"newpasswd": newpassword, "passwd": password}
         return self.put("passwd", cred)

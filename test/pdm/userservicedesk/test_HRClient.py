@@ -4,6 +4,7 @@ RESTful test client API for the HRService service
 
 import json
 import unittest
+import mock
 
 from pdm.userservicedesk.HRClient import HRClient
 from pdm.userservicedesk.HRService import HRService
@@ -16,7 +17,7 @@ class TestHRClient(unittest.TestCase):
 
     def setUp(self):
         # Get an instance of HRService to test against
-        conf = {}
+        conf = {'CS_secret':'HJGnbfdsV'}
         self.__service = FlaskServer("pdm.userservicedesk.HRService")
         self.__service.test_mode(HRService, None)
         self.__service.fake_auth("ALL")
@@ -94,7 +95,8 @@ class TestHRClient(unittest.TestCase):
         res = self.__client.get_user()
         assert (res['email'] == self.__userdict['email'])
 
-    def test_del_user(self):
+    @mock.patch('pdm.cred.CredClient.MockCredClient.del_user')
+    def test_del_user(self, mock_del):
         self.__service.fake_auth("TOKEN", "User_1")
         res = self.__client.del_user()
         assert ('message' in res[0])
