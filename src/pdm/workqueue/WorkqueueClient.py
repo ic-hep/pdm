@@ -11,7 +11,7 @@ class WorkqueueClient(RESTClient):
         """Load config & configure client."""
         super(WorkqueueClient, self).__init__('workqueue')
 
-    def list(self, src_siteid, src_filepath, credentials,
+    def list(self, src_siteid, src_filepath, credentials,  # pylint: disable=too-many-arguments
              max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
         """
         List a given path.
@@ -34,8 +34,8 @@ class WorkqueueClient(RESTClient):
                                        'priority':  priority,
                                        'protocol': protocol}).data
 
-    def copy(self, src_siteid, src_filepath, dst_siteid, dst_filepath,
-             credentials, max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
+    def copy(self, src_siteid, src_filepath, dst_siteid,  # pylint: disable=too-many-arguments
+             dst_filepath, credentials, max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
         """
         Copy a one path to another.
 
@@ -61,7 +61,7 @@ class WorkqueueClient(RESTClient):
                                        'priority':  priority,
                                        'protocol': protocol}).data
 
-    def remove(self, src_siteid, src_filepath, credentials,
+    def remove(self, src_siteid, src_filepath, credentials,  # pylint: disable=too-many-arguments
                max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
         """
         Remove a given path.

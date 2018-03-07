@@ -37,8 +37,7 @@ class WorkqueueService(object):
     @export_ext('worker/<int:job_id>', ['PUT'])
     def return_output(job_id):
         """Return a job."""
-        db = request.db
-        Job = db.tables.Job  # pylint: disable=invalid-name
+        Job = request.db.tables.Job  # pylint: disable=invalid-name
 
         # Update job status.
         job = Job.query.filter_by(id=job_id).get_or_404()
@@ -61,7 +60,7 @@ class WorkqueueService(object):
     @export_ext("jobs", ['POST'])
     def post_job():
         """Add a job."""
-        Job = request.db.tables.Job
+        Job = request.db.tables.Job  # pylint: disable=invalid-name
         allowed_attrs = require_attrs('type', 'src_siteid', 'src_filepath') +\
                         ('credentials', 'max_tries', 'priority', 'protocol')
         request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])

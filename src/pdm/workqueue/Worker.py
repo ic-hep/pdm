@@ -65,7 +65,7 @@ class Worker(RESTClient, Daemon):
                      data={'log': message,
                            'returncode': 1,
                            'host': socket.gethostbyaddr(socket.getfqdn)})
-        except:
+        except RuntimeError:
             self._logger.exception("Error trying to PUT back abort message")
 
     def run(self):
@@ -76,12 +76,14 @@ class Worker(RESTClient, Daemon):
                 job = self.post('worker', data={'types': [type_.value for type_ in self._types]})
             except Timeout:
                 continue
-            except:
+            except RuntimeError:
                 self._logger.exception("Error getting job from workqueue.")
                 continue
 
-            src_endpoints = (urlsplit(site) for site in endpoint_client.get_mappings(job['src_siteid']).itervalues())
-            src = [urlunsplit(site._replace(path=job['src_filepath'])) for site in src_endpoints if site.schema == PROTOCOLMAP[job['protocol']]]
+            src_endpoints = (urlsplit(site) for site
+                             in endpoint_client.get_mappings(job['src_siteid']).itervalues())
+            src = [urlunsplit(site._replace(path=job['src_filepath'])) for site in src_endpoints
+                   if site.schema == PROTOCOLMAP[job['protocol']]]
             if not src:
                 self._abort(job['id'], "Protocol '%s' not supported at src site with id %d"
                             % (job['protocol'], job['src_siteid']))
@@ -96,8 +98,10 @@ class Worker(RESTClient, Daemon):
                     self._abort(job['id'], "No dst site filepath set for copy operation")
                     continue
 
-                dst_endpoints = (urlsplit(site) for site in endpoint_client.get_mappings(job['dst_siteid']).itervalues())
-                dst = [urlunsplit(site._replace(path=job['dst_filepath'])) for site in dst_endpoints if site.schema == PROTOCOLMAP[job['protocol']]]
+                dst_endpoints = (urlsplit(site) for site
+                                 in endpoint_client.get_mappings(job['dst_siteid']).itervalues())
+                dst = [urlunsplit(site._replace(path=job['dst_filepath'])) for site in dst_endpoints
+                       if site.schema == PROTOCOLMAP[job['protocol']]]
                 if not dst:
                     self._abort(job['id'], "Protocol '%s' not supported at dst site with id %d"
                                 % (job['protocol'], job['dst_siteid']))
@@ -121,7 +125,7 @@ class Worker(RESTClient, Daemon):
                              data={'log': log,
                                    'returncode': self._current_process.returncode,
                                    'host': socket.gethostbyaddr(socket.getfqdn)})
-                except:
+                except RuntimeError:
                     self._logger.exception("Error trying to PUT back output from subcommand.")
 
 

@@ -59,7 +59,7 @@ COMMANDMAP = {JobType.LIST: {JobProtocol.GRIDFTP: 'gfal-ls',
                              JobProtocol.SSH: 'scp'}}
 
 
-class WorkqueueModels(object):
+class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
     """DB Models."""
 
     def __init__(self, db_base):
