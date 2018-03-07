@@ -11,6 +11,7 @@ from sqlalchemy.orm import relationship
 from pdm.framework.Database import JSONMixin
 from pdm.utils.db import managed_session
 
+
 class EnumBase(IntEnum):
     """Base enum."""
 
@@ -134,4 +135,3 @@ class WorkqueueModels(object):
                     ids = (ids,)
                 with managed_session(current_app) as session:
                     session.query.filter(Job.id.in_(set(ids))).delete()
-

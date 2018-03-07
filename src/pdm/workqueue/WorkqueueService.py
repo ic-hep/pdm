@@ -1,4 +1,4 @@
-"""App."""
+"""Workqueue Service."""
 import os
 import json
 import re
@@ -6,7 +6,6 @@ import re
 from flask import request, abort
 
 from pdm.framework.FlaskWrapper import export_ext, db_model
-from pdm.framework.Database import JSONTableEncoder
 from pdm.utils.config import getConfig
 
 from .WorkqueueDB import WorkqueueModels, JobStatus, JobType
@@ -149,6 +148,7 @@ class WorkqueueService(object):
                        .get_or_404()
         return json.dumps({'jobid': job.id, 'status': job.status.name})
 
+
 def subdict(dct, keys):
     """Create a sub dictionary."""
     return {k: dct[k] for k in keys if k in dct}
@@ -170,5 +170,5 @@ def require_attrs(*attrs):
 
 def get_user_id():
     """Placeholder for Janusz code to get token from request and return id."""
-    #request.token -> id
+    # request.token -> id
     return 1
