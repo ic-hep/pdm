@@ -267,7 +267,10 @@ class HRService(object):
         if not check_hash(user.password, passwd):
             HRService._logger.info("login request for %s failed (wrong password) ", data['email'])
             abort(403)
-        plain = "User_%s" % user_id
+        # hashed key for CS
+        cs_hashed_key = hash_pass(user.password, current_app.cs_key)
+        #plain = "User_%s" % user_id
+        plain = {'id':user_id, 'expiry':None, 'key':cs_hashed_key}
         HRService._logger.info("login request accepted for %s", data['email'])
         token = request.token_svc.issue(plain)
         return jsonify(token)
@@ -304,13 +307,26 @@ class HRService(object):
 
         # TODO: Update token to just contain a dictionary
         if request.token_ok:
-            user_id = request.token[5:]
+            user_id = request.token[id]
         else:
             user_id = None
             HRService._logger.error("Token invalid (%s)", request.token)
             abort(403)
 
         return user_id
+
+    @staticmethod
+    def get_token_key(token):
+        """
+        Get the value of the 'key' part of the token to be used to contact the CS
+        The token intenally holds:
+        id: user id
+        expiry: expiry info (to be decided)
+        key: hashed key (from pdm.utils.hashing.hash_pass() )
+        :param token encrypted token
+        :return: the value of the 'key' field of the token dictionary
+        """
+        pass
 
         ### Quarantine below this line.
         ### Code which might be cosidered in the future version of the service
