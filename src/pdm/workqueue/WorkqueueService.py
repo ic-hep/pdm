@@ -7,6 +7,7 @@ from flask import request, abort
 
 from pdm.framework.FlaskWrapper import export_ext, db_model
 from pdm.utils.config import getConfig
+from pdm.userservicedesk.HRService import HRService
 
 from .WorkqueueDB import WorkqueueModels, JobStatus, JobType
 
@@ -67,7 +68,7 @@ class WorkqueueService(object):
         if request.data['type'] == JobType.COPY:
             allowed_attrs += require_attrs('dst_siteid', 'dst_filepath')
             request.data['dst_filepath'] = shellpath_sanitise(request.data['dst_filepath'])
-        job = Job(user_id=get_user_id(), **subdict(request.data, allowed_attrs))
+        job = Job(user_id=HRService.check_token(), **subdict(request.data, allowed_attrs))
         job.add()
         return job.json()
 
@@ -167,7 +168,7 @@ def require_attrs(*attrs):
     return attrs
 
 
-def get_user_id():
-    """Placeholder for Janusz code to get token from request and return id."""
-    # request.token -> id
-    return 1
+#def get_user_id():
+#    """Placeholder for Janusz code to get token from request and return id."""
+#    # request.token -> id
+#    return 1
