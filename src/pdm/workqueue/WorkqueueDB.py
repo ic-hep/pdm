@@ -1,5 +1,6 @@
 """Workqueue SQL DB Module."""
 import uuid
+import json
 from datetime import datetime
 
 from enum import unique, IntEnum
@@ -8,7 +9,7 @@ from sqlalchemy import (Column, Integer, SmallInteger,
                         String, TEXT, TIMESTAMP, CheckConstraint)
 from sqlalchemy.orm import relationship
 
-from pdm.framework.Database import JSONMixin
+from pdm.framework.Database import JSONMixin, JSONTableEncoder
 from pdm.utils.db import managed_session
 
 
@@ -47,6 +48,23 @@ class JobProtocol(EnumBase):
     GRIDFTP = 0
     SSH = 1
 
+
+class WorkqueueJobEncoder(JSONTableEncoder):
+    """
+    Workqueue Job DB Table Encoder.
+
+    Will turn enums into human readable form.
+    """
+
+    #pylint: disable=method-hidden
+    def default(self, obj):
+        """Default encoding method."""
+        return_obj = super(WorkqueueJobEncoder, self).default(obj)
+        if isinstance(obj, JSONMixin):
+            return_obj['type'] = JobType(obj.type).name
+            return_obj['protocol'] = JobProtocol(obj.protocol).name
+            return_obj['status'] = JobStatus(obj.status).name
+        return return_obj
 
 PROTOCOLMAP = {JobProtocol.GRIDFTP: 'gsiftp',
                JobProtocol.SSH: 'ssh'}
@@ -93,7 +111,7 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
                               nullable=False,
                               default=JobProtocol.GRIDFTP)
             status = Column(SmallInteger,
-                            CheckConstraint('status in {0}'.format(JobType.values())),
+                            CheckConstraint('status in {0}'.format(JobStatus.values())),
                             nullable=False,
                             default=JobStatus.NEW)
             logs = relationship("Log", back_populates="job", cascade="all, delete-orphan")
@@ -113,6 +131,10 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
                 """Update session with current job."""
                 with managed_session(current_app) as session:
                     session.merge(self)
+
+            def enum_json(self):
+                """Dump as JSON document with enums expanded."""
+                return json.dumps(self, cls=WorkqueueJobEncoder)
 
             @staticmethod
             def get(ids=None, status=None, prioritised=True):

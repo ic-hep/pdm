@@ -10,7 +10,7 @@ from pdm.framework.Database import JSONTableEncoder
 from pdm.utils.config import getConfig
 from pdm.userservicedesk.HRService import HRService
 
-from .WorkqueueDB import WorkqueueModels, JobStatus, JobType, JobProtocol
+from .WorkqueueDB import WorkqueueModels, WorkqueueJobEncoder, JobStatus, JobType, JobProtocol
 
 
 SHELLPATH_REGEX = re.compile(r'^/[a-zA-Z0-9/-_.*]*$')
@@ -80,7 +80,7 @@ class WorkqueueService(object):
             request.data['dst_filepath'] = shellpath_sanitise(request.data['dst_filepath'])
         job = Job(user_id=HRService.check_token(), **subdict(request.data, allowed_attrs))
         job.add()
-        return job.json()
+        return job.enum_json()
 
     @staticmethod
     @export_ext('list', ['POST'])
@@ -132,7 +132,7 @@ class WorkqueueService(object):
         """Get all jobs for a user."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
         return json.dumps(Job.query.filter_by(user_id=HRService.check_token()).all(),
-                          cls=JSONTableEncoder)
+                          cls=WorkqueueJobEncoder)
 
     @staticmethod
     @export_ext("jobs/<int:job_id>", ['GET'])
@@ -141,7 +141,7 @@ class WorkqueueService(object):
         Job = request.db.tables.Job  # pylint: disable=invalid-name
         job = Job.query.filter_by(user_id=HRService.check_token(), id=job_id)\
                        .get_or_404()
-        return job.json()
+        return job.enum_json()
 
     @staticmethod
     @export_ext('jobs/<int:job_id>/output', ['GET'])
