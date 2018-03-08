@@ -30,7 +30,6 @@ class CredDBModel(object):
             expiry_date = Column(TIMESTAMP, nullable=False)
             cred_pub = Column(TEXT, nullable=False)
             cred_priv = Column(TEXT, nullable=False)
-            sub_creds = relationship("JobCred", cascade="delete")
 
         #pylint: disable=too-few-public-methods, unused-variable
         class JobCred(db_base):
@@ -43,3 +42,5 @@ class CredDBModel(object):
             expiry_date = Column(TIMESTAMP, nullable=False)
             cred_pub = Column(TEXT, nullable=False)
             cred_priv = Column(TEXT, nullable=False)
+
+        UserCred.sub_creds = relationship(JobCred, cascade="delete")

@@ -113,6 +113,17 @@ class TestX509Utils(unittest.TestCase):
         # i.e. x509_obj.CN will only return "Test User".
         # Just check that all fields appear if object is converted back:
         self.assertEqual(X509Utils.x509name_to_str(x509_obj), TEST_DN)
+
+    def test_get_cert_expiry(self):
+        """ Test that the get_cert_expiry function works. """
+        from M2Crypto import X509
+        # Just generate a CA and get its expiry time
+        test_ca = X509CA()
+        test_ca.gen_ca("/C=XX/L=YY/CN=Test CA", 1234)
+        ca_pem = test_ca.get_cert()
+        ca_obj = X509.load_cert_string(ca_pem)
+        ca_exp = ca_obj.get_not_after().get_datetime()
+        self.assertEqual(X509Utils.get_cert_expiry(ca_pem), ca_exp)
         
 
 class TestX509CA(unittest.TestCase):
@@ -134,6 +145,25 @@ class TestX509CA(unittest.TestCase):
         self.assertRaises(RuntimeError, self.__ca.get_key)
         self.assertRaises(RuntimeError, self.__ca.get_dn)
         self.assertRaises(RuntimeError, self.__ca.get_serial)
+
+    def test_ca_props(self):
+        """ Check CA cert properies. """
+        from M2Crypto import X509
+        self.__ca.gen_ca("/C=XX/L=YY/CN=Test CA", 1234)
+        ca_obj = X509.load_cert_string(self.__ca.get_cert())
+        # Check extensions
+        basic_const = ca_obj.get_ext('basicConstraints')
+        self.assertTrue(basic_const.get_critical())
+        self.assertEqual(basic_const.get_value(), 'CA:TRUE')
+        key_usage = ca_obj.get_ext('keyUsage')
+        self.assertTrue(key_usage.get_critical())
+        self.assertIn('Certificate Sign', key_usage.get_value())
+        self.assertNotIn('Data Encipherment', key_usage.get_value())
+        subject_keyid = ca_obj.get_ext('subjectKeyIdentifier').get_value()
+        # Hard to get keyid fields without just checking they look about right
+        self.assertIn(':', subject_keyid)
+        # 20 bytes of hash = 40 chars + 19 ':' chars
+        self.assertEqual(len(subject_keyid), 59)
 
     def test_get_dn(self):
         """ Check the get DN function. """
@@ -174,8 +204,11 @@ class TestX509CA(unittest.TestCase):
             correctly converted into exceptions.
         """
         constr_params = ("/C=ZZ/CN=Another CA", 5)
+        pkey = mock.MagicMock()
+        pkey.as_der.return_value = ""
         x509_obj = mock.MagicMock()
         x509_constr.return_value = x509_obj
+        x509_obj.get_pubkey.return_value = pkey
         not_before.return_value = None
         not_after.return_value = None
         X509_FN = [
@@ -203,8 +236,11 @@ class TestX509CA(unittest.TestCase):
             This only does the non-CA cert specific errors, everything else
             should be covered by test_gen_ca_errors.
         """
+        pkey = mock.MagicMock()
+        pkey.as_der.return_value = ""
         x509_obj = mock.MagicMock()
         x509_constr.return_value = x509_obj
+        x509_obj.get_pubkey.return_value = pkey
         not_before.return_value = None
         not_after.return_value = None
         # Create CA certificate
@@ -221,15 +257,28 @@ class TestX509CA(unittest.TestCase):
             self.assertRaises(RuntimeError, self.__ca.gen_cert, *CERT_PARAMS)
             self.assertTrue(getattr(x509_obj, fcn).called)
             getattr(x509_obj, fcn).return_value = 1
-        # We also have to check that adding the altName fails in the correct
-        # way, this is hidden behind another all to add_ext
+        # We also have to check that adding the specific extensions fails in
+        # the correct way, this is hidden behind another all to add_ext
+        for extName in ('subjectAltName', 'subjectKeyIdentifier'):
+            def add_ext_altfail(ext):
+                if ext.get_name() == extName:
+                    return 0
+                return 1
+            x509_obj.add_ext.called = False
+            x509_obj.add_ext.side_effect = add_ext_altfail
+            self.assertRaises(RuntimeError, self.__ca.gen_cert, *CERT_PARAMS)
+            self.assertTrue(x509_obj.add_ext.called)
+            x509_obj.add_ext.side_effect = None
+        # Finally we have to check add_ext with authKeyId fails correctly
+        # This is similar to above, but isn't included on CA certs
+        self.__ca.gen_cert(*CERT_PARAMS)
         def add_ext_altfail(ext):
-            if ext.get_name() == 'subjectAltName':
+            if ext.get_name() == 'authorityKeyIdentifier':
                 return 0
             return 1
         x509_obj.add_ext.called = False
         x509_obj.add_ext.side_effect = add_ext_altfail
-        self.assertRaises(RuntimeError, self.__ca.gen_cert, *CERT_PARAMS)
+        self.assertRaises(RuntimeError, self.__ca.gen_cert, "/C=XX/CN=Test", 5)
         self.assertTrue(x509_obj.add_ext.called)
         x509_obj.add_ext.side_effect = None
 
@@ -326,10 +375,26 @@ class TestX509CA(unittest.TestCase):
         self.assertEqual(start_diff.days, 0)
         self.assertLess(start_diff.seconds, 60)
         # Check cert extensions
-        self.assertEqual(cert_obj.get_ext('basicConstraints').get_value(),
-                         'CA:FALSE')
+        basic_const = cert_obj.get_ext('basicConstraints')
+        self.assertTrue(basic_const.get_critical())
+        self.assertEqual(basic_const.get_value(), 'CA:FALSE')
         self.assertEqual(cert_obj.get_ext('subjectAltName').get_value(),
                          'email:%s' % TEST_EMAIL)
+        key_usage = cert_obj.get_ext('keyUsage')
+        self.assertTrue(key_usage.get_critical())
+        self.assertIn('Data Encipherment', key_usage.get_value())
+        self.assertNotIn('Certificate Sign', key_usage.get_value())
+        # Check cert keyid extensions
+        ca_id = cert_obj.get_ext('authorityKeyIdentifier')
+        self.assertFalse(ca_id.get_critical())
+        key_id = cert_obj.get_ext('subjectKeyIdentifier')
+        self.assertFalse(key_id.get_critical())
+        ca_obj = X509.load_cert_string(self.__ca.get_cert())
+        real_ca_id = ca_obj.get_ext('subjectKeyIdentifier')
+        test_value = "keyid:%s\n" % real_ca_id.get_value()
+        print self.__ca.get_cert()
+        print cert
+        self.assertEqual(ca_id.get_value(), test_value)
         # Check that the CA's serial number increased
         self.assertGreater(self.__ca.get_serial(), start_serial)
         # Issue another cert, but with an encrypted private key
@@ -343,6 +408,23 @@ class TestX509CA(unittest.TestCase):
                           callback=lambda x: "wrongpass")
         key_obj = RSA.load_key_string(key, callback=lambda x: "weakpass")
         self.assertIsInstance(key_obj, RSA.RSA)
+
+    def test_gen_cert_lifetime(self):
+        """ Check that issuing a cert with a lifetime greater than the CA
+            correctly caps the child cert expiry date to match the CA.
+        """
+        from M2Crypto import X509
+        TEST_ISSUER = "C = ZZ, L = YY, O = Test CA, CN = Basic Test CA"
+        TEST_SUBJECT = "C = ZZ, L = YY, CN = Test User"
+        TEST_CA_DAYS = 3
+        self.__ca.gen_ca(TEST_ISSUER, TEST_CA_DAYS)
+        cert, key = self.__ca.gen_cert(TEST_SUBJECT,
+                                       valid_days=TEST_CA_DAYS + 10)
+        cert_obj = X509.load_cert_string(cert)
+        cert_exp = cert_obj.get_not_after().get_datetime()
+        ca_obj = X509.load_cert_string(self.__ca.get_cert())
+        ca_exp = cert_obj.get_not_after().get_datetime()
+        self.assertEqual(cert_exp, ca_exp)
 
     def test_gen_proxy(self):
         """ Test generating a user proxy. """
@@ -368,6 +450,27 @@ class TestX509CA(unittest.TestCase):
         valid_time = end_time - start_time
         self.assertEqual(valid_time.days, 0)
         self.assertEqual(valid_time.seconds, TEST_HOURS * 3600)
+        # Check proxy extensions
+        key_usage = proxy_obj.get_ext('keyUsage')
+        self.assertTrue(key_usage.get_critical())
+        self.assertIn('Data Encipherment', key_usage.get_value())
+        self.assertNotIn('Certificate Sign', key_usage.get_value())
+        proxy_ext = proxy_obj.get_ext('proxyCertInfo')
+        self.assertTrue(proxy_ext.get_critical())
+        self.assertIn('Path Length Constraint: infinite',
+                      proxy_ext.get_value())
+        self.assertIn('Policy Language: Inherit all',
+                      proxy_ext.get_value())
+        # Check proxy keyid extensions
+        print proxycert
+        user_id = proxy_obj.get_ext('authorityKeyIdentifier')
+        self.assertFalse(user_id.get_critical())
+        proxy_id = proxy_obj.get_ext('subjectKeyIdentifier')
+        self.assertFalse(proxy_id.get_critical())
+        user_obj = X509.load_cert_string(usercert)
+        real_user_id = user_obj.get_ext('subjectKeyIdentifier')
+        test_value = "keyid:%s\n" % real_user_id.get_value()
+        self.assertEqual(user_id.get_value(), test_value)
         # Test generating proxy with passphrase
         USER_PASSPHRASE = "weaktest"
         usercert, userkey = self.__ca.gen_cert("/C=XX, CN=Test User", 4,
@@ -378,8 +481,18 @@ class TestX509CA(unittest.TestCase):
                           userkey, 1, "wrongtest")
         proxycert, proxykey = self.__ca.gen_proxy(usercert, userkey,
                                                   1, USER_PASSPHRASE)
-        # TODO: Check proxy extension
-        # TODO: Add limited proxy test
+        # Test generating a limited proxy
+        proxycert, proxykey = self.__ca.gen_proxy(usercert, userkey,
+                                                  1, USER_PASSPHRASE,
+                                                  limited=True)
+        # Check proxy really is limited
+        proxy_obj = X509.load_cert_string(proxycert)
+        proxy_ext = proxy_obj.get_ext('proxyCertInfo')
+        self.assertTrue(proxy_ext.get_critical())
+        self.assertIn('Path Length Constraint: infinite',
+                      proxy_ext.get_value())
+        self.assertIn('Policy Language: 1.3.6.1.4.1.3536.1.1.1.9',
+                      proxy_ext.get_value())
 
     @mock.patch('M2Crypto.m2.x509_get_not_after')
     @mock.patch('M2Crypto.m2.x509_get_not_before')
@@ -388,7 +501,10 @@ class TestX509CA(unittest.TestCase):
         """ Test all possible error conditions on generating a proxy.
             Only includes tests not tested by general certificate tests.
         """
+        x509_pubkey = mock.MagicMock()
+        x509_pubkey.as_der.return_value = "ABCD"
         x509_obj = mock.MagicMock()
+        x509_obj.get_pubkey.return_value = x509_pubkey
         x509_constr.return_value = x509_obj
         not_before.return_value = None
         not_after.return_value = None

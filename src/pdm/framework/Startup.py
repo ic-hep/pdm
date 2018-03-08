@@ -22,10 +22,13 @@ class ExecutableServer(object):
         self.__wsgi_server = None
         self.__conf_base = ""
         self.__debug = False
+        self.__test = False
         self.__parser = ArgumentParser()
         self.__parser.add_argument("conf", help="Server config file")
         self.__parser.add_argument("--debug", "-d", action='store_true',
                                    help="Debug mode: Don't fork")
+        self.__parser.add_argument("--test", "-t", action='store_true',
+                                   help="Start the service with test data")
         self.__parser.add_argument("--log", "-l",
                                    help="Log file name (defaults to stdout)")
 
@@ -81,13 +84,32 @@ class ExecutableServer(object):
             # We failed to import the client app, we need to raise the inner
             # exception to make debugging easier
             raise err.exc, err.value, err.tb
+        return app_inst
+
+    def __init_apps(self, app_server, app_names, config):
+        """ Creates instances of all WSGI apps defined in the config. """
+        all_config = {}
+        for app_name in app_names:
+            app_config = config.get_section("app/%s" % app_name)
+            auth_conf = self.__fix_path(app_config.pop("auth"))
+            auth_pol = self.__load_auth(app_name, auth_conf)
+            app_server.add_auth_rules(auth_pol)
+            app_class = app_config.pop("class")
+            try:
+                app_inst = pydoc.locate(app_class)()
+                app_server.attach_obj(app_inst)
+            except pydoc.ErrorDuringImport as err:
+                # We failed to import the client app, we need to raise the inner
+                # exception to make debugging easier
+                raise err.exc, err.value, err.tb
+            all_config.update(app_config)
         app_server.build_db()
-        app_server.before_startup(app_config)
+        app_server.before_startup(all_config, with_test=self.__test)
         # Test if there are any unused keys in the dictionary
-        if app_config:
+        if all_config:
             # There are => Unused items = typos?
-            keys = ', '.join(app_config.keys())
-            raise ValueError("Unused config params for %s: '%s'" % (app_name, keys))
+            keys = ', '.join(all_config.keys())
+            raise ValueError("Unused config params: '%s'" % keys)
 
     def __init_wsgi(self, wsgi_name, config):
         """ Creates an instance of FlaskServer, opens a port and configures
@@ -111,8 +133,7 @@ class ExecutableServer(object):
             app_server.enable_db(db_uri)
         # Create child app instances
         app_names = wsgi_config.get("apps", [])
-        for app_name in app_names:
-            self.__init_app(app_server, app_name, config)
+        self.__init_apps(app_server, app_names, config)
         self.__wsgi_server.add_server(port, app_server, cert, key, cafile)
 
     def run(self):
@@ -123,6 +144,7 @@ class ExecutableServer(object):
         # Handle command-line args
         args = self.__parser.parse_args()
         self.__debug = args.debug
+        self.__test = args.test
         self.__conf_base = os.path.dirname(args.conf)
         # Enabling logging
         if self.__debug:

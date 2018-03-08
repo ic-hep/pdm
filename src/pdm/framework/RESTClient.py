@@ -43,6 +43,8 @@ class RESTClient(object):
         self.__url = self.__locate(service)
         self.__ssl_opts = self.__get_ssl_opts(ssl_opts)
         self.__token = token
+        client_conf = self.__conf.get_section("client")
+        self.__timeout = client_conf.pop("timeout", 20)
 
     def set_token(self, token):
         """ Set the token to use for future requests.
@@ -65,8 +67,14 @@ class RESTClient(object):
         if self.__token:
             headers['X-Token'] = self.__token
         # Actually send the request
-        resp = requests.request(method, full_url, json=data, headers=headers,
-                                verify=cafile, cert=client_cert)
+        request_args = {}
+        if data:
+            request_args['json'] = data
+        request_args['headers'] = headers
+        request_args['verify'] = cafile
+        request_args['cert'] = client_cert
+        request_args['timeout'] = self.__timeout
+        resp = requests.request(method, full_url, **request_args)
         #pylint: disable=no-member
         if resp.status_code not in (requests.codes.ok, requests.codes.created):
             # TODO: Better excpetions here

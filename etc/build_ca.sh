@@ -22,5 +22,10 @@ openssl x509 -req -CA CA.crt -CAkey CA.key -CAcreateserial -days 365 -sha256 -in
 # Client Cert
 openssl genrsa -out client.key 2048
 openssl req -new -batch -key client.key -subj "${BASEDN}/CN=client user" -out client.csr
-openssl x509 -req -CA CA.crt -CAkey CA.key -CAcreateserial -days 365 -sha256 -in client.csr -extfile ../openssl.cnf -extensions SAN -out client.crt
+openssl x509 -req -CA CA.crt -CAkey CA.key -CAcreateserial -days 365 -sha256 -in client.csr -out client.crt
 
+# Root cert
+# For testing, allowed to do all operations
+openssl genrsa -out root.key 2048
+openssl req -new -batch -key client.key -subj "${BASEDN}/CN=root" -out root.csr
+openssl x509 -req -CA CA.crt -CAkey CA.key -CAcreateserial -days 365 -sha256 -in root.csr -out root.crt

@@ -159,6 +159,17 @@ class TestRESTClient(unittest.TestCase):
         self.assertSequenceEqual(cert, (TEST_CERT, TEST_KEY))
 
     @mock.patch("pdm.framework.RESTClient.requests")
+    def test_conf_timeout(self, mock_req):
+        """ Test that timeout config works.
+        """
+        TEST_TIMEOUT = 33
+        client = self.__get_inst(client_conf={'timeout': TEST_TIMEOUT})
+        self.__mock_req(mock_req, 200, "")
+        client.get('test_timeout')
+        real_timeout = mock_req.request.call_args[1]['timeout']
+        self.assertEqual(real_timeout, TEST_TIMEOUT)
+
+    @mock.patch("pdm.framework.RESTClient.requests")
     def test_constr_ssl(self, mock_req):
         """ Test that configuring SSL via the constructor works and
             overrides the config.
