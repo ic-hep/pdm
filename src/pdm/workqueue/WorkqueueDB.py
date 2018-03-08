@@ -114,7 +114,6 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
                             CheckConstraint('status in {0}'.format(JobStatus.values())),
                             nullable=False,
                             default=JobStatus.NEW)
-            logs = relationship("Log", back_populates="job", cascade="all, delete-orphan")
             CheckConstraint('retries <= max_tries')
 
             def add(self):
