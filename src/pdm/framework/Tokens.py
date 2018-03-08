@@ -2,7 +2,7 @@
 """ A module for handling client tokens. """
 
 import os
-from itsdangerous import URLSafeSerializer
+from itsdangerous import URLSafeSerializer, BadData, BadSignature
 
 class TokenService(object):
     """ This class issues and verifies client tokens using a given key.
@@ -45,6 +45,19 @@ class TokenService(object):
         try:
             res = self.__signer.loads(token)
             return res
-        except:
-            # TODO: More specific catch here
+        except BadData:
             raise ValueError("Token is invalid")
+
+    @staticmethod
+    def unpack(token):
+        """ Unpacks a token without verification.
+            Should only be used for fields which provide their own integrity.
+            (Such as other tokens).
+            Returns: The token object.
+            Raises ValueError if the token cannot be unpacked.
+        """
+        unpacker = URLSafeSerializer("BadKey", None)
+        _, res = unpacker.loads_unsafe(token)
+        if not res:
+            raise ValueError("Corrupt/empty token")
+        return res

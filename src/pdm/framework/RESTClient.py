@@ -52,6 +52,13 @@ class RESTClient(object):
         """
         self.__token = token
 
+    def get_token(self):
+        """
+        Get the token used for the requests
+        :return:
+        """
+        return self.__token
+
     def __do_request(self, uri, method, data=None):
         """ Run a request on te server
             Returns object from the server.

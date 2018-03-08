@@ -57,3 +57,15 @@ class TokenServiceTest(unittest.TestCase):
         # Tokens should be identical
         self.assertEqual(token1, token2)
         self.assertEqual(TEST_STR, svc1.check(token2))
+
+    def test_unpack(self):
+        """ Test that the unpacker without verification works
+            correctly.
+        """
+        TEST_OBJ = {"a": "field1", "b": "ASD" }
+        svc = TokenService()
+        token = svc.issue(TEST_OBJ)
+        retval = TokenService.unpack(token)
+        self.assertDictEqual(TEST_OBJ, retval)
+        # Check the error handling
+        self.assertRaises(ValueError, svc.unpack, "not_a_token")
