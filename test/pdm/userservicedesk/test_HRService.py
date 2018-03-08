@@ -34,7 +34,7 @@ class TestHRService(unittest.TestCase):
         GET operation on users/self
         :return:
         """
-        self.__service.fake_auth("TOKEN", "User_1")
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':None, 'key': 'unused'})
         res = self.__test.get('/users/api/v1.0/users/self')
         assert (res.status_code == 200)
         user = json.loads(res.data)
@@ -46,7 +46,7 @@ class TestHRService(unittest.TestCase):
         assert (user['state'] == 0)
         assert ('password' not in user)
         #
-        self.__service.fake_auth("TOKEN", "User_2")
+        self.__service.fake_auth("TOKEN", {'id':2, 'expiry':None, 'key': 'unused'})
         res = self.__test.get('/users/api/v1.0/users/self')
         assert (res.status_code == 404)
 
@@ -153,7 +153,7 @@ class TestHRService(unittest.TestCase):
         Test the password changing operation
         :return:
         """
-        self.__service.fake_auth("TOKEN", "User_1")  # fake auth John, which is id=1
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':None, 'key': 'unused'})  # fake auth John, which is id=1
         new_pass_data = json.dumps({'passwd': 'very_secret', 'newpasswd': 'even_more_secret'})
         res = self.__test.put('/users/api/v1.0/passwd', data=new_pass_data)
         assert (res.status_code == 200)
@@ -193,7 +193,7 @@ class TestHRService(unittest.TestCase):
         res = self.__test.put('/users/api/v1.0/passwd', data=weak_pass)
         assert (res.status_code == 403)
         # non existing user
-        self.__service.fake_auth("TOKEN", "User_7")
+        self.__service.fake_auth("TOKEN", {'id':7, 'expiry':None, 'key': 'unused'})
         res = self.__test.put('/users/api/v1.0/passwd', data=new_pass_data)
         assert (res.status_code == 404)
 
@@ -203,7 +203,7 @@ class TestHRService(unittest.TestCase):
         :param mock_add_user: Only test HR, CS transaction, not the password detail
         :return:
         """
-        self.__service.fake_auth("TOKEN", "User_1")  # fake auth John, which is id=1
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':None, 'key': 'unused'})  # fake auth John, which is id=1
         new_pass_data = json.dumps({'passwd': 'very_secret', 'newpasswd': 'even_more_secret'})
         res = self.__test.put('/users/api/v1.0/passwd', data=new_pass_data)
         assert (res.status_code == 200)
@@ -212,7 +212,7 @@ class TestHRService(unittest.TestCase):
 
     @mock.patch('pdm.cred.CredClient.MockCredClient.add_user')
     def test_change_password_CS_fail(self, mock_add_user):
-        self.__service.fake_auth("TOKEN", "User_1")  # fake auth John, which is id=1
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':None, 'key': 'unused'})  # fake auth John, which is id=1
         new_pass_data = json.dumps({'passwd': 'very_secret', 'newpasswd': 'even_more_secret'})
         mock_add_user.side_effect = Exception()
         res = self.__test.put('/users/api/v1.0/passwd', data=new_pass_data)
@@ -231,13 +231,13 @@ class TestHRService(unittest.TestCase):
         :return:
         """
         # not existing user:
-        self.__service.fake_auth("TOKEN", "User_7")
+        self.__service.fake_auth("TOKEN", {'id':7, 'expiry':None, 'key': 'unused'})
         res = self.__test.delete('/users/api/v1.0/users/self')
         assert (res.status_code == 404)
         assert not mock_del_user.called
 
         # delete poor Johny ;-(
-        self.__service.fake_auth("TOKEN", "User_1")  # fake auth John, which is id=1
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':None, 'key': 'unused'})  # fake auth John, which is id=1
         res = self.__test.delete('/users/api/v1.0/users/self')
         assert (res.status_code == 200)
         assert mock_del_user.called
@@ -251,7 +251,7 @@ class TestHRService(unittest.TestCase):
         """
 
         # delete poor Johny ;-(
-        self.__service.fake_auth("TOKEN", "User_1")  # fake auth John, which is id=1
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':None, 'key': 'unused'})  # fake auth John, which is id=1
         mock_del_user.side_effect = Exception()
         res = self.__test.delete('/users/api/v1.0/users/self')
         assert (res.status_code == 500)
@@ -265,7 +265,7 @@ class TestHRService(unittest.TestCase):
     @mock.patch('sqlalchemy.orm.scoping.scoped_session.delete')
     @mock.patch('pdm.cred.CredClient.MockCredClient.del_user')
     def test_deleteUser_HR_fail(self, mock_del_user, mock_del):
-        self.__service.fake_auth("TOKEN", "User_1")  # fake auth John, which is id=1
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':None, 'key': 'unused'})  # fake auth John, which is id=1
         mock_del.side_effect = Exception()
         res = self.__test.delete('/users/api/v1.0/users/self')
         assert (res.status_code == 500)
@@ -281,7 +281,10 @@ class TestHRService(unittest.TestCase):
         assert (res.status_code == 200)
         # TODO check the token content
         token_data = self.__service.token_svc.check(json.loads(res.data))
-        assert (token_data == 'User_1')
+        db = self.__service.test_db()
+        dbuser = db.tables.User.query.filter_by(email='Johnny@example.com').first()
+        cs_hashed_key = hash_pass(dbuser.password, 'HJGnbfdsV')
+        assert (token_data == {'id':1, 'expiry':None, 'key': cs_hashed_key})
 
         login_creds = json.dumps({'email': 'Johnny@example.com'})
         res = self.__test.post('/users/api/v1.0/login', data=login_creds)

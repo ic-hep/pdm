@@ -308,7 +308,7 @@ class HRService(object):
 
         # TODO: Update token to just contain a dictionary
         if request.token_ok:
-            user_id = request.token[id]
+            user_id = request.token['id']
         else:
             user_id = None
             HRService._logger.error("Token invalid (%s)", request.token)
