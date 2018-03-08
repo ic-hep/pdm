@@ -32,7 +32,7 @@ class WorkqueueService(object):
     def get_next_job():
         """Get the next job."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
-        job = Job.query.filter(Job.status.in_(JobStatus.NEW, JobStatus.FAILED),
+        job = Job.query.filter(Job.status.in_((JobStatus.NEW, JobStatus.FAILED)),
                                Job.type.in_(request.data['types']),
                                Job.attempts <= Job.max_tries)\
                        .order_by(Job.priority)\
@@ -138,7 +138,7 @@ class WorkqueueService(object):
         """Get job output."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
         job = Job.query.filter_by(id=job_id)\
-                       .filter(Job.status.in_(JobStatus.DONE, JobStatus.FAILED))\
+                       .filter(Job.status.in_((JobStatus.DONE, JobStatus.FAILED)))\
                        .get_or_404()
         dir_ = os.path.join(getConfig("app/workqueue").get('workerlogs', '/tmp/workers'),
                             job.log.guid[:2],
