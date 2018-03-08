@@ -43,9 +43,13 @@ class test_EndpointService(unittest.TestCase):
             with one that throws an error (simulating
             a generic DB failure).
         """
-        session = mock.MagicMock()
-        mock_session.return_value = session
-        session.__exit__.side_effect = Exception("DB Error")
+        from flask import abort
+        def run_session(request, message="Error",
+                        logger=None, http_error_code=None):
+            if http_error_code:
+                abort(http_error_code, description=message)
+            raise Exception("DB Error")
+        mock_session.side_effect = run_session
 
     def setUp(self):
         """ Configure the basic service in test mode.
