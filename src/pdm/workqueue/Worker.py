@@ -74,7 +74,7 @@ class Worker(RESTClient, Daemon):
         endpoint_client = EndpointClient()
         while True:
             try:
-                job = self.post('worker', data={'types': [type_.value for type_ in self._types]})
+                job = self.post('worker', data={'types': self._types})
             except Timeout:
                 continue
             except RuntimeError:

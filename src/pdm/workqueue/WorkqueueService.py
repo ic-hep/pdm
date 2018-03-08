@@ -6,10 +6,11 @@ import re
 from flask import request, abort
 
 from pdm.framework.FlaskWrapper import export_ext, db_model
+from pdm.framework.Database import JSONTableEncoder
 from pdm.utils.config import getConfig
 from pdm.userservicedesk.HRService import HRService
 
-from .WorkqueueDB import WorkqueueModels, JobStatus, JobType
+from .WorkqueueDB import WorkqueueModels, JobStatus, JobType, JobProtocol
 
 
 SHELLPATH_REGEX = re.compile(r'^/[a-zA-Z0-9/-_.*]*$')
@@ -71,6 +72,8 @@ class WorkqueueService(object):
         Job = request.db.tables.Job  # pylint: disable=invalid-name
         allowed_attrs = require_attrs('type', 'src_siteid', 'src_filepath') +\
                         ('credentials', 'max_tries', 'priority', 'protocol')
+        request.data['type'] = to_enum(request.data['type'], JobType)
+        request.data['protocol'] = to_enum(request.data['protocol'], JobProtocol)
         request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
         if request.data['type'] == JobType.COPY:
             allowed_attrs += require_attrs('dst_siteid', 'dst_filepath')
@@ -122,6 +125,14 @@ class WorkqueueService(object):
 #        job = Job(user_id=get_user_id(), type=JobType.REMOVE, **subdict(request.data, allowed_attrs))
 #        job.add()
 #        return json.dumps(job, cls=JSONTableEncoder)
+
+    @staticmethod
+    @export_ext("jobs", ['GET'])
+    def get_jobs():
+        """Get all jobs for a user."""
+        Job = request.db.tables.Job  # pylint: disable=invalid-name
+        return json.dumps(Job.query.filter_by(user_id=HRService.check_token()).all(),
+                          cls=JSONTableEncoder)
 
     @staticmethod
     @export_ext("jobs/<int:job_id>", ['GET'])
@@ -182,7 +193,20 @@ def require_attrs(*attrs):
     return attrs
 
 
-#def get_user_id():
-#    """Placeholder for Janusz code to get token from request and return id."""
-#    # request.token -> id
-#    return 1
+def to_enum(obj, enum_type):
+    """Convert arg to enum."""
+    if isinstance(obj, enum_type):
+        return obj
+    if isinstance(obj, int):
+        return enum_type(obj)
+    if isinstance(obj, basestring):
+        if obj.isdigit():
+            return enum_type(int(obj))
+        return enum_type[obj]
+    abort(400)
+
+
+# def get_user_id():
+#     """Placeholder for Janusz code to get token from request and return id."""
+#     # request.token -> id
+#     return 1
