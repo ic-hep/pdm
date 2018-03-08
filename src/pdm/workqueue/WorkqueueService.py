@@ -139,7 +139,7 @@ class WorkqueueService(object):
     def get_job(job_id):
         """Get job."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
-        job = Job.query.filter_by(id=job_id)\
+        job = Job.query.filter_by(user_id=HRService.check_token(), id=job_id)\
                        .get_or_404()
         return job.json()
 
@@ -148,7 +148,7 @@ class WorkqueueService(object):
     def get_output(job_id):
         """Get job output."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
-        job = Job.query.filter_by(id=job_id)\
+        job = Job.query.filter_by(user_id=HRService.check_token(), id=job_id)\
                        .filter(Job.status.in_((JobStatus.DONE, JobStatus.FAILED)))\
                        .get_or_404()
         dir_ = os.path.join(getConfig("app/workqueue").get('workerlogs', '/tmp/workers'),
@@ -169,7 +169,7 @@ class WorkqueueService(object):
     def get_status(job_id):
         """Get job status."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
-        job = Job.query.filter_by(id=job_id)\
+        job = Job.query.filter_by(user_id=HRService.check_token(), id=job_id)\
                        .get_or_404()
         return json.dumps({'jobid': job.id, 'status': job.status.name})
 

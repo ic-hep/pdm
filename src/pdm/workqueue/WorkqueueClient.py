@@ -84,3 +84,56 @@ class WorkqueueClient(RESTClient):
                                          'max_tries': max_tries,
                                          'priority':  priority,
                                          'protocol': protocol}).data
+
+    def jobs(self):
+        """
+        Get all jobs for a user.
+
+        Returns:
+            list: JSON list of all the users jobs as dicts.
+        """
+        return self.get('jobs')
+
+    def job(self, job_id):
+        """
+        Get a job by id.
+
+        Args:
+            job_id (int): The id number of the job to get.
+
+        Returns:
+            dict: JSON representation of the job.
+        """
+        return self.get('jobs/%s' % job_id)
+
+    def status(self, job_id):
+        """
+        Get a jobs status.
+
+        This returns the human readable status rather than the integer code.
+
+        Args:
+            job_id (int): The id number of the job to query.
+
+        Returns:
+            dict: JSON representation of the status with keys (jobid, status)
+        """
+        return self.get('jobs/%s/stauts' % job_id)
+
+    def output(self, job_id):
+        """
+        Get job output.
+
+        Gets the output for the given job if it's ready.
+
+        Args:
+            job_id (int): The id number of the job to fetch output from.
+
+        Returns:
+            dict: JSON representation of the output with keys (jobid, log).
+                  log is the contents of the job log file. If the job in question was a LIST type
+                  job then there will be the additional key "listing" which will be a JSON encoded
+                  list of files/directories each as a dict containing the following keys:
+                  (permissions, nlinks, userid, groupid, size, datestamp, name, is_directory).
+            """
+        return self.get('jobs/%s/output' % job_id)
