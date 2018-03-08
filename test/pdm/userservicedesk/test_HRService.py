@@ -5,6 +5,7 @@ import mock
 from pdm.userservicedesk.HRService import HRService
 from pdm.framework.FlaskWrapper import FlaskServer
 from pdm.utils.hashing import hash_pass, check_hash
+from pdm.framework.Tokens import TokenService
 
 
 class TestHRService(unittest.TestCase):
@@ -300,3 +301,12 @@ class TestHRService(unittest.TestCase):
         assert (res.status_code == 200)
         res_str = json.loads(res.data)
         assert (res_str == 'User Service Desk at your service !\n')
+
+    def test_get_token_key(self):
+        key = 'hdfgdgfgfusy'
+        plain = {'id':44, 'expiry':None, 'key': key}
+        svc = TokenService()
+        token = svc.issue(plain)
+        ukey = HRService.get_token_key(token)
+        assert key == ukey
+

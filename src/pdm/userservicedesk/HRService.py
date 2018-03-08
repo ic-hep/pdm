@@ -10,6 +10,7 @@ from sqlalchemy import func
 from flask import request, abort, current_app
 from pdm.framework.FlaskWrapper import export, export_ext, db_model, jsonify, startup
 from pdm.utils.hashing import hash_pass, check_hash
+from pdm.framework.Tokens import TokenService
 import pdm.userservicedesk.models
 from pdm.cred.CredClient import MockCredClient
 
@@ -326,7 +327,9 @@ class HRService(object):
         :param token encrypted token
         :return: the value of the 'key' field of the token dictionary
         """
-        pass
+        unpacked_user_token = TokenService.unpack(token)
+        cs_key = unpacked_user_token.get('key', None)
+        return cs_key
 
         ### Quarantine below this line.
         ### Code which might be cosidered in the future version of the service
