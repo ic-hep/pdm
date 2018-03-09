@@ -81,7 +81,7 @@ class Worker(RESTClient, Daemon):
                 self._logger.exception("Error getting job from workqueue.")
                 continue
             try:
-                job = response.json()
+                job, token = response.json()
             except ValueError:
                 self._logger.exception("Error decoding JSON job.")
                 continue
@@ -125,6 +125,7 @@ class Worker(RESTClient, Daemon):
                                                                   X509_USER_CERT=certfile.name,
                                                                   X509_USER_KEY=keyfile.name))
                 log, _ = self._current_process.communicate()
+                self.set_token(token)
                 try:
                     self.put('worker/%s' % job['id'],
                              data={'log': log,
@@ -132,7 +133,8 @@ class Worker(RESTClient, Daemon):
                                    'host': socket.gethostbyaddr(socket.getfqdn)})
                 except RuntimeError:
                     self._logger.exception("Error trying to PUT back output from subcommand.")
-
+                finally:
+                    self.set_token(None)
 
 if __name__ == '__main__':
     Worker().start()

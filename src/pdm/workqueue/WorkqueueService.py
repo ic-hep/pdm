@@ -3,7 +3,7 @@ import os
 import json
 import re
 
-from flask import request, abort
+from flask import request, abort, jsonify
 
 from pdm.framework.FlaskWrapper import export_ext, db_model
 from pdm.framework.Database import JSONTableEncoder
@@ -40,12 +40,16 @@ class WorkqueueService(object):
                        .first_or_404()
         job.status = JobStatus.SUBMITTED
         job.update()
-        return job.json()
+        return jsonify((job, request.token_svc.issue(str(job.id))))
 
     @staticmethod
     @export_ext('worker/<int:job_id>', ['PUT'])
     def return_output(job_id):
         """Return a job."""
+        if not request.token_ok:
+            abort(403, description="Invalid token")
+        if request.token != job_id:
+            abort(403, description="Token not valid for job %d" % job_id)
         Job = request.db.tables.Job  # pylint: disable=invalid-name
 
         # Update job status.
@@ -182,14 +186,15 @@ def subdict(dct, keys):
 def shellpath_sanitise(path):
     """Sanitise the path for use in bash shell."""
     if SHELLPATH_REGEX.match(path) is None:
-        abort(400)
+        abort(400, description="Possible injection content in filepath '%s'" % path)
     return path
 
 
 def require_attrs(*attrs):
     """Require the given attrs."""
-    if set(attrs).difference_update(request.data):
-        abort(400)
+    required = set(attrs).difference_update(request.data)
+    if required:
+        abort(400, description="Missing data attributes: %s" % list(required))
     return attrs
 
 
@@ -203,7 +208,7 @@ def to_enum(obj, enum_type):
         if obj.isdigit():
             return enum_type(int(obj))
         return enum_type[obj]
-    abort(400)
+    abort(400, description="Failed to convert '%s' to enum type '%s'" % (obj, enum_type))
 
 
 # def get_user_id():
