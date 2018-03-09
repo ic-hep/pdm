@@ -65,6 +65,7 @@ class WorkqueueJobEncoder(JSONTableEncoder):
             return_obj['status'] = JobStatus(obj.status).name
         return return_obj
 
+
 PROTOCOLMAP = {JobProtocol.GRIDFTP: 'gsiftp',
                JobProtocol.SSH: 'ssh'}
 
