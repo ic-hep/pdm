@@ -7,7 +7,6 @@ from enum import unique, IntEnum
 from flask import current_app
 from sqlalchemy import (Column, Integer, SmallInteger,
                         String, TEXT, TIMESTAMP, CheckConstraint)
-from sqlalchemy.orm import relationship
 
 from pdm.framework.Database import JSONMixin, JSONTableEncoder
 from pdm.utils.db import managed_session
@@ -118,17 +117,23 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
 
             def add(self):
                 """Add job to session."""
-                with managed_session(current_app) as session:
+                with managed_session(current_app,
+                                     message="Error adding job",
+                                     http_error_code=500) as session:
                     session.add(self)
 
             def remove(self):
                 """Remove job from session."""
-                with managed_session(current_app) as session:
+                with managed_session(current_app,
+                                     message="Error removing job",
+                                     http_error_code=500) as session:
                     session.delete(self)
 
             def update(self):
                 """Update session with current job."""
-                with managed_session(current_app) as session:
+                with managed_session(current_app,
+                                     message="Error updating job",
+                                     http_error_code=500) as session:
                     session.merge(self)
 
             def enum_json(self):
@@ -154,5 +159,7 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
                 """Remove jobs from database."""
                 if isinstance(ids, int):
                     ids = (ids,)
-                with managed_session(current_app) as session:
+                with managed_session(current_app,
+                                     message="Error removing all jobs.",
+                                     http_error_code=500) as session:
                     session.query.filter(Job.id.in_(set(ids))).delete()
