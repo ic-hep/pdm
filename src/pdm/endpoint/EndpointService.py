@@ -74,9 +74,8 @@ class EndpointService(object):
             return "Malformed POST data", 400
         # Add the new site
         site = Site(**site_data)
-        # TODO: Check for duplicate site_name
         try:
-            with managed_session(db) as session:
+            with managed_session(request) as session:
                 session.add(site)
         except IntegrityError:
             # site_name almost certainly already exists
@@ -113,12 +112,10 @@ class EndpointService(object):
         db = request.db
         Site = db.tables.Site
         site = Site.query.filter_by(site_id=site_id).first_or_404()
-        try:
-            with managed_session(db) as session:
-                session.delete(site)
-        #pylint: disable=broad-except
-        except Exception:
-            return "Failed to remote site from DB", 500
+        with managed_session(request,
+                             message="Database error while deleting site",
+                             http_error_code=500) as session:
+            session.delete(site)
         return ""
 
     @staticmethod
@@ -139,12 +136,10 @@ class EndpointService(object):
         Site.query.filter_by(site_id=site_id).first_or_404()
         # TODO: Check ep_uri format?
         new_ep = Endpoint(ep_uri=ep_uri, site_id=site_id)
-        try:
-            with managed_session(db) as session:
-                session.add(new_ep)
-        #pylint: disable=broad-except
-        except Exception:
-            return "Failed to add endpoint to DB", 500
+        with managed_session(request,
+                             message="Failed to add endpoint to DB",
+                             http_error_code=500) as session:
+            session.add(new_ep)
         return jsonify(new_ep.ep_id)
 
     @staticmethod
@@ -155,12 +150,10 @@ class EndpointService(object):
         Endpoint = db.tables.Endpoint
         endpoint = Endpoint.query.filter_by(site_id=site_id,
                                             ep_id=ep_id).first_or_404()
-        try:
-            with managed_session(db) as session:
-                session.delete(endpoint)
-        #pylint: disable=broad-except
-        except Exception:
-            return "Failed to delete endpoint from DB", 500
+        with managed_session(request,
+                             message="Failed to delete endpoint from DB",
+                             http_error_code=500) as session:
+            session.delete(endpoint)
         return ""
 
     @staticmethod
@@ -196,7 +189,7 @@ class EndpointService(object):
                           site_id=site_id,
                           username=local_user)
         try:
-            with managed_session(db) as session:
+            with managed_session(request) as session:
                 session.add(new_map)
         except FlushError:
             return "Mapping for user_id already exists", 409
@@ -212,12 +205,10 @@ class EndpointService(object):
         UserMap = db.tables.UserMap
         entry = UserMap.query.filter_by(site_id=site_id,
                                         user_id=user_id).first_or_404()
-        try:
-            with managed_session(db) as session:
-                session.delete(entry)
-        #pylint: disable=broad-except
-        except Exception:
-            return "Failed to del sitemap from DB", 500
+        with managed_session(request,
+                             message="Failed to del sitemap from DB",
+                             http_error_code=500) as session:
+            session.delete(entry)
         return ""
 
     @staticmethod
@@ -226,15 +217,13 @@ class EndpointService(object):
         """ Delete a user from all site maps. """
         db = request.db
         UserMap = db.tables.UserMap
-        try:
-            # We do this the long way with managed_session to make testing
-            # more easy, otherwise we could just do .delete() instead of
-            # .all()
-            with managed_session(db) as session:
-                mappings = UserMap.query.filter_by(user_id=user_id).all()
-                for entry in mappings:
-                    session.delete(entry)
-        #pylint: disable=broad-except
-        except Exception:
-            return "Failed to del user from sitemaps", 500
+        # We do this the long way with managed_session to make testing
+        # more easy, otherwise we could just do .delete() instead of
+        # .all()
+        with managed_session(request,
+                             message="Failed to del user from sitemaps",
+                             http_error_code=500) as session:
+            mappings = UserMap.query.filter_by(user_id=user_id).all()
+            for entry in mappings:
+                session.delete(entry)
         return ""
