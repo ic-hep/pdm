@@ -301,12 +301,14 @@ class FlaskServer(Flask):
                 for func in self.__test_funcs:
                     func()
 
-    def attach_obj(self, obj_inst, root_path='/'):
+    def attach_obj(self, obj_inst, root_path='/', parent_name=None):
         """ Attaches an object tree to this web service.
             For each exported object, it is attached to the path tree and
             then all of its children are checked for the exported flag.
             obj_inst - The root object to start scanning.
             root_path - The base path to start attaching relative paths from.
+            parent_name - Optinal prefix to give registered endpoints.
+                          (Used to prevent duplicate entries between classes).
             Returns None.
         """
         if hasattr(obj_inst, 'is_exported'):
@@ -320,10 +322,13 @@ class FlaskServer(Flask):
                     self.__db_classes.extend(obj_inst.db_model)
                 items = [x for x in dir(obj_inst) if not x.startswith('_')]
                 for obj_item in [getattr(obj_inst, x) for x in items]:
-                    self.attach_obj(obj_item, obj_path)
+                    cls_name = type(obj_inst).__name__
+                    self.attach_obj(obj_item, obj_path, cls_name)
             else:
                 self.__logger.debug("Attaching %s at %s", obj_inst, obj_path)
                 endpoint = obj_inst.__name__
+                if parent_name:
+                    endpoint = "%s.%s" % (parent_name, endpoint)
                 self.add_url_rule(obj_path, endpoint, obj_inst,
                                   methods=obj_inst.export_methods)
         elif hasattr(obj_inst, 'is_startup'):
