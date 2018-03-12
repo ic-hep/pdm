@@ -6,11 +6,14 @@ User Interface Service
 import sys
 import logging
 import json
-from flask import request, abort
-from pdm.framework.FlaskWrapper import export, export_ext, db_model, jsonify
-from pdm.utils.hashing import hash_pass, check_hash
-import pdm.userservicedesk.models
 from sqlalchemy import func
+from flask import request, abort, current_app
+from pdm.framework.FlaskWrapper import export, export_ext, db_model, jsonify, startup
+from pdm.utils.hashing import hash_pass, check_hash
+from pdm.framework.Tokens import TokenService
+import pdm.userservicedesk.models
+from pdm.cred.CredClient import CredClient
+
 
 @export_ext("/users/api/v1.0")
 @db_model(pdm.userservicedesk.models.UserModel)
@@ -20,6 +23,18 @@ class HRService(object):
 
     """
     _logger = logging.getLogger(__name__)
+
+    @staticmethod
+    @startup
+    def load_userconfig(config):
+        """ Configure the HRService application.
+            Gets the key needed to contact the Credential Service
+        """
+        current_app.cs_key = config.pop("CS_secret", None)
+        if current_app.cs_key is None:
+            HRService._logger.error(" CS secret was not provided in the config file . Aborting.")
+            raise ValueError(" CS secret was not provided in the config file . Aborting.")
+        current_app.cs_client = CredClient()
 
     @staticmethod
     @export
@@ -46,7 +61,7 @@ class HRService(object):
 
         if not user:
             # Raise an HTTPException with a 404 not found status code
-            HRService._logger.error("GET: requested user for id %s doesn't not exist ", user_id)
+            HRService._logger.error("GET: requested user for id %s doesn't exist ", user_id)
             abort(404)
 
         response = jsonify(user)
@@ -77,32 +92,36 @@ class HRService(object):
             abort(404)
 
         data['password'] = hash_pass(data['password'])
+        cs_hashed_key = hash_pass(data['password'], current_app.cs_key)
 
         User = request.db.tables.User
         user = User.from_json(json.dumps(data))
 
         db = request.db
+
         try:
-            user.save(db)
-        #pylint: disable=broad-except
+            # user.save(db)
+            db.session.add(user)
+            user_id = db.session.query(User.id).filter_by(email=data['email']).scalar()
+            # add a user to the Credential Service:
+            if user_id:
+                current_app.cs_client.add_user(user_id, cs_hashed_key)
+            else:
+                HRService._logger.error(
+                    "Failed to get user id from the db for just added user:%s %s ",
+                    user.email, sys.exc_info())
+                raise
+
+            db.session.commit()
+
+        # pylint: disable=broad-except
         except Exception:
-            HRService._logger.error("Failed to add user: %s ", sys.exc_info())
+            HRService._logger.error("Failed to add user: %s or post to the CS", sys.exc_info())
+            db.session.rollback()
             abort(403)
-        # TODO: Exclude fields in DB model rather than manually constructing
+
         # dict
         response = jsonify(user)
-        # response = jsonify([{
-        #     'id': user.id,
-        #     'name': user.name,
-        #     # 'username': user.username,
-        #     'surname': user.surname,
-        #     'state': user.state,
-        #     # 'dn' : user.dn,
-        #     'email': user.email,
-        #     # 'password' :user.password,
-        #     'date_created': str(user.date_created),
-        #     'date_modified': str(user.date_modified)
-        # }])
         response.status_code = 201
         return response
 
@@ -131,8 +150,8 @@ class HRService(object):
             newpasswd = data['newpasswd']
 
             if not (password and newpasswd \
-               and HRService.check_passwd(password) \
-               and HRService.check_passwd(newpasswd)):
+                            and HRService.check_passwd(password) \
+                            and HRService.check_passwd(newpasswd)):
                 HRService._logger.error("passwd change request:" \
                                         "null password and/or new password, supplied: %s  ",
                                         request.json)
@@ -156,8 +175,22 @@ class HRService(object):
 
             user.password = hash_pass(newpasswd)
             user.last_login = func.current_timestamp()
-            user.save(db)
-            HRService._logger.info("Password updated successfully for user %s ", email)
+            # User update and CS update in a single transaction
+            try:
+                db.session.add(user)
+                # user_id = db.session.query(User.id).filter_by(email=data['email']).scalar()
+                # add a user to the Credential Service:
+                cs_hashed_key = hash_pass(newpasswd, current_app.cs_key)
+                current_app.cs_client.add_user(user_id, cs_hashed_key)
+                db.session.commit()
+                HRService._logger.info("CS and password updated successfully for user %s ", email)
+            # pylint: disable=broad-except
+            except Exception:
+                HRService._logger.error("Failed to change passwd: %s or post to the CS",
+                                        sys.exc_info())
+                db.session.rollback()
+                abort(403)
+
         else:
             HRService._logger.error("Password update FAILED for user %s (wrong password)", email)
             abort(403)
@@ -175,18 +208,28 @@ class HRService(object):
         """
 
         user_id = HRService.check_token()
-        db = request.db
+        # exception thrown if no user_id
 
-        if user_id:
-            User = request.db.tables.User
-            user = User.query.filter_by(id=user_id).first()
+        db = request.db
+        User = request.db.tables.User
+        user = User.query.filter_by(id=user_id).first()
 
         if not user:
             # Raise an HTTPException with a 404 not found status code
             HRService._logger.error("GET: requested user for id %s doesn't exist ", user_id)
             abort(404)
 
-        user.delete(db)
+        try:
+            #user.delete(db)
+            db.session.delete(user)
+            current_app.cs_client.del_user(user_id)
+            db.session.commit()
+            HRService._logger.info(" User %s deleted successfully", user_id)
+            # pylint: disable=broad-except
+        except Exception:
+            db.session.rollback()
+            HRService._logger.error(" Failed to delete a user %s (%s)", user_id, sys.exc_info())
+            abort(500)
 
         response = jsonify([{
             'message': "user %s deleted successfully" % (user.email,)
@@ -225,7 +268,10 @@ class HRService(object):
         if not check_hash(user.password, passwd):
             HRService._logger.info("login request for %s failed (wrong password) ", data['email'])
             abort(403)
-        plain = "User_%s" % user_id
+        # hashed key for CS
+        cs_hashed_key = hash_pass(user.password, current_app.cs_key)
+        #plain = "User_%s" % user_id
+        plain = {'id':user_id, 'expiry':None, 'key':cs_hashed_key}
         HRService._logger.info("login request accepted for %s", data['email'])
         token = request.token_svc.issue(plain)
         return jsonify(token)
@@ -259,16 +305,29 @@ class HRService(object):
         Token validity helper
         :return: user id from the token or None.
         """
-
-        # TODO: Update token to just contain a dictionary
         if request.token_ok:
-            user_id = request.token[5:]
+            user_id = request.token['id']
         else:
             user_id = None
             HRService._logger.error("Token invalid (%s)", request.token)
             abort(403)
 
         return user_id
+
+    @staticmethod
+    def get_token_key(token):
+        """
+        Get the value of the 'key' part of the token to be used to contact the CS
+        The token intenally holds:
+        id: user id
+        expiry: expiry info (to be decided)
+        key: hashed key (from pdm.utils.hashing.hash_pass() )
+        :param token encrypted token
+        :return: the value of the 'key' field of the token dictionary
+        """
+        unpacked_user_token = TokenService.unpack(token)
+        cs_key = unpacked_user_token.get('key', None)
+        return cs_key
 
         ### Quarantine below this line.
         ### Code which might be cosidered in the future version of the service
