@@ -12,7 +12,7 @@ from pdm.framework.FlaskWrapper import export, export_ext, db_model, jsonify, st
 from pdm.utils.hashing import hash_pass, check_hash
 from pdm.framework.Tokens import TokenService
 import pdm.userservicedesk.models
-from pdm.cred.CredClient import MockCredClient
+from pdm.cred.CredClient import CredClient
 
 
 @export_ext("/users/api/v1.0")
@@ -34,7 +34,7 @@ class HRService(object):
         if current_app.cs_key is None:
             HRService._logger.error(" CS secret was not provided in the config file . Aborting.")
             raise ValueError(" CS secret was not provided in the config file . Aborting.")
-        current_app.cs_client = MockCredClient()
+        current_app.cs_client = CredClient()
 
     @staticmethod
     @export

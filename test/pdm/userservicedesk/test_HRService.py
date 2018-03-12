@@ -3,13 +3,17 @@ import unittest
 import mock
 
 from pdm.userservicedesk.HRService import HRService
+from pdm.cred.CredClient import MockCredClient
 from pdm.framework.FlaskWrapper import FlaskServer
 from pdm.utils.hashing import hash_pass, check_hash
 from pdm.framework.Tokens import TokenService
 
 
 class TestHRService(unittest.TestCase):
-    def setUp(self):
+
+    @mock.patch("pdm.userservicedesk.HRService.CredClient")
+    def setUp(self, cred_mock):
+        cred_mock.return_value = MockCredClient()
         conf = {'CS_secret':'HJGnbfdsV'}
         self.__service = FlaskServer("pdm.userservicedesk.HRService")
         self.__service.test_mode(HRService, None)  # to skip DB auto build
