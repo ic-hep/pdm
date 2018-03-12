@@ -27,11 +27,11 @@ class UserCommand(object):
         user_parser.add_argument('-t', '--token', type=str, required=True)
         user_parser.set_defaults(func=self.whoami)
         #list
-        user_parser = subparsers.add_parser('list', help = "List Remote site.")
+        user_parser = subparsers.add_parser('list', help = "List remote site.")
         user_parser.add_argument('-t', '--token', type=str, required=True)
         user_parser.add_argument('url', type=str)
-        user_parser.add_argument('-m', type=int)
-        user_parser.add_argument('-p', type=int)
+        user_parser.add_argument('-m', type=int, help = 'max tries')
+        user_parser.add_argument('-p', type=int, help = 'priority')
         user_parser.set_defaults(func=self.list)
         #remove
         user_parser = subparsers.add_parser('remove', help = "remove files from remote site.")
