@@ -1,6 +1,9 @@
 
 from getpass import getpass
 from pdm.userservicedesk.HRClient import HRClient
+from pdm.userservicedesk.TransferClient import TransferClient
+from pdm.userservicedesk.TransferClientFacade import TransferClientFacade
+
 
 class UserCommand(object):
 
@@ -23,6 +26,20 @@ class UserCommand(object):
         user_parser = subparsers.add_parser('whoami')
         user_parser.add_argument('-t', '--token', type=str, required=True)
         user_parser.set_defaults(func=self.whoami)
+        #list
+        user_parser = subparsers.add_parser('list', help = "List Remote site.")
+        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('url', type=str)
+        user_parser.add_argument('-m', type=int)
+        user_parser.add_argument('-p', type=int)
+        user_parser.set_defaults(func=self.list)
+        #remove
+        user_parser = subparsers.add_parser('remove', help = "remove files from remote site.")
+        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('url', type=str)
+        user_parser.add_argument('-m', type=int)
+        user_parser.add_argument('-p', type=int)
+        user_parser.set_defaults(func=self.list)
 
         # sub-command functions
     def register(self, args):
@@ -80,3 +97,18 @@ class UserCommand(object):
         client.set_token(token)
         ret = client.get_user()
         print ret
+
+    def list(self, args):
+        token = args.token
+        if args.token:
+            client = TransferClientFacade(token)
+            client.list(args.url) # max_tries, priority)
+
+    def remove(self, args):
+        token = args.token
+        if args.token:
+            client = TransferClientFacade(token)
+            client.remove(args.url) # max_tries, priority)
+
+    def copy(selfself, args):
+        pass
