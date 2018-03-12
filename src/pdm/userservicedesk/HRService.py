@@ -305,8 +305,6 @@ class HRService(object):
         Token validity helper
         :return: user id from the token or None.
         """
-
-        # TODO: Update token to just contain a dictionary
         if request.token_ok:
             user_id = request.token['id']
         else:
