@@ -32,11 +32,11 @@ class TestWorkqueueService(unittest.TestCase):
         request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [0]}))
         self.assertEqual(request.status_code, 200, "Request to get worker job failed.")
         job, token = json.loads(request.data)
-        self.assertEqual(job, {'user_id': 1,
-                               'src_siteid': 13,
-                               'src_filepath': '/data/somefile1',
-                               'type': JobType.LIST,
-                               'status': JobStatus.SUBMITTED}, "Job not returned correctly.")
+        self.assertDictContainsSubset({'user_id': 1,
+                                       'src_siteid': 13,
+                                       'src_filepath': '/data/somefile1',
+                                       'type': JobType.LIST,
+                                       'status': JobStatus.SUBMITTED}, job,  "Job not returned correctly.")
         self.assertEqual(token, str(job.id), "Token and job.id do not match.")
         Job = self.__service.test_db().tables.Job
         j = Job.query().filter_by(id=job.id).one_or_none()
