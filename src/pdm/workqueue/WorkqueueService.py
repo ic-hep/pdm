@@ -34,13 +34,13 @@ class WorkqueueService(object):
         """Get the next job."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
         job = Job.query.filter(Job.status.in_((JobStatus.NEW, JobStatus.FAILED)),
-                               Job.type.in_(request.data['types']),
+                               Job.type.in_(json.loads(request.data)['types']),
                                Job.attempts <= Job.max_tries)\
                        .order_by(Job.priority)\
                        .first_or_404()
         job.status = JobStatus.SUBMITTED
         job.update()
-        return jsonify((job, request.token_svc.issue(str(job.id))))
+        return json.dumps((job, request.token_svc.issue(str(job.id))), cls=JSONTableEncoder)
 
     @staticmethod
     @export_ext('worker/<int:job_id>', ['PUT'])

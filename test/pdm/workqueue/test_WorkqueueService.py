@@ -4,12 +4,13 @@ import mock
 
 from pdm.framework.FlaskWrapper import FlaskServer
 from pdm.workqueue.WorkqueueDB import JobType, JobStatus
+from pdm.workqueue.WorkqueueService import WorkqueueService
 
 class TestWorkqueueService(unittest.TestCase):
     def setUp(self):
         conf = {}
         self.__service = FlaskServer("pdm.workqueue.WorkqueueService")
-#        self.__service.test_mode(HRService, None)  # to skip DB auto build
+        self.__service.test_mode(WorkqueueService, None)  # to skip DB auto build
         self.__service.fake_auth("ALL")
         self.__service.build_db()  # build manually
 
@@ -28,7 +29,7 @@ class TestWorkqueueService(unittest.TestCase):
     def test_get_next_job(self):
         """test worker get next job."""
 #        self.__service.fake_auth("TOKEN", "User_1")
-        request = self.__test.post('/workqueue/api/v1.0/worker', data={'types': [JobType.LIST]})
+        request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [0]}))
         self.assertEqual(request.status_code, 200, "Request to get worker job failed.")
         job, token = json.loads(request.data)
         self.assertEqual(job.user_id, 1, "User id is not correct.")
@@ -42,11 +43,11 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertIsNotNone(j)
         self.assertEqual(j.status, JobStatus.SUBMITTED, "Job status not updated in DB")
 
-        request = self.__test.post('/workqueue/api/v1.0/worker', data={'types': [JobType.COPY, JobType.REMOVE]})
+        request = self.__test.post('/workqueue/api/v1.0/worker', data={'types': [1, 2]})
         self.assertEqual(request.status_code, 200, "Failed to get copy or remove job.")
 
-        request = self.__test.post('/workqueue/api/v1.0/worker', data={'types': [JobType.COPY, JobType.REMOVE]})
+        request = self.__test.post('/workqueue/api/v1.0/worker', data={'types': [1, 2]})
         self.assertEqual(request.status_code, 200, "Failed to get copy or remove job.")
-        request = self.__test.post('/workqueue/api/v1.0/worker', data={'types': [JobType.COPY, JobType.REMOVE]})
+        request = self.__test.post('/workqueue/api/v1.0/worker', data={'types': [1, 2]})
         self.assertEqual(request.status_code, 404, "Trying to get a job that doesn't exist should return 404.")
 
