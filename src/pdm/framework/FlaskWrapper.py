@@ -281,7 +281,11 @@ class FlaskServer(Flask):
             if self.__db:
                 for cls in self.__db_classes:
                     self.__db_insts.append(cls(self.__db.Model))
-                self.__add_tables()
+                    # We have to add the tables class-by-class
+                    # Some versions of Flask-SQLalchemy clear the
+                    # _decl_class_registry every time a new model class is
+                    # loaded (which causes tables to go missing otherwise).
+                    self.__add_tables()
                 self.__db.create_all()
 
     def before_startup(self, config, with_test=False):
