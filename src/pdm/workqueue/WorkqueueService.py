@@ -3,7 +3,7 @@ import os
 import json
 import re
 
-from flask import request, abort, jsonify
+from flask import request, abort
 
 from pdm.framework.FlaskWrapper import export_ext, db_model
 from pdm.framework.Database import JSONTableEncoder
