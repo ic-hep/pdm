@@ -37,17 +37,17 @@ class TestWorkqueueService(unittest.TestCase):
                                        'src_filepath': '/data/somefile1',
                                        'type': JobType.LIST,
                                        'status': JobStatus.SUBMITTED}, job,  "Job not returned correctly.")
-        self.assertEqual(token, str(job.id), "Token and job.id do not match.")
+        self.assertIsInstance(token, basestring)
         Job = self.__service.test_db().tables.Job
-        j = Job.query().filter_by(id=job.id).one_or_none()
+        j = Job.query.filter_by(id=job['id']).one()
         self.assertIsNotNone(j)
         self.assertEqual(j.status, JobStatus.SUBMITTED, "Job status not updated in DB")
 
-        request = self.__test.post('/workqueue/api/v1.0/worker', data={'types': [1, 2]})
+        request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [1, 2]}))
         self.assertEqual(request.status_code, 200, "Failed to get copy or remove job.")
 
-        request = self.__test.post('/workqueue/api/v1.0/worker', data={'types': [1, 2]})
+        request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [1, 2]}))
         self.assertEqual(request.status_code, 200, "Failed to get copy or remove job.")
-        request = self.__test.post('/workqueue/api/v1.0/worker', data={'types': [1, 2]})
+        request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [1, 2]}))
         self.assertEqual(request.status_code, 404, "Trying to get a job that doesn't exist should return 404.")
 
