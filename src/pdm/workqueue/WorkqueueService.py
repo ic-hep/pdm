@@ -27,7 +27,8 @@ LISTPARSE_REGEX = re.compile(r'^(?P<permissions>\S+)\s+'
 def decode_json_data(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        request.data = json.loads(request.data)
+        if not isinstance(request.data, dict):
+            request.data = json.loads(request.data)
         return func(*args, **kwargs)
     return wrapper
 
@@ -44,7 +45,7 @@ class WorkqueueService(object):
         """Get the next job."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
         job = Job.query.filter(Job.status.in_((JobStatus.NEW, JobStatus.FAILED)),
-                               Job.type.in_(json.loads(request.data)['types']),
+                               Job.type.in_(request.data['types']),
                                Job.attempts <= Job.max_tries)\
                        .order_by(Job.priority)\
                        .first_or_404()
@@ -61,14 +62,13 @@ class WorkqueueService(object):
             abort(403, description="Invalid token")
         if int(request.token) != job_id:
             abort(403, description="Token not valid for job %d" % job_id)
-        data = json.loads(request.data)
 
         # Update job status.
         Job = request.db.tables.Job  # pylint: disable=invalid-name
         job = Job.query.get_or_404(job_id)
         job.attempts += 1
         job.status = JobStatus.DONE
-        if data['returncode'] != 0:
+        if request.data['returncode'] != 0:
             job.status = JobStatus.FAILED
         job.update()
 
@@ -79,8 +79,8 @@ class WorkqueueService(object):
         if not os.path.exists(dir_):
             os.makedirs(dir_)
         with open(os.path.join(dir_, 'attempt%i.log' % job.attempts), 'wb') as logfile:
-            logfile.write("Job run on host: %s\n" % data['host'])
-            logfile.write(data['log'])
+            logfile.write("Job run on host: %s\n" % request.data['host'])
+            logfile.write(request.data['log'])
         return '', 200
 
     @staticmethod
@@ -89,8 +89,6 @@ class WorkqueueService(object):
     def post_job():
         """Add a job."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
-        if not isinstance(request.data, dict):
-            request.data = json.loads(request.data)
         allowed_attrs = require_attrs('type', 'src_siteid', 'src_filepath') +\
                         ('credentials', 'max_tries', 'priority', 'protocol')
         request.data['type'] = to_enum(request.data['type'], JobType)
@@ -212,7 +210,7 @@ def shellpath_sanitise(path):
 
 def require_attrs(*attrs):
     """Require the given attrs."""
-    required = set(attrs).difference_update(request.data)
+    required = set(attrs).difference(request.data)
     if required:
         abort(400, description="Missing data attributes: %s" % list(required))
     return attrs
