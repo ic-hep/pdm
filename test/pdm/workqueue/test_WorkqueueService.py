@@ -1,5 +1,7 @@
+import os
 import json
 import unittest
+from textwrap import dedent
 import mock
 
 from pdm.framework.FlaskWrapper import FlaskServer
@@ -74,6 +76,32 @@ class TestWorkqueueService(unittest.TestCase):
         self.__service.fake_auth("TOKEN", "1")
         request = self.__test.put('/workqueue/api/v1.0/worker/1',
                                    data=json.dumps({'log': 'blah blah',
-                                                    'returncode': 0,
+                                                    'returncode': 1,
                                                     'host': 'somehost.domain'}))
         self.assertEqual(request.status_code, 200)
+        Job = self.__service.test_db().tables.Job
+        j = Job.query.filter_by(id=1).one()
+        self.assertIsNotNone(j)
+        self.assertEqual(j.status, JobStatus.FAILED)
+        logfile=os.path.join('/tmp/workers', j.log_uid[:2], j.log_uid, 'attempt1.log')
+        self.assertTrue(os.path.isfile(logfile))
+
+        expected_log = dedent("""
+        Job run on host: somehost.domain
+        blah blah
+        """).lstrip()
+        with open(logfile, 'rb') as log:
+            self.assertEqual(log.read(), expected_log)
+
+        request = self.__test.put('/workqueue/api/v1.0/worker/1',
+                                  data=json.dumps({'log': 'blah blah',
+                                                   'returncode': 0,
+                                                   'host': 'somehost.domain'}))
+        self.assertEqual(request.status_code, 200)
+        j = Job.query.filter_by(id=1).one()
+        self.assertIsNotNone(j)
+        self.assertEqual(j.status, JobStatus.DONE)
+        logfile=os.path.join('/tmp/workers', j.log_uid[:2], j.log_uid, 'attempt2.log')
+        self.assertTrue(os.path.isfile(logfile))
+        with open(logfile, 'rb') as log:
+            self.assertEqual(log.read(), expected_log)
