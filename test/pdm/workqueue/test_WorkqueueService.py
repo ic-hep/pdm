@@ -89,7 +89,7 @@ class TestWorkqueueService(unittest.TestCase):
         expected_log = dedent("""
         Job run on host: somehost.domain
         blah blah
-        """).lstrip()
+        """).strip()
         with open(logfile, 'rb') as log:
             self.assertEqual(log.read(), expected_log)
 

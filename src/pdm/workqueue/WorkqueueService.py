@@ -65,7 +65,8 @@ class WorkqueueService(object):
         dir_ = os.path.join(getConfig("app/workqueue").get('workerlogs', '/tmp/workers'),
                             job.log_uid[:2],
                             job.log_uid)
-        os.makedirs(dir_)
+        if not os.path.exists(dir_):
+            os.makedirs(dir_)
         with open(os.path.join(dir_, 'attempt%i.log' % job.attempts), 'wb') as logfile:
             logfile.write("Job run on host: %s\n" % data['host'])
             logfile.write(data['log'])

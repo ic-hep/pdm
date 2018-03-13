@@ -98,7 +98,7 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
             dst_filepath = Column(TEXT)
             extra_opts = Column(TEXT)
             credentials = Column(TEXT)
-            log_uid = Column(String(36), nullable=False, default=lambda: str(uuid.uuid4))
+            log_uid = Column(String(36), nullable=False, default=lambda: str(uuid.uuid4()))
             max_tries = Column(SmallInteger, nullable=False, default=2)
             attempts = Column(SmallInteger, nullable=False, default=0)
             timestamp = Column(TIMESTAMP, nullable=False,
