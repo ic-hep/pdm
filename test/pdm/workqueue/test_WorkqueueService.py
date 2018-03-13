@@ -105,3 +105,8 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertTrue(os.path.isfile(logfile))
         with open(logfile, 'rb') as log:
             self.assertEqual(log.read(), expected_log)
+
+    def test_post_job(self):
+        request = self.__test.post('/workqueue/api/v1.0/jobs',
+                                   data=json.dumps({'blah': 12}))
+        self.assertEqual(request.status_code, 400)

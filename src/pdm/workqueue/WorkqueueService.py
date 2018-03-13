@@ -196,7 +196,8 @@ def shellpath_sanitise(path):
 
 def require_attrs(*attrs):
     """Require the given attrs."""
-    required = set(attrs).difference_update(json.loads(request.data))
+    request.data = json.loads(request.data)
+    required = set(attrs).difference_update(request.data)
     if required:
         abort(400, description="Missing data attributes: %s" % list(required))
     return attrs
