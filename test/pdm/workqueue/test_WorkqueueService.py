@@ -8,7 +8,7 @@ from pdm.workqueue.WorkqueueService import WorkqueueService
 
 class TestWorkqueueService(unittest.TestCase):
     def setUp(self):
-        conf = {}
+        conf = {'workerlogs': '/tmp/workers'}
         self.__service = FlaskServer("pdm.workqueue.WorkqueueService")
         self.__service.test_mode(WorkqueueService, None)  # to skip DB auto build
         self.__service.fake_auth("ALL")
@@ -28,7 +28,6 @@ class TestWorkqueueService(unittest.TestCase):
 
     def test_get_next_job(self):
         """test worker get next job."""
-#        self.__service.fake_auth("TOKEN", "User_1")
         request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [JobType.LIST]}))
         self.assertEqual(request.status_code, 200, "Request to get worker job failed.")
         job, token = json.loads(request.data)
@@ -52,7 +51,29 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(request.status_code, 404, "Trying to get a job that doesn't exist should return 404.")
 
     def test_return_output(self):
-        request = self.__test.post('/workqueue/api/v1.0/worker',
-                                   data=json.dumps({'types': [JobType.LIST]}))
+        request = self.__test.put('/workqueue/api/v1.0/worker/1',
+                                   data=json.dumps({'log': 'blah blah',
+                                                    'returncode': 0,
+                                                    'host': 'somehost.domain'}))
+        self.assertEqual(request.status_code, 403)
 
-        self.assertEqual(request.status_code, 200, "Request to get worker job failed.")
+        self.__service.fake_auth("TOKEN", "12")
+        request = self.__test.put('/workqueue/api/v1.0/worker/1',
+                                   data=json.dumps({'log': 'blah blah',
+                                                    'returncode': 0,
+                                                    'host': 'somehost.domain'}))
+        self.assertEqual(request.status_code, 403)
+
+        self.__service.fake_auth("TOKEN", "100")
+        request = self.__test.put('/workqueue/api/v1.0/worker/100',
+                                   data=json.dumps({'log': 'blah blah',
+                                                    'returncode': 0,
+                                                    'host': 'somehost.domain'}))
+        self.assertEqual(request.status_code, 404)
+
+        self.__service.fake_auth("TOKEN", "1")
+        request = self.__test.put('/workqueue/api/v1.0/worker/1',
+                                   data=json.dumps({'log': 'blah blah',
+                                                    'returncode': 0,
+                                                    'host': 'somehost.domain'}))
+        self.assertEqual(request.status_code, 200)
