@@ -15,6 +15,10 @@ from pdm.utils.db import managed_session
 class EnumBase(IntEnum):
     """Base enum."""
 
+    def __str__(self):
+        """Return the value of the enum."""
+        return str(self.value)
+
     @classmethod
     def values(cls):
         """Return tuple of all possible enum values."""

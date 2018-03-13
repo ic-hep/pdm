@@ -29,25 +29,30 @@ class TestWorkqueueService(unittest.TestCase):
     def test_get_next_job(self):
         """test worker get next job."""
 #        self.__service.fake_auth("TOKEN", "User_1")
-        request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [0]}))
+        request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [JobType.LIST]}))
         self.assertEqual(request.status_code, 200, "Request to get worker job failed.")
         job, token = json.loads(request.data)
+        self.assertIsInstance(token, basestring)
         self.assertDictContainsSubset({'user_id': 1,
                                        'src_siteid': 13,
                                        'src_filepath': '/data/somefile1',
                                        'type': JobType.LIST,
                                        'status': JobStatus.SUBMITTED}, job,  "Job not returned correctly.")
-        self.assertIsInstance(token, basestring)
         Job = self.__service.test_db().tables.Job
         j = Job.query.filter_by(id=job['id']).one()
         self.assertIsNotNone(j)
         self.assertEqual(j.status, JobStatus.SUBMITTED, "Job status not updated in DB")
 
-        request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [1, 2]}))
+        request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [JobType.COPY, JobType.REMOVE]}))
         self.assertEqual(request.status_code, 200, "Failed to get copy or remove job.")
 
-        request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [1, 2]}))
+        request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [JobType.COPY, JobType.REMOVE]}))
         self.assertEqual(request.status_code, 200, "Failed to get copy or remove job.")
-        request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [1, 2]}))
+        request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [JobType.COPY, JobType.REMOVE]}))
         self.assertEqual(request.status_code, 404, "Trying to get a job that doesn't exist should return 404.")
 
+    def test_return_output(self):
+        request = self.__test.post('/workqueue/api/v1.0/worker',
+                                   data=json.dumps({'types': [JobType.LIST]}))
+
+        self.assertEqual(request.status_code, 200, "Request to get worker job failed.")

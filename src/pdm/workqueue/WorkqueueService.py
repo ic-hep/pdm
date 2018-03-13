@@ -50,13 +50,14 @@ class WorkqueueService(object):
             abort(403, description="Invalid token")
         if request.token != job_id:
             abort(403, description="Token not valid for job %d" % job_id)
-        Job = request.db.tables.Job  # pylint: disable=invalid-name
+        data = json.loads(request.data)
 
         # Update job status.
+        Job = request.db.tables.Job  # pylint: disable=invalid-name
         job = Job.query.filter_by(id=job_id).get_or_404()
         job.attempts += 1
         job.status = JobStatus.DONE
-        if request.data['returncode'] != 0:
+        if data['returncode'] != 0:
             job.status = JobStatus.FAILED
         job.update()
 
@@ -66,8 +67,8 @@ class WorkqueueService(object):
                             job.log_uid)
         os.makedirs(dir_)
         with open(os.path.join(dir_, 'attempt%i.log' % job.attempts), 'wb') as logfile:
-            logfile.write("Job run on host: %s\n" % request.data['host'])
-            logfile.write(request.data['log'])
+            logfile.write("Job run on host: %s\n" % data['host'])
+            logfile.write(data['log'])
 
     @staticmethod
     @export_ext("jobs", ['POST'])
@@ -76,13 +77,14 @@ class WorkqueueService(object):
         Job = request.db.tables.Job  # pylint: disable=invalid-name
         allowed_attrs = require_attrs('type', 'src_siteid', 'src_filepath') +\
                         ('credentials', 'max_tries', 'priority', 'protocol')
-        request.data['type'] = to_enum(request.data['type'], JobType)
-        request.data['protocol'] = to_enum(request.data['protocol'], JobProtocol)
-        request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
-        if request.data['type'] == JobType.COPY:
+        data = json.loads(request.data)
+        data['type'] = to_enum(data['type'], JobType)
+        data['protocol'] = to_enum(data['protocol'], JobProtocol)
+        data['src_filepath'] = shellpath_sanitise(data['src_filepath'])
+        if data['type'] == JobType.COPY:
             allowed_attrs += require_attrs('dst_siteid', 'dst_filepath')
-            request.data['dst_filepath'] = shellpath_sanitise(request.data['dst_filepath'])
-        job = Job(user_id=HRService.check_token(), **subdict(request.data, allowed_attrs))
+            data['dst_filepath'] = shellpath_sanitise(data['dst_filepath'])
+        job = Job(user_id=HRService.check_token(), **subdict(data, allowed_attrs))
         job.add()
         return job.enum_json()
 
@@ -192,7 +194,7 @@ def shellpath_sanitise(path):
 
 def require_attrs(*attrs):
     """Require the given attrs."""
-    required = set(attrs).difference_update(request.data)
+    required = set(attrs).difference_update(json.loads(request.data))
     if required:
         abort(400, description="Missing data attributes: %s" % list(required))
     return attrs
