@@ -2,6 +2,7 @@
 import os
 import json
 import re
+from functools import wraps
 
 from flask import request, abort
 
@@ -23,6 +24,14 @@ LISTPARSE_REGEX = re.compile(r'^(?P<permissions>\S+)\s+'
                              '(?P<name>.*)$', re.MULTILINE)
 
 
+def decode_json_data(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        request.data = json.loads(request.data)
+        return func(*args, **kwargs)
+    return wrapper
+
+
 @export_ext("/workqueue/api/v1.0")
 @db_model(WorkqueueModels)
 class WorkqueueService(object):
@@ -30,6 +39,7 @@ class WorkqueueService(object):
 
     @staticmethod
     @export_ext('worker', ["POST"])
+    @decode_json_data
     def get_next_job():
         """Get the next job."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
@@ -44,6 +54,7 @@ class WorkqueueService(object):
 
     @staticmethod
     @export_ext('worker/<int:job_id>', ['PUT'])
+    @decode_json_data
     def return_output(job_id):
         """Return a job."""
         if not request.token_ok:
@@ -74,19 +85,21 @@ class WorkqueueService(object):
 
     @staticmethod
     @export_ext("jobs", ['POST'])
+    @decode_json_data
     def post_job():
         """Add a job."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
+        if not isinstance(request.data, dict):
+            request.data = json.loads(request.data)
         allowed_attrs = require_attrs('type', 'src_siteid', 'src_filepath') +\
                         ('credentials', 'max_tries', 'priority', 'protocol')
-        data = json.loads(request.data)
-        data['type'] = to_enum(data['type'], JobType)
-        data['protocol'] = to_enum(data['protocol'], JobProtocol)
-        data['src_filepath'] = shellpath_sanitise(data['src_filepath'])
-        if data['type'] == JobType.COPY:
+        request.data['type'] = to_enum(request.data['type'], JobType)
+        request.data['protocol'] = to_enum(request.data['protocol'], JobProtocol)
+        request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
+        if request.data['type'] == JobType.COPY:
             allowed_attrs += require_attrs('dst_siteid', 'dst_filepath')
-            data['dst_filepath'] = shellpath_sanitise(data['dst_filepath'])
-        job = Job(user_id=HRService.check_token(), **subdict(data, allowed_attrs))
+            request.data['dst_filepath'] = shellpath_sanitise(request.data['dst_filepath'])
+        job = Job(user_id=HRService.check_token(), **subdict(request.data, allowed_attrs))
         job.add()
         return job.enum_json()
 
@@ -94,6 +107,7 @@ class WorkqueueService(object):
     @export_ext('list', ['POST'])
     def list():
         """List a remote dir."""
+        request.data = json.loads(request.data)
         request.data['type'] = JobType.LIST
         return WorkqueueService.post_job()
 #        Job = request.db.tables.Job
@@ -109,6 +123,7 @@ class WorkqueueService(object):
     @export_ext('copy', ['POST'])
     def copy():
         """Copy."""
+        request.data = json.loads(request.data)
         request.data['type'] = JobType.COPY
         return WorkqueueService.post_job()
 #        Job = request.db.tables.Job
@@ -124,6 +139,7 @@ class WorkqueueService(object):
     @export_ext('remove', ['POST'])
     def remove():
         """Remove."""
+        request.data = json.loads(request.data)
         request.data['type'] = JobType.REMOVE
         return WorkqueueService.post_job()
 #        Job = request.db.tables.Job
@@ -196,7 +212,6 @@ def shellpath_sanitise(path):
 
 def require_attrs(*attrs):
     """Require the given attrs."""
-    request.data = json.loads(request.data)
     required = set(attrs).difference_update(request.data)
     if required:
         abort(400, description="Missing data attributes: %s" % list(required))
