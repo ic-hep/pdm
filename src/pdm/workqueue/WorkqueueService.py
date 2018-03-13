@@ -103,9 +103,9 @@ class WorkqueueService(object):
 
     @staticmethod
     @export_ext('list', ['POST'])
+    @decode_json_data
     def list():
         """List a remote dir."""
-        request.data = json.loads(request.data)
         request.data['type'] = JobType.LIST
         return WorkqueueService.post_job()
 #        Job = request.db.tables.Job
@@ -119,9 +119,9 @@ class WorkqueueService(object):
 
     @staticmethod
     @export_ext('copy', ['POST'])
+    @decode_json_data
     def copy():
         """Copy."""
-        request.data = json.loads(request.data)
         request.data['type'] = JobType.COPY
         return WorkqueueService.post_job()
 #        Job = request.db.tables.Job
@@ -135,9 +135,9 @@ class WorkqueueService(object):
 
     @staticmethod
     @export_ext('remove', ['POST'])
+    @decode_json_data
     def remove():
         """Remove."""
-        request.data = json.loads(request.data)
         request.data['type'] = JobType.REMOVE
         return WorkqueueService.post_job()
 #        Job = request.db.tables.Job

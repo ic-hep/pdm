@@ -106,7 +106,12 @@ class TestWorkqueueService(unittest.TestCase):
         with open(logfile, 'rb') as log:
             self.assertEqual(log.read(), expected_log)
 
-    def test_post_job(self):
+    @mock.patch.object('pdm.userservicedesk.HRService', 'check_token')
+    def test_post_job(self, mock_hrservice):
         request = self.__test.post('/workqueue/api/v1.0/jobs',
                                    data=json.dumps({'blah': 12}))
         self.assertEqual(request.status_code, 400)
+
+        request = self.__test.post('/workqueue/api/v1.0/jobs',
+                                   data=json.dumps({'type': JobType.LIST, 'src_siteid': 12, 'src_filepath': '/data/somefile'}))
+        self.assertEqual(request.status_code, 200)
