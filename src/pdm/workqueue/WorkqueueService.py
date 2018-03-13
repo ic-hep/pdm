@@ -48,13 +48,13 @@ class WorkqueueService(object):
         """Return a job."""
         if not request.token_ok:
             abort(403, description="Invalid token")
-        if request.token != job_id:
+        if int(request.token) != job_id:
             abort(403, description="Token not valid for job %d" % job_id)
         data = json.loads(request.data)
 
         # Update job status.
         Job = request.db.tables.Job  # pylint: disable=invalid-name
-        job = Job.query.filter_by(id=job_id).get_or_404()
+        job = Job.query.get_or_404(job_id)
         job.attempts += 1
         job.status = JobStatus.DONE
         if data['returncode'] != 0:
@@ -69,6 +69,7 @@ class WorkqueueService(object):
         with open(os.path.join(dir_, 'attempt%i.log' % job.attempts), 'wb') as logfile:
             logfile.write("Job run on host: %s\n" % data['host'])
             logfile.write(data['log'])
+        return '', 200
 
     @staticmethod
     @export_ext("jobs", ['POST'])
