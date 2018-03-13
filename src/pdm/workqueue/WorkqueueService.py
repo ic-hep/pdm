@@ -92,8 +92,9 @@ class WorkqueueService(object):
         allowed_attrs = require_attrs('type', 'src_siteid', 'src_filepath') +\
                         ('credentials', 'max_tries', 'priority', 'protocol')
         request.data['type'] = to_enum(request.data['type'], JobType)
-        request.data['protocol'] = to_enum(request.data['protocol'], JobProtocol)
         request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
+        if 'protocol' in request.data:
+            request.data['protocol'] = to_enum(request.data['protocol'], JobProtocol)
         if request.data['type'] == JobType.COPY:
             allowed_attrs += require_attrs('dst_siteid', 'dst_filepath')
             request.data['dst_filepath'] = shellpath_sanitise(request.data['dst_filepath'])

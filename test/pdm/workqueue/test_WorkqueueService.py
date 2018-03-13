@@ -4,6 +4,7 @@ import unittest
 from textwrap import dedent
 import mock
 
+import pdm.userservicedesk.HRService as HRService
 from pdm.framework.FlaskWrapper import FlaskServer
 from pdm.workqueue.WorkqueueDB import JobType, JobStatus
 from pdm.workqueue.WorkqueueService import WorkqueueService
@@ -106,12 +107,13 @@ class TestWorkqueueService(unittest.TestCase):
         with open(logfile, 'rb') as log:
             self.assertEqual(log.read(), expected_log)
 
-    @mock.patch.object('pdm.userservicedesk.HRService', 'check_token')
+    @mock.patch.object(HRService.HRService, 'check_token')
     def test_post_job(self, mock_hrservice):
         request = self.__test.post('/workqueue/api/v1.0/jobs',
                                    data=json.dumps({'blah': 12}))
         self.assertEqual(request.status_code, 400)
 
+        mock_hrservice.return_value = 1
         request = self.__test.post('/workqueue/api/v1.0/jobs',
                                    data=json.dumps({'type': JobType.LIST, 'src_siteid': 12, 'src_filepath': '/data/somefile'}))
         self.assertEqual(request.status_code, 200)
