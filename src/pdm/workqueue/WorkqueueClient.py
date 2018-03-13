@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Client for Workqueue application."""
+import json
 from pdm.framework.RESTClient import RESTClient
 
 from .WorkqueueDB import JobProtocol
@@ -28,12 +29,12 @@ class WorkqueueClient(RESTClient):
         Returns:
             dict: The job object as stored in the workqueue database.
         """
-        return self.post('list', data={'src_siteid': src_siteid,
-                                       'src_filepath': src_filepath,
-                                       'credentials': credentials,
-                                       'max_tries': max_tries,
-                                       'priority':  priority,
-                                       'protocol': protocol}).data
+        return json.loads(self.post('list', data=json.dumps({'src_siteid': src_siteid,
+                                                             'src_filepath': src_filepath,
+                                                             'credentials': credentials,
+                                                             'max_tries': max_tries,
+                                                             'priority':  priority,
+                                                             'protocol': protocol})).data)
 
     def copy(self, src_siteid, src_filepath, dst_siteid,  # pylint: disable=too-many-arguments
              dst_filepath, credentials, max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
@@ -53,14 +54,14 @@ class WorkqueueClient(RESTClient):
         Returns:
             dict: The job object as stored in the workqueue database.
         """
-        return self.post('copy', data={'src_siteid': src_siteid,
-                                       'src_filepath': src_filepath,
-                                       'dst_siteid': dst_siteid,
-                                       'dst_filepath': dst_filepath,
-                                       'credentials': credentials,
-                                       'max_tries': max_tries,
-                                       'priority':  priority,
-                                       'protocol': protocol}).data
+        return json.loads(self.post('copy', data=json.dumps({'src_siteid': src_siteid,
+                                                             'src_filepath': src_filepath,
+                                                             'dst_siteid': dst_siteid,
+                                                             'dst_filepath': dst_filepath,
+                                                             'credentials': credentials,
+                                                             'max_tries': max_tries,
+                                                             'priority':  priority,
+                                                             'protocol': protocol})).data)
 
     def remove(self, src_siteid, src_filepath, credentials,  # pylint: disable=too-many-arguments
                max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
@@ -78,12 +79,12 @@ class WorkqueueClient(RESTClient):
         Returns:
             dict: The job object as stored in the workqueue database.
         """
-        return self.post('remove', data={'src_siteid': src_siteid,
-                                         'src_filepath': src_filepath,
-                                         'credentials': credentials,
-                                         'max_tries': max_tries,
-                                         'priority':  priority,
-                                         'protocol': protocol}).data
+        return json.loads(self.post('remove', data=json.dumps({'src_siteid': src_siteid,
+                                                               'src_filepath': src_filepath,
+                                                               'credentials': credentials,
+                                                               'max_tries': max_tries,
+                                                               'priority':  priority,
+                                                               'protocol': protocol})).data)
 
     def jobs(self):
         """
@@ -104,7 +105,7 @@ class WorkqueueClient(RESTClient):
         Returns:
             dict: JSON representation of the job.
         """
-        return self.get('jobs/%s' % job_id)
+        return json.loads(self.get('jobs/%s' % job_id))
 
     def status(self, job_id):
         """
@@ -118,7 +119,7 @@ class WorkqueueClient(RESTClient):
         Returns:
             dict: JSON representation of the status with keys (jobid, status)
         """
-        return self.get('jobs/%s/stauts' % job_id)
+        return json.loads(self.get('jobs/%s/stauts' % job_id))
 
     def output(self, job_id):
         """
@@ -136,4 +137,4 @@ class WorkqueueClient(RESTClient):
                   list of files/directories each as a dict containing the following keys:
                   (permissions, nlinks, userid, groupid, size, datestamp, name, is_directory).
             """
-        return self.get('jobs/%s/output' % job_id)
+        return json.loads(self.get('jobs/%s/output' % job_id))
