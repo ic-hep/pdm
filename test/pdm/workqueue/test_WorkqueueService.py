@@ -115,5 +115,16 @@ class TestWorkqueueService(unittest.TestCase):
 
         mock_hrservice.return_value = 1
         request = self.__test.post('/workqueue/api/v1.0/jobs',
-                                   data=json.dumps({'type': JobType.LIST, 'src_siteid': 12, 'src_filepath': '/data/somefile'}))
+                                   data=json.dumps({'type': JobType.LIST, 'src_siteid': 12, 'src_filepath': '/data/somefile', 'dst_siteid': 15}))
         self.assertEqual(request.status_code, 200)
+        returned_job = json.loads(request.data)
+
+        Job = self.__service.test_db().tables.Job
+        j = Job.query.filter_by(user_id=1).one()
+        self.assertIsNotNone(j)
+        self.assertEqual(j, returned_job)
+        self.assertEqual(j.status, JobStatus.NEW)
+        self.assertEqual(j.type, JobType.LIST)
+        self.assertEqual(j.src_siteid, 12)
+        self.assertEqual(j.src_filepath, '/data/somefile')
+        self.assertIsNone(j.dst_siteid)
