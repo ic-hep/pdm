@@ -44,7 +44,7 @@ class UserCommand(object):
         user_parser.add_argument('url', type=str)
         user_parser.add_argument('-m', type=int)
         user_parser.add_argument('-p', type=int)
-        user_parser.set_defaults(func=self.list)
+        user_parser.set_defaults(func=self.remove)
 
         # sub-command functions
 
@@ -114,7 +114,7 @@ class UserCommand(object):
         token = args.token
         if args.token:
             client = TransferClientFacade(token)
-            client.list(args.url)  # max_tries, priority)
+            client.list(args.url, **vars(args))  # max_tries, priority)
 
     def remove(self, args): #pylint: disable=no-self-use
         """
@@ -125,7 +125,7 @@ class UserCommand(object):
         token = args.token
         if args.token:
             client = TransferClientFacade(token)
-            client.remove(args.url)  # max_tries, priority)
+            client.remove(args.url, **vars(args))  # max_tries, priority)
 
     def copy(self, args): #pylint: disable=no-self-use
         """

@@ -1,6 +1,6 @@
-
 from pdm.userservicedesk.TransferClient import TransferClient
 from urlparse import urlparse
+
 
 class TransferClientFacade(TransferClient):
     """
@@ -10,16 +10,21 @@ class TransferClientFacade(TransferClient):
     def __init__(self, token):
         super(TransferClientFacade, self).__init__(token)
 
-    def list(self, url, max_tries=2, priority=5):
+    def list(self, url, **kwargs):
         parts = urlparse(url)
-        super(TransferClientFacade, self).list(parts.netloc, parts.path, max_tries, priority, parts.scheme)
+        if parts.scheme:
+            kwargs['protocol'] = parts.scheme
+        super(TransferClientFacade, self).list(parts.netloc, parts.path, **kwargs )
 
-    def copy(self, src_url, dst_url, max_tries=2, priority=5):
+    def copy(self, src_url, dst_url, **kwargs):
         dst_parts = urlparse(dst_url)
         src_parts = urlparse(src_url)
-        super(TransferClientFacade, self).copy(src_parts.netloc, src_parts.path, dst_parts.netloc, dst_parts.path, max_tries, priority)
-        
-    def remove(self, src_url, max_tries=2, priority=5):
+        if src_parts.scheme:
+            kwargs['protocol'] = src_parts.scheme
+        super(TransferClientFacade, self).copy(src_parts.netloc, src_parts.path, dst_parts.netloc, dst_parts.path,
+                                               **kwargs)
+    def remove(self, src_url, **kwargs):
         src_parts = urlparse(src_url)
-        super(TransferClientFacade, self).remove(src_parts.netloc, src_parts.path, max_tries, priority)
-    
+        if src_parts.scheme:
+            kwargs['protocol'] = src_parts.scheme
+        super(TransferClientFacade, self).remove(src_parts.netloc, src_parts.path, **kwargs)
