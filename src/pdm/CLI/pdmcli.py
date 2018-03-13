@@ -1,11 +1,17 @@
 #!/usr/bin/env python
-
+"""
+PDM Command Line Interface
+"""
 import argparse
 import os
-import user_subcommand
+import pdm.CLI.user_subcommand as user_subcommand
 from pdm.utils.config import ConfigSystem
 
 def main():
+    """
+    Main CLI function. Read configuration aand add subparsers
+    :return:
+    """
     # config
     conf_file = "../etc/users.conf"
     ConfigSystem.get_instance().setup(conf_file)
@@ -19,4 +25,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
