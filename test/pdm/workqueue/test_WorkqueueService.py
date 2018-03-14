@@ -309,32 +309,88 @@ class TestWorkqueueService(unittest.TestCase):
         request = self.__test.get('/workqueue/api/v1.0/jobs/1/output')
         self.assertEqual(request.status_code, 404)
 
-        Job = self.__service.test_db().tables.Job
-        job = Job.query.filter_by(user_id=1).one()
-        self.assertIsNotNone(job)
-        job.status = JobStatus.DONE
-        job.update()
+        db = self.__service.test_db()
+        session = db.session
+        list_job = db.tables.Job.query.filter_by(user_id=1).one()
+        remove_job = db.tables.Job.query.filter_by(user_id=2).one()
+        self.assertIsNotNone(list_job)
+        self.assertIsNotNone(remove_job)
+        list_job_dir = os.path.join('/tmp/workers',
+                                    list_job.log_uid[:2],
+                                    list_job.log_uid)
+        remove_job_dir = os.path.join('/tmp/workers',
+                                      remove_job.log_uid[:2],
+                                      remove_job.log_uid)
+        list_job_filename = os.path.join(list_job_dir, "attempt%i.log" % list_job.attempts)
+        remove_job_filename = os.path.join(remove_job_dir, "attempt%i.log" % remove_job.attempts)
+        session.merge(list_job).status = JobStatus.DONE
+        session.merge(remove_job).status = JobStatus.FAILED
+        session.commit()
 
         request = self.__test.get('/workqueue/api/v1.0/jobs/1/output')
         self.assertEqual(request.status_code, 500)
 
-        dir_ = os.path.join('/tmp/workers',
-                            job.log_uid[:2],
-                            job.log_uid)
 
-        if not os.path.exists(dir_):
-            os.makedirs(dir_)
+        
+        if not os.path.exists(list_job_dir):
+            os.makedirs(list_job_dir)
+        if not os.path.exists(remove_job_dir):
+            os.makedirs(remove_job_dir)
 
-        with open(os.path.join(dir_, "attempt%i.log" % job.attempts), 'wb') as logfile:
-            logfile.write('blah blah\n')
+        listoutput = dedent('''
+        drwx------. 3 arichard res0 4.0K Mar 12 16:15 bin/
+        drwx------. 4 arichard res0 4.0K Feb 14 10:08 test/
+        -rw-------. 1 arichard res0  871 Mar  7 15:38 testdata.txt
+        -rw-------. 1 arichard res0  604 Mar  7 17:09 test.py
+        ''').strip()
+        with open(list_job_filename, 'wb') as listlog,\
+             open(remove_job_filename, 'wb') as removelog:
+            listlog.write(listoutput)
+            removelog.write('blah blah\n')
+
+        mock_hrservice.return_value = 2
+        request = self.__test.get('/workqueue/api/v1.0/jobs/2/output')
+        self.assertEqual(request.status_code, 200)
+        returned_dict = json.loads(request.data)
+        self.assertEqual(returned_dict, {'jobid': 2, 'log': 'blah blah\n'})
 
         mock_hrservice.return_value = 1
         request = self.__test.get('/workqueue/api/v1.0/jobs/1/output')
         self.assertEqual(request.status_code, 200)
         returned_dict = json.loads(request.data)
-        self.assertEqual(returned_dict, {'jobid': 1, 'log': 'blah blah\n'})
-
-
+        self.assertEqual(returned_dict, {'jobid': 1, 'log': listoutput,
+                                         'listing': [{'datestamp': 'Mar 12 16:15',
+                                                      'groupid': 'res0',
+                                                      'is_directory': True,
+                                                      'name': 'bin/',
+                                                      'nlinks': '3',
+                                                      'permissions': 'drwx------.',
+                                                      'size': '4.0K',
+                                                      'userid': 'arichard'},
+                                                     {'datestamp': 'Feb 14 10:08',
+                                                      'groupid': 'res0',
+                                                      'is_directory': True,
+                                                      'name': 'test/',
+                                                      'nlinks': '4',
+                                                      'permissions': 'drwx------.',
+                                                      'size': '4.0K',
+                                                      'userid': 'arichard'},
+                                                     {'datestamp': 'Mar  7 15:38',
+                                                      'groupid': 'res0',
+                                                      'is_directory': False,
+                                                      'name': 'testdata.txt',
+                                                      'nlinks': '1',
+                                                      'permissions': '-rw-------.',
+                                                      'size': '871',
+                                                      'userid': 'arichard'},
+                                                     {'datestamp': 'Mar  7 17:09',
+                                                      'groupid': 'res0',
+                                                      'is_directory': False,
+                                                      'name': 'test.py',
+                                                      'nlinks': '1',
+                                                      'permissions': '-rw-------.',
+                                                      'size': '604',
+                                                      'userid': 'arichard'}]})
 
 ## check jobs in status
 ## check check_token is called
