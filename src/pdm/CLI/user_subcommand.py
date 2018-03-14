@@ -4,7 +4,7 @@ Example usage: pdm register -e fred@flintstones.com -n Fred -s Flintstone
 """
 from getpass import getpass
 from pdm.userservicedesk.HRClient import HRClient
-#from pdm.userservicedesk.TransferClient import TransferClient
+# from pdm.userservicedesk.TransferClient import TransferClient
 from pdm.userservicedesk.TransferClientFacade import TransferClientFacade
 
 
@@ -12,6 +12,7 @@ class UserCommand(object):
     """
     Define user sub-commands and assign actions fro them.
     """
+
     def __init__(self, subparsers):
         # register
         user_parser = subparsers.add_parser('register')
@@ -42,13 +43,13 @@ class UserCommand(object):
         user_parser = subparsers.add_parser('remove', help="remove files from remote site.")
         user_parser.add_argument('-t', '--token', type=str, required=True)
         user_parser.add_argument('url', type=str)
-        user_parser.add_argument('-m', type=int)
-        user_parser.add_argument('-p', type=int)
+        user_parser.add_argument('-m', '--max_tries', type=int)
+        user_parser.add_argument('-p', '--priority', type=int)
         user_parser.set_defaults(func=self.remove)
 
         # sub-command functions
 
-    def register(self, args): #pylint: disable=no-self-use
+    def register(self, args):  # pylint: disable=no-self-use
         """
         User registration function
         :param parser arguments when called by the master command (pdm)
@@ -66,7 +67,7 @@ class UserCommand(object):
         client.add_user(userdict)
         print "User registered %s %s %s " % (args.name, args.surname, args.email)
 
-    def login(self, args): #pylint: disable=no-self-use
+    def login(self, args):  # pylint: disable=no-self-use
         """
         User login function. Prints out a token obtained from the server.
         """
@@ -76,7 +77,7 @@ class UserCommand(object):
         token = client.login(args.email, password)
         print token
 
-    def passwd(self, args): #pylint: disable=no-self-use
+    def passwd(self, args):  # pylint: disable=no-self-use
         """ Change user password """
 
         token = args.token
@@ -94,7 +95,7 @@ class UserCommand(object):
         ret = client.change_password(password, newpassword)
         print ret
 
-    def whoami(self, args): #pylint: disable=no-self-use
+    def whoami(self, args):  # pylint: disable=no-self-use
         """
         get users own data
         """
@@ -105,7 +106,7 @@ class UserCommand(object):
         ret = client.get_user()
         print ret
 
-    def list(self, args): #pylint: disable=no-self-use
+    def list(self, args):  # pylint: disable=no-self-use
         """
         List files at remote site.
         :param args:
@@ -116,7 +117,7 @@ class UserCommand(object):
             client = TransferClientFacade(token)
             client.list(args.url, **vars(args))  # max_tries, priority)
 
-    def remove(self, args): #pylint: disable=no-self-use
+    def remove(self, args):  # pylint: disable=no-self-use
         """
         Remove files at remote site
         :param args:
@@ -127,7 +128,7 @@ class UserCommand(object):
             client = TransferClientFacade(token)
             client.remove(args.url, **vars(args))  # max_tries, priority)
 
-    def copy(self, args): #pylint: disable=no-self-use
+    def copy(self, args):  # pylint: disable=no-self-use
         """
         Copy files between sites
         :param args:

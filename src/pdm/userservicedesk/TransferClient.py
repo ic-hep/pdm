@@ -33,6 +33,7 @@ class TransferClient(object):
         self.__credentials = cred_client.get_cred(cs_key)
         # work queue client
         self.__wq_client = WorkqueueClient()
+        self.__wq_client.set_token(user_token)
 
     def list(self, src_site, src_filepath, **kwargs ):  #max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
         """
@@ -47,7 +48,6 @@ class TransferClient(object):
         # sort out the site ID first:
         src_siteid = [elem['site_id'] for elem in self.__sitelist if elem['site_name'] == src_site]
         if src_siteid:
-
             # list
             response = self.__wq_client.list(src_siteid[0], src_filepath, self.__credentials, **kwargs)
                                             # max_tries, priority, protocol=JobProtocol.GRIDFTP)

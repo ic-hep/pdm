@@ -14,7 +14,7 @@ class TransferClientFacade(TransferClient):
         parts = urlparse(url)
         if parts.scheme:
             kwargs['protocol'] = parts.scheme
-        super(TransferClientFacade, self).list(parts.netloc, parts.path, **kwargs )
+        return super(TransferClientFacade, self).list(parts.netloc, parts.path, **kwargs )
 
     def copy(self, src_url, dst_url, **kwargs):
         dst_parts = urlparse(dst_url)
