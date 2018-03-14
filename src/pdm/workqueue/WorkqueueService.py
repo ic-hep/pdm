@@ -90,7 +90,7 @@ class WorkqueueService(object):
         """Add a job."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
         allowed_attrs = require_attrs('type', 'src_siteid', 'src_filepath') +\
-                        ('credentials', 'max_tries', 'priority', 'protocol')
+                        ('credentials', 'max_tries', 'priority', 'protocol', 'extra_opts')
         request.data['type'] = to_enum(request.data['type'], JobType)
         request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
         if 'protocol' in request.data:
@@ -162,8 +162,8 @@ class WorkqueueService(object):
     def get_job(job_id):
         """Get job."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
-        job = Job.query.filter_by(user_id=HRService.check_token(), id=job_id)\
-                       .get_or_404()
+        job = Job.query.filter_by(id=job_id, user_id=HRService.check_token())\
+                       .first_or_404()
         return job.enum_json()
 
     @staticmethod
@@ -171,9 +171,9 @@ class WorkqueueService(object):
     def get_output(job_id):
         """Get job output."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
-        job = Job.query.filter_by(user_id=HRService.check_token(), id=job_id)\
+        job = Job.query.filter_by(id=job_id, user_id=HRService.check_token())\
                        .filter(Job.status.in_((JobStatus.DONE, JobStatus.FAILED)))\
-                       .get_or_404()
+                       .first_or_404()
         dir_ = os.path.join(getConfig("app/workqueue").get('workerlogs', '/tmp/workers'),
                             job.log.guid[:2],
                             job.log.guid)
@@ -192,9 +192,9 @@ class WorkqueueService(object):
     def get_status(job_id):
         """Get job status."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
-        job = Job.query.filter_by(user_id=HRService.check_token(), id=job_id)\
-                       .get_or_404()
-        return json.dumps({'jobid': job.id, 'status': job.status.name})
+        job = Job.query.filter_by(id=job_id, user_id=HRService.check_token())\
+                       .first_or_404()
+        return json.dumps({'jobid': job.id, 'status': JobStatus(job.status).name})
 
 
 def subdict(dct, keys):
