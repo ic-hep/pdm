@@ -4,9 +4,8 @@ import unittest
 from textwrap import dedent
 import mock
 
-import pdm.userservicedesk.HRService as HRService
 from pdm.framework.FlaskWrapper import FlaskServer
-from pdm.workqueue.WorkqueueDB import JobType, JobStatus
+from pdm.workqueue.WorkqueueDB import JobType, JobStatus, JobProtocol, WorkqueueJobEncoder
 from pdm.workqueue.WorkqueueService import WorkqueueService
 
 class TestWorkqueueService(unittest.TestCase):
@@ -107,24 +106,191 @@ class TestWorkqueueService(unittest.TestCase):
         with open(logfile, 'rb') as log:
             self.assertEqual(log.read(), expected_log)
 
-    @mock.patch.object(HRService.HRService, 'check_token')
+    @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
     def test_post_job(self, mock_hrservice):
+        Job = self.__service.test_db().tables.Job
+
+        mock_hrservice.return_value = 10
         request = self.__test.post('/workqueue/api/v1.0/jobs',
                                    data=json.dumps({'blah': 12}))
         self.assertEqual(request.status_code, 400)
 
-        mock_hrservice.return_value = 1
         request = self.__test.post('/workqueue/api/v1.0/jobs',
-                                   data=json.dumps({'type': JobType.LIST, 'src_siteid': 12, 'src_filepath': '/data/somefile', 'dst_siteid': 15}))
+                                   data=json.dumps({'type': JobType.LIST,
+                                                    'src_siteid': 12,
+                                                    'src_filepath': '/data/somefile',
+                                                    'dst_siteid': 15}))
         self.assertEqual(request.status_code, 200)
         returned_job = json.loads(request.data)
+        job = Job.query.filter_by(user_id=10).one()
+        self.assertIsNotNone(job)
+        self.assertEqual(returned_job, json.loads(json.dumps(job, cls=WorkqueueJobEncoder)))
+        self.assertEqual(job.status, JobStatus.NEW)
+        self.assertEqual(returned_job['status'], 'NEW')
+        self.assertEqual(job.type, JobType.LIST)
+        self.assertEqual(returned_job['type'], 'LIST')
+        self.assertEqual(job.src_siteid, 12)
+        self.assertEqual(job.src_filepath, '/data/somefile')
+        self.assertIsNone(job.dst_siteid)
+        self.assertIsNone(job.dst_filepath)
+        self.assertIsNone(job.credentials)
+        self.assertIsNone(job.extra_opts)
+        self.assertEqual(job.attempts, 0)
+        self.assertEqual(job.max_tries, 2)
+        self.assertEqual(job.priority, 5)
+        self.assertEqual(job.protocol, JobProtocol.GRIDFTP)
+        self.assertEqual(returned_job['protocol'], 'GRIDFTP')
+        self.assertIsInstance(job.log_uid, basestring)
 
+        mock_hrservice.return_value = 12
+        request = self.__test.post('/workqueue/api/v1.0/jobs',
+                                   data=json.dumps({'type': JobType.COPY,
+                                                    'src_siteid': 12,
+                                                    'src_filepath': '/data/somefile',
+                                                    'dst_siteid': 15}))
+        self.assertEqual(request.status_code, 400)
+
+        request = self.__test.post('/workqueue/api/v1.0/jobs',
+                                   data=json.dumps({'type': JobType.COPY,
+                                                    'src_siteid': 12,
+                                                    'src_filepath': '/data/somefile',
+                                                    'dst_siteid': 15,
+                                                    'dst_filepath': '/data/someotherfile',
+                                                    'credentials': 'somesecret',
+                                                    'extra_opts': 'blah',
+                                                    'attempts': 30,
+                                                    'max_tries': 3,
+                                                    'priority': 2,
+                                                    'protocol': JobProtocol.SSH,
+                                                    'log_uid': 'my_log_uid'}))
+        self.assertEqual(request.status_code, 200)
+        returned_job = json.loads(request.data)
+        job = Job.query.filter_by(user_id=12).one()
+        self.assertIsNotNone(job)
+        self.assertEqual(returned_job, json.loads(json.dumps(job, cls=WorkqueueJobEncoder)))
+        self.assertEqual(job.status, JobStatus.NEW)
+        self.assertEqual(returned_job['status'], 'NEW')
+        self.assertEqual(job.type, JobType.COPY)
+        self.assertEqual(returned_job['type'], 'COPY')
+        self.assertEqual(job.src_siteid, 12)
+        self.assertEqual(job.src_filepath, '/data/somefile')
+        self.assertEqual(job.dst_siteid, 15)
+        self.assertEqual(job.dst_filepath, '/data/someotherfile')
+        self.assertEqual(job.credentials, 'somesecret')
+        self.assertEqual(job.extra_opts, 'blah')
+        self.assertEqual(job.attempts, 0)
+        self.assertEqual(job.max_tries, 3)
+        self.assertEqual(job.priority, 2)
+        self.assertEqual(job.protocol, JobProtocol.SSH)
+        self.assertEqual(returned_job['protocol'], 'SSH')
+        self.assertIsInstance(job.log_uid, basestring)
+        self.assertNotEqual(job.log_uid, 'my_log_uid')
+
+#    @mock.patch.object(HRService.HRService, 'check_token')
+    @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
+    def test_list(self, mock_hrservice):
         Job = self.__service.test_db().tables.Job
-        j = Job.query.filter_by(user_id=1).one()
-        self.assertIsNotNone(j)
-        self.assertEqual(j, returned_job)
-        self.assertEqual(j.status, JobStatus.NEW)
-        self.assertEqual(j.type, JobType.LIST)
-        self.assertEqual(j.src_siteid, 12)
-        self.assertEqual(j.src_filepath, '/data/somefile')
-        self.assertIsNone(j.dst_siteid)
+
+        mock_hrservice.return_value = 10
+        request = self.__test.post('/workqueue/api/v1.0/list',
+                                   data=json.dumps({'type': JobType.COPY,
+                                                    'src_siteid': 12,
+                                                    'src_filepath': '/data/somefile'}))
+        self.assertEqual(request.status_code, 200)
+        returned_job = json.loads(request.data)
+        job = Job.query.filter_by(user_id=10).one()
+        self.assertIsNotNone(job)
+        self.assertEqual(returned_job, json.loads(json.dumps(job, cls=WorkqueueJobEncoder)))
+        self.assertEqual(job.type, JobType.LIST)
+        self.assertEqual(returned_job['type'], 'LIST')
+
+    @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
+    def test_copy(self, mock_hrservice):
+        Job = self.__service.test_db().tables.Job
+
+        mock_hrservice.return_value = 10
+        request = self.__test.post('/workqueue/api/v1.0/copy',
+                                   data=json.dumps({'type': JobType.LIST,
+                                                    'src_siteid': 12,
+                                                    'src_filepath': '/data/somefile',
+                                                    'dst_siteid': 15,
+                                                    'dst_filepath': '/data/someotherfile'}))
+        self.assertEqual(request.status_code, 200)
+        returned_job = json.loads(request.data)
+        job = Job.query.filter_by(user_id=10).one()
+        self.assertIsNotNone(job)
+        self.assertEqual(returned_job, json.loads(json.dumps(job, cls=WorkqueueJobEncoder)))
+        self.assertEqual(job.type, JobType.COPY)
+        self.assertEqual(returned_job['type'], 'COPY')
+
+    @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
+    def test_remove(self, mock_hrservice):
+        Job = self.__service.test_db().tables.Job
+
+        mock_hrservice.return_value = 10
+        request = self.__test.post('/workqueue/api/v1.0/remove',
+                                   data=json.dumps({'type': JobType.COPY,
+                                                    'src_siteid': 12,
+                                                    'src_filepath': '/data/somefile'}))
+        self.assertEqual(request.status_code, 200)
+        returned_job = json.loads(request.data)
+        job = Job.query.filter_by(user_id=10).one()
+        self.assertIsNotNone(job)
+        self.assertEqual(returned_job, json.loads(json.dumps(job, cls=WorkqueueJobEncoder)))
+        self.assertEqual(job.type, JobType.REMOVE)
+        self.assertEqual(returned_job['type'], 'REMOVE')
+
+    @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
+    def test_get_jobs(self, mock_hrservice):
+        mock_hrservice.return_value = 10
+        request = self.__test.get('/workqueue/api/v1.0/jobs')
+        self.assertEqual(request.status_code, 200)
+        returned_jobs = json.loads(request.data)
+        self.assertEqual(returned_jobs, [])
+
+        mock_hrservice.return_value = 1
+        request = self.__test.get('/workqueue/api/v1.0/jobs')
+        self.assertEqual(request.status_code, 200)
+        returned_jobs = json.loads(request.data)
+        self.assertEqual(len(returned_jobs), 1)
+        self.assertDictContainsSubset({'user_id': 1,
+                                       'src_siteid': 13,
+                                       'src_filepath': '/data/somefile1',
+                                       'type': 'LIST',
+                                       'status': 'NEW'}, returned_jobs[0])
+
+    @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
+    def test_get_job(self, mock_hrservice):
+        mock_hrservice.return_value = 10
+        request = self.__test.get('/workqueue/api/v1.0/jobs/2')
+        self.assertEqual(request.status_code, 404)
+
+        mock_hrservice.return_value = 2
+        request = self.__test.get('/workqueue/api/v1.0/jobs/1')
+        self.assertEqual(request.status_code, 404)
+
+        mock_hrservice.return_value = 2
+        request = self.__test.get('/workqueue/api/v1.0/jobs/2')
+        self.assertEqual(request.status_code, 200)
+        returned_job = json.loads(request.data)
+        self.assertDictContainsSubset({'user_id': 2,
+                                       'src_siteid': 14,
+                                       'src_filepath': '/data/somefile2',
+                                       'type': 'REMOVE',
+                                       'status': 'NEW'}, returned_job)
+
+    @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
+    def test_get_status(self, mock_hrservice):
+        mock_hrservice.return_value = 10
+        request = self.__test.get('/workqueue/api/v1.0/jobs/3/status')
+        self.assertEqual(request.status_code, 404)
+
+        mock_hrservice.return_value = 3
+        request = self.__test.get('/workqueue/api/v1.0/jobs/1/status')
+        self.assertEqual(request.status_code, 404)
+
+        mock_hrservice.return_value = 3
+        request = self.__test.get('/workqueue/api/v1.0/jobs/3/status')
+        self.assertEqual(request.status_code, 200)
+        returned_dict = json.loads(request.data)
+        self.assertEqual(returned_dict, {'jobid': 3, 'status': 'NEW'})
