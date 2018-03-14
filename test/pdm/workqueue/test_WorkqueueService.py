@@ -312,7 +312,7 @@ class TestWorkqueueService(unittest.TestCase):
         dir_ = os.path.join('/tmp/workers',
                             job.log_uid[:2],
                             job.log_uid)
-        with open(os.path.join(dir_, "attempt%i.log" % job.attempts, 'wb')) as logfile:
+        with open(os.path.join(dir_, "attempt%i.log" % job.attempts), 'wb') as logfile:
             logfile.write('blah blah\n')
 
         mock_hrservice.return_value = 1
