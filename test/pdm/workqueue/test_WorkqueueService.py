@@ -310,8 +310,8 @@ class TestWorkqueueService(unittest.TestCase):
         job = Job.query.filter_by(user_id=1).one()
         self.assertIsNotNone(job)
         dir_ = os.path.join('/tmp/workers',
-                            job.log.guid[:2],
-                            job.log.guid)
+                            job.log_uid[:2],
+                            job.log_uid)
         with open(os.path.join(dir_, "attempt%i.log" % job.attempts, 'rb')) as logfile:
             log = logfile.write('blah blah\n')
 
