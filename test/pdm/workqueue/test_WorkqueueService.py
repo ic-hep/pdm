@@ -294,3 +294,35 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(request.status_code, 200)
         returned_dict = json.loads(request.data)
         self.assertEqual(returned_dict, {'jobid': 3, 'status': 'NEW'})
+
+    @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
+    def test_get_output(self, mock_hrservice):
+        mock_hrservice.return_value = 10
+        request = self.__test.get('/workqueue/api/v1.0/jobs/1/output')
+        self.assertEqual(request.status_code, 404)
+
+        mock_hrservice.return_value = 1
+        request = self.__test.get('/workqueue/api/v1.0/jobs/2/output')
+        self.assertEqual(request.status_code, 404)
+
+
+        Job = self.__service.test_db().tables.Job
+        job = Job.query.filter_by(user_id=1).one()
+        self.assertIsNotNone(job)
+        dir_ = os.path.join('/tmp/workers',
+                            job.log.guid[:2],
+                            job.log.guid)
+        with open(os.path.join(dir_, "attempt%i.log" % job.attempts, 'rb')) as logfile:
+            log = logfile.write('blah blah\n')
+
+        mock_hrservice.return_value = 1
+        request = self.__test.get('/workqueue/api/v1.0/jobs/1/output')
+        self.assertEqual(request.status_code, 200)
+        returned_dict = json.loads(request.data)
+        self.assertEqual(returned_dict, {'jobid': 1, 'log': 'blah blah\n'})
+
+
+
+## check jobs in status
+## check check_token is called
+## dont hardcode /tmp/workerslogs get it from self.config
