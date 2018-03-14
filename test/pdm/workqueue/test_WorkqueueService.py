@@ -330,8 +330,6 @@ class TestWorkqueueService(unittest.TestCase):
         request = self.__test.get('/workqueue/api/v1.0/jobs/1/output')
         self.assertEqual(request.status_code, 500)
 
-
-        
         if not os.path.exists(list_job_dir):
             os.makedirs(list_job_dir)
         if not os.path.exists(remove_job_dir):
