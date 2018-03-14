@@ -307,11 +307,17 @@ class TestWorkqueueService(unittest.TestCase):
 
         mock_hrservice.return_value = 1
         request = self.__test.get('/workqueue/api/v1.0/jobs/1/output')
-        self.assertEqual(request.status_code, 500)
+        self.assertEqual(request.status_code, 404)
 
         Job = self.__service.test_db().tables.Job
         job = Job.query.filter_by(user_id=1).one()
         self.assertIsNotNone(job)
+        job.status = JobStatus.DONE
+        job.update()
+
+        request = self.__test.get('/workqueue/api/v1.0/jobs/1/output')
+        self.assertEqual(request.status_code, 500)
+
         dir_ = os.path.join('/tmp/workers',
                             job.log_uid[:2],
                             job.log_uid)
