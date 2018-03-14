@@ -174,10 +174,13 @@ class WorkqueueService(object):
         job = Job.query.filter_by(id=job_id, user_id=HRService.check_token())\
                        .filter(Job.status.in_((JobStatus.DONE, JobStatus.FAILED)))\
                        .first_or_404()
-        dir_ = os.path.join(getConfig("app/workqueue").get('workerlogs', '/tmp/workers'),
-                            job.log_uid[:2],
-                            job.log_uid)
-        with open(os.path.join(dir_, "attempt%i.log" % job.attempts), 'rb') as logfile:
+        logfilename = os.path.join(getConfig("app/workqueue").get('workerlogs', '/tmp/workers'),
+                                   job.log_uid[:2],
+                                   job.log_uid,
+                                   "attempt%i.log" % job.attempts)
+        if not os.path.exists(logfilename):
+            abort(500, description="log directory/file not found.")
+        with open(logfilename, 'rb') as logfile:
             log = logfile.read()
 
         return_dict = {'jobid': job.id, 'log': log}

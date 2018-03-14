@@ -305,6 +305,9 @@ class TestWorkqueueService(unittest.TestCase):
         request = self.__test.get('/workqueue/api/v1.0/jobs/2/output')
         self.assertEqual(request.status_code, 404)
 
+        mock_hrservice.return_value = 1
+        request = self.__test.get('/workqueue/api/v1.0/jobs/1/output')
+        self.assertEqual(request.status_code, 500)
 
         Job = self.__service.test_db().tables.Job
         job = Job.query.filter_by(user_id=1).one()
@@ -312,6 +315,10 @@ class TestWorkqueueService(unittest.TestCase):
         dir_ = os.path.join('/tmp/workers',
                             job.log_uid[:2],
                             job.log_uid)
+
+        if not os.path.exists(dir_):
+            os.makedirs(dir_)
+
         with open(os.path.join(dir_, "attempt%i.log" % job.attempts), 'wb') as logfile:
             logfile.write('blah blah\n')
 
