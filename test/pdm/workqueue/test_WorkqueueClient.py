@@ -61,3 +61,39 @@ class test_WorkqueueClient(unittest.TestCase):
         self.assertTrue(removemock.called)
         self.assertIsInstance(response, dict)
         self.assertEqual(response, args)
+
+    def test_jobs(self):
+        # check the token is passed
+        methodmock = mock.MagicMock()
+        methodmock.return_value = jsonify([])
+        with mock.patch.dict(self._service.view_functions, {'get_jobs': methodmock}):
+            response = self._inst.jobs()
+        self.assertTrue(methodmock.called)
+        self.assertEqual(response, [])
+
+    def test_job(self):
+        # check the token is passed
+        methodmock = mock.MagicMock()
+        methodmock.return_value = jsonify({})
+        with mock.patch.dict(self._service.view_functions, {'get_job': methodmock}):
+            response = self._inst.job(1)
+        self.assertTrue(methodmock.called)
+        self.assertEqual(response, {})
+
+    def test_status(self):
+        # check the token is passed
+        methodmock = mock.MagicMock()
+        methodmock.return_value = jsonify({})
+        with mock.patch.dict(self._service.view_functions, {'get_status': methodmock}):
+            response = self._inst.status(1)
+        self.assertTrue(methodmock.called)
+        self.assertEqual(response, {})
+
+    def test_output(self):
+        # check the token is passed
+        methodmock = mock.MagicMock()
+        methodmock.return_value = jsonify({})
+        with mock.patch.dict(self._service.view_functions, {'get_output': methodmock}):
+            response = self._inst.output(1)
+        self.assertTrue(methodmock.called)
+        self.assertEqual(response, {})
