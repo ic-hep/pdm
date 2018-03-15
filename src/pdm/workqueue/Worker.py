@@ -81,11 +81,12 @@ class Worker(RESTClient, Daemon):
             except RuntimeError:
                 self._logger.exception("Error getting job from workqueue.")
                 continue
-            try:
-                job, token = json.loads(response.data())
-            except ValueError:
-                self._logger.exception("Error decoding JSON job.")
-                continue
+            job, token = response
+#            try:
+#                job, token = json.loads(response.data())
+#            except ValueError:
+#                self._logger.exception("Error decoding JSON job.")
+#                continue
             src_endpoints = (urlsplit(site) for site
                              in endpoint_client.get_mappings(job['src_siteid']).itervalues())
             src = [urlunsplit(site._replace(path=job['src_filepath'])) for site in src_endpoints
