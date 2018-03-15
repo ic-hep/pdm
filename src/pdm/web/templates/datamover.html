@@ -1,19 +1,51 @@
 <html>
-<head>
-  <title>UK DataMover</title>
-  <link rel="stylesheet" href="/static/webpage.css">
-</head>
-<body>
-  <center><h1>The DataMover</h1></center>
-<div class="row">
-  <div class="column" style="background-color:#aaa;">
-    <h2>Column 1</h2>
-    <p>Some text..</p>
-  </div>
-  <div class="column" style="background-color:#bbb;">
-    <h2>Column 2</h2>
-    <p>Some text..</p>
-  </div>
-</div>  
-</body>
+  <head>
+    <title>UK DataMover</title>
+    <link rel="stylesheet" href="/static/webpage.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+
+    <div class="inner">
+      <div class="fpborder">
+
+	<h1><img src="{{url_for('static', filename='pdm.png')}}" alt="Logo"> <br> The DataMover</h1>
+	
+        <form action="/action_page.php">
+          <center>
+            <table>
+              <tr><td>
+                <label for="uname"><font size ="3em"><b>Username</b></font></label>
+	      </td></tr>
+	      <tr><td>
+                <input type="text" placeholder="email address" name="uname" required><br>
+		<label><font size ="2em">
+		    <input type="checkbox" checked="checked" name="remember"> Remember me. 
+		</font></label>
+	      </td></tr>
+
+	      <!--- allow some space between username and password --->
+	      <tr><td> <br></td></tr>
+
+              <tr><td>
+                  <label for="pswd"><b><font size ="3em">Password</font></b></label>
+	      </td></tr>
+	      <tr><td>
+                  <input type="password" placeholder="password" name="pswd" required><br>
+		  <div class="psw"><span><font size ="2em">
+			Forgot <a href="#">password?</a>
+		  </font></span></div>
+	      </td></tr>
+	      <tr>
+		<td><font size = "2em">New user ? </font><button class="sbutton" type="submit">Sign Up</button></td>
+		<td align="right"><button type="submit">Login</button></td>
+	      </tr>
+            </table>
+          </center>
+        </form>
+      </div> <!--- fpborder --->
+      <button class="abutton">About</button>
+    </div> <!--- inner --->
+
+  </body>  
 </html>

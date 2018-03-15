@@ -1,17 +1,111 @@
+/* I'm so going to need one css per page..... */
+
+/* html */
+
 body {
-  background-color: white;
+    background-color: snow; 
 }
 
-/* Create two equal columns */
-.column {
-    float: left;
-    width: 50%;
-    padding: 10px;
+form {
+    background-color : white; 
+    padding-top : 10px; 
+    padding-bottom: 10px;
+    margin: 1 1 1 1;
+    border : hidden;
+    border-radius : 8px
 }
 
-/* Clear floats after the columns */
-.row:after {
-    content: "";
-    display: table;
-    clear: both;
+/* buttons buttons buttons */
+button {
+    background-color: forestgreen;
+    border : hidden;
+    border-radius: 10px;
+    text-align: center;
+    color: black; /* text colour */
+    padding: 18px 18px;
+    margin: 8px 0;
+    cursor: pointer;
+}
+
+button:hover {
+    opacity: 0.8;
+}
+
+/* sign up button */
+.sbutton {
+    background-color: lightcoral;
+    border-style : hidden;
+    border-radius: 10px;
+    text-align: center;
+    color: black; /* text colour */
+    padding: 10px 10px;
+    margin: 8px 0;
+    cursor: pointer;
+}
+
+/* about button, cause I can' encicrle text (yet?)*/
+
+.abutton {
+    float: right;
+    background-color: Transparent;
+    border-style: solid; 
+    border-width : 1px;
+    border-color: darkgrey;
+    border-radius: 10px;
+    text-align: center;
+    color: black; 
+    padding: 10px 10px;
+    margin: 8px 0;
+    cursor: pointer;
+}
+
+/* front page */
+
+.fpborder {
+    
+    border-style: solid;
+    border-radius: 10px;
+    border-color: darkgray;
+}
+
+
+/* sign in page */
+
+
+
+/* about page */
+
+.outer {
+  width: 100%;
+  margin: 0 auto;
+
+}
+.inner {
+  width: 50%;
+  background-color : white;
+  border: hidden;
+  border-radius: 10px;
+  margin: 0 auto;
+  margin-top : 20px;
+  text-align: center;
+}
+
+/* The "Forgot password" text -- not sure this works, cut and paste*/
+
+span.psw {
+    float: right;
+    padding-top: 16px;
+}
+
+/* for small screens -- this seems to work*/
+@media screen and (max-width: 500px) {
+    .inner {
+	width: 80%;
+	background-color : white;
+	border: hidden;
+	border-radius: 10px;
+	margin: 0 auto;
+	margin-top : 20px;
+	text-align: center;
+    }
 }
