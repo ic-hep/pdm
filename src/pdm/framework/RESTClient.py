@@ -108,7 +108,7 @@ class RESTClient(object):
         return self.__do_request(uri, 'DELETE')
 
 
-class RESTClientTest(object):
+class RESTClientTest(RESTClient):
     """ A mock version of RESTClient which calls a local
         Flask test_client instance instead.
         Useful for doing unit testing, use patch_client to get
