@@ -6,7 +6,7 @@ from functools import wraps
 
 from flask import request, abort
 
-from pdm.framework.FlaskWrapper import export_ext, db_model
+from pdm.framework.FlaskWrapper import export_ext, db_model, jsonify
 from pdm.framework.Database import JSONTableEncoder
 from pdm.utils.config import getConfig
 from pdm.userservicedesk.HRService import HRService
@@ -51,7 +51,7 @@ class WorkqueueService(object):
                        .first_or_404()
         job.status = JobStatus.SUBMITTED
         job.update()
-        return json.dumps((job, request.token_svc.issue(str(job.id))), cls=JSONTableEncoder)
+        return jsonify((job, request.token_svc.issue(str(job.id))))
 
     @staticmethod
     @export_ext('worker/<int:job_id>', ['PUT'])
