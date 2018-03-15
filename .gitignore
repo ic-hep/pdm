@@ -106,3 +106,6 @@ etc/certs
 # Editor lock files
 *.swp
 *~
+
+# Test DB location
+test.db

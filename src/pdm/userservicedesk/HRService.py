@@ -10,8 +10,9 @@ from sqlalchemy import func
 from flask import request, abort, current_app
 from pdm.framework.FlaskWrapper import export, export_ext, db_model, jsonify, startup
 from pdm.utils.hashing import hash_pass, check_hash
+from pdm.framework.Tokens import TokenService
 import pdm.userservicedesk.models
-from pdm.cred.CredClient import MockCredClient
+from pdm.cred.CredClient import CredClient
 
 
 @export_ext("/users/api/v1.0")
@@ -33,7 +34,7 @@ class HRService(object):
         if current_app.cs_key is None:
             HRService._logger.error(" CS secret was not provided in the config file . Aborting.")
             raise ValueError(" CS secret was not provided in the config file . Aborting.")
-        current_app.cs_client = MockCredClient()
+        current_app.cs_client = CredClient()
 
     @staticmethod
     @export
@@ -267,7 +268,10 @@ class HRService(object):
         if not check_hash(user.password, passwd):
             HRService._logger.info("login request for %s failed (wrong password) ", data['email'])
             abort(403)
-        plain = "User_%s" % user_id
+        # hashed key for CS
+        cs_hashed_key = hash_pass(user.password, current_app.cs_key)
+        #plain = "User_%s" % user_id
+        plain = {'id':user_id, 'expiry':None, 'key':cs_hashed_key}
         HRService._logger.info("login request accepted for %s", data['email'])
         token = request.token_svc.issue(plain)
         return jsonify(token)
@@ -301,16 +305,29 @@ class HRService(object):
         Token validity helper
         :return: user id from the token or None.
         """
-
-        # TODO: Update token to just contain a dictionary
         if request.token_ok:
-            user_id = request.token[5:]
+            user_id = request.token['id']
         else:
             user_id = None
             HRService._logger.error("Token invalid (%s)", request.token)
             abort(403)
 
         return user_id
+
+    @staticmethod
+    def get_token_key(token):
+        """
+        Get the value of the 'key' part of the token to be used to contact the CS
+        The token intenally holds:
+        id: user id
+        expiry: expiry info (to be decided)
+        key: hashed key (from pdm.utils.hashing.hash_pass() )
+        :param token encrypted token
+        :return: the value of the 'key' field of the token dictionary
+        """
+        unpacked_user_token = TokenService.unpack(token)
+        cs_key = unpacked_user_token.get('key', None)
+        return cs_key
 
         ### Quarantine below this line.
         ### Code which might be cosidered in the future version of the service
