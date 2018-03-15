@@ -35,3 +35,29 @@ class test_WorkqueueClient(unittest.TestCase):
         self.assertTrue(listmock.called)
         self.assertIsInstance(response, dict)
         self.assertEqual(response, args)
+
+    def test_copy(self):
+        args = {'src_siteid': 12,
+                'src_filepath': '/data/somefile',
+                'dst_siteid': 15,
+                'dst_filepath': '/data/someotherfile',
+                'credentials': 'somesecret'}
+        copymock = mock.MagicMock()
+        copymock.return_value = jsonify(args)
+        with mock.patch.dict(self._service.view_functions, {'copy': copymock}):
+            response = self._inst.copy(**args)
+        self.assertTrue(copymock.called)
+        self.assertIsInstance(response, dict)
+        self.assertEqual(response, args)
+
+    def test_remove(self):
+        args = {'src_siteid': 12,
+                'src_filepath': '/data/somefile',
+                'credentials': 'somesecret'}
+        removemock = mock.MagicMock()
+        removemock.return_value = jsonify(args)
+        with mock.patch.dict(self._service.view_functions, {'remove': removemock}):
+            response = self._inst.remove(**args)
+        self.assertTrue(removemock.called)
+        self.assertIsInstance(response, dict)
+        self.assertEqual(response, args)
