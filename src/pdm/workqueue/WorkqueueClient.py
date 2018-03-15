@@ -119,7 +119,7 @@ class WorkqueueClient(RESTClient):
         Returns:
             dict: Representation of the status with keys (jobid, status)
         """
-        return self.get('jobs/%s/stauts' % job_id)
+        return self.get('jobs/%s/status' % job_id)
 
     def output(self, job_id):
         """
