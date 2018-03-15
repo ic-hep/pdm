@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 """ Test WorkqueueClient class. """
-
 import unittest
 import mock
 
-from pdm.framework.FlaskWrapper import FlaskServer
+from pdm.framework.FlaskWrapper import FlaskServer, jsonify
 from pdm.framework.RESTClient import RESTClientTest
 from pdm.workqueue.WorkqueueService import WorkqueueService
 from pdm.workqueue.WorkqueueClient import WorkqueueClient
@@ -12,6 +11,7 @@ from pdm.workqueue.WorkqueueClient import WorkqueueClient
 
 class test_WorkqueueClient(unittest.TestCase):
 
+#    @mock.patch('pdm.workqueue.WorkqueueService.WorkqueueService')
     def setUp(self):
         self._service = FlaskServer("pdm.workqueue.WorkqueueService")
         self._service.test_mode(WorkqueueService, {}, with_test=False)
@@ -25,7 +25,13 @@ class test_WorkqueueClient(unittest.TestCase):
         self._patcher.stop()
 
     def test_list(self):
-        #Job = self._service.test_db().tables.Job
-        with mock.patch.object(self._service, 'list') as list_mock:
-            self._inst.list(12, '/data/somefile', 'somesecret')
-        self.assertTrue(list_mock.called)
+        args = {'src_siteid': 12,
+                'src_filepath': '/data/somefile',
+                'credentials': 'somesecret'}
+        listmock = mock.MagicMock()
+        listmock.return_value = jsonify(args)
+        with mock.patch.dict(self._service.view_functions, {'list': listmock}):
+            response = self._inst.list(**args)
+        self.assertTrue(listmock.called)
+        self.assertIsInstance(response, dict)
+        self.assertEqual(response, args)
