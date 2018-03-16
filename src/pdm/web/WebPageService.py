@@ -33,8 +33,13 @@ class WebPageService(object):
     @staticmethod
     @export_ext("/web/datamover")
     def website():
-        """ Render the turtles page. """
-        return flask.render_template("datamover.html")
+        status = "In Development"
+        return flask.render_template("datamover.html", status=status)
+
+    @staticmethod
+    @export_ext("about")
+    def aboutpage():
+        return flask.render_template("about.html")
 
     @staticmethod
     @export_ext("hello")
