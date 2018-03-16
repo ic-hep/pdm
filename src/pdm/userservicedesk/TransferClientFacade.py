@@ -37,7 +37,7 @@ class TransferClientFacade(TransferClient):
         src_parts = urlparse(src_url)
         if src_parts.scheme:
             kwargs['protocol'] = src_parts.scheme
-        super(TransferClientFacade, self).copy(src_parts.netloc, src_parts.path,
+        return super(TransferClientFacade, self).copy(src_parts.netloc, src_parts.path,
                                                dst_parts.netloc, dst_parts.path,
                                                **kwargs)
 
@@ -51,4 +51,4 @@ class TransferClientFacade(TransferClient):
         src_parts = urlparse(src_url)
         if src_parts.scheme:
             kwargs['protocol'] = src_parts.scheme
-        super(TransferClientFacade, self).remove(src_parts.netloc, src_parts.path, **kwargs)
+        return super(TransferClientFacade, self).remove(src_parts.netloc, src_parts.path, **kwargs)

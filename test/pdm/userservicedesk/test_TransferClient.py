@@ -29,7 +29,9 @@ class TestTransferClient(unittest.TestCase):
         endp_mock.return_value.set_token = mock.MagicMock()
 
         endp_mock.return_value.add_site('localhost:8080', 'test localhost site')
+        endp_mock.return_value.add_site('remotehost:8080', 'test remotehost site')
         self.site_id = endp_mock.return_value.get_sites()[0]['site_id']
+        self.site2_id = endp_mock.return_value.get_sites()[1]['site_id']
 
         # self._wq_mock = wq_mock
         # self._wq_mock.return_value = mock.MagicMock()
@@ -73,12 +75,58 @@ class TestTransferClient(unittest.TestCase):
         # mock_list.return_value = 'root/file.txt'
         with mock.patch.object(self.__client._TransferClient__wq_client, 'list') as mock_list:
             mock_list.return_value = 'root/file.txt'
-            assert self.__client.list(url, **{'priority': 2}) == 'root/file.txt'  # **{'token':'hashgfsgg'}
+            assert self.__client.list(url, **{'priority': 2}) == 'root/file.txt'
         assert mock_list.called
         mock_list.assert_called_with(self.site_id, parts.path, ('private_key', 'public_key'), protocol=parts.scheme,
                                      priority=2)
         print mock_list.call_args_list
-        # assert False
+
+        wrongurl = "http://localhost2:8080/root/file.txt"  # no such site,
+        with mock.patch.object(self.__client._TransferClient__wq_client, 'list') as mock_list:
+            mock_list.return_value = 'root/file.txt'  # event if ...
+            assert self.__client.list(wrongurl, **{'priority': 2}) == None  # we return None
+        assert not mock_list.called
+
+
+    def test_remove(self):
+        url = "http://localhost:8080/root/file.txt"
+        parts = urlparse(url)
+        # mock_remove.return_value = 'root/file.txt'
+        with mock.patch.object(self.__client._TransferClient__wq_client, 'remove') as mock_remove:
+            mock_remove.return_value = 'root/file.txt removed'
+            assert self.__client.remove(url, **{'priority': 2}) == 'root/file.txt removed'
+        assert mock_remove.called
+        mock_remove.assert_called_with(self.site_id, parts.path, ('private_key', 'public_key'), protocol=parts.scheme,
+                                       priority=2)
+        print mock_remove.call_args_remove
+
+        wrongurl = "http://localhost2:8080/root/file.txt"  # no such site,
+        with mock.patch.object(self.__client._TransferClient__wq_client, 'remove') as mock_remove:
+            mock_remove.return_value = 'whatever..'  # event if ...
+            assert self.__client.remove(wrongurl, **{'priority': 2}) == None  # we return None
+        assert not mock_remove.called
+
+    def test_copy(self):
+        surl = "http://localhost:8080/root/file.txt"
+        turl = "http://remotehost:8080/root/file.txt"
+        sparts = urlparse(surl)
+        tparts = urlparse(surl)
+        with mock.patch.object(self.__client._TransferClient__wq_client, 'copy') as mock_copy:
+            mock_copy.return_value = 'root/file.txt copied'
+            assert self.__client.copy(surl, turl,
+                                      **{'priority': 2}) == 'root/file.txt copied'
+        assert mock_copy.called
+        mock_copy.assert_called_with(self.site_id, sparts.path, self.site2_id, tparts.path,
+                                     ('private_key', 'public_key'), protocol=sparts.scheme,
+                                     priority=2)
+        print mock_copy.call_args_copy
+
+        wrongurl = "http://localhost2:8080/root/file.txt"  # no such site,
+        with mock.patch.object(self.__client._TransferClient__wq_client, 'copy') as mock_copy:
+            mock_copy.return_value = 'whatever..'  # event if ...
+            assert self.__client.copy(wrongurl, turl,
+                                      **{'priority': 2}) == None # we return None
+        assert not mock_copy.called
 
     def tearDown(self):
         pass
