@@ -8,6 +8,7 @@ import mock
 
 from pdm.userservicedesk.HRClient import HRClient
 from pdm.userservicedesk.HRService import HRService
+from pdm.cred.CredClient import MockCredClient
 from pdm.framework.FlaskWrapper import FlaskServer
 from pdm.framework.RESTClient import RESTClientTest
 from pdm.utils.hashing import hash_pass
@@ -15,7 +16,9 @@ from pdm.utils.hashing import hash_pass
 
 class TestHRClient(unittest.TestCase):
 
-    def setUp(self):
+    @mock.patch("pdm.userservicedesk.HRService.CredClient")
+    def setUp(self, cred_mock):
+        cred_mock.return_value = MockCredClient()
         # Get an instance of HRService to test against
         conf = {'CS_secret':'HJGnbfdsV'}
         self.__service = FlaskServer("pdm.userservicedesk.HRService")
@@ -78,7 +81,7 @@ class TestHRClient(unittest.TestCase):
         assert (the_exception[0] == 'Request failed with code 403')
 
     def test_change_password(self):
-        self.__service.fake_auth("TOKEN", "User_1")
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':None, 'key': 'unused'})
         # client takes plain passwords
         res = self.__client.change_password('very_secret', 'newpassword')
         print res
@@ -91,12 +94,12 @@ class TestHRClient(unittest.TestCase):
         assert (the_exception[0] == 'Request failed with code 403')
 
     def test_get_user(self):
-        self.__service.fake_auth("TOKEN", "User_1")
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':None, 'key': 'unused'})
         res = self.__client.get_user()
         assert (res['email'] == self.__userdict['email'])
 
     @mock.patch('pdm.cred.CredClient.MockCredClient.del_user')
     def test_del_user(self, mock_del):
-        self.__service.fake_auth("TOKEN", "User_1")
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':None, 'key': 'unused'})
         res = self.__client.del_user()
         assert ('message' in res[0])
