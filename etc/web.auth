@@ -8,6 +8,8 @@
 # * matches the paths, but not the methods
 /web/* = "ALL"
 /web/registration%POST = "ALL"
+/web/datamover%POST = "ALL"
+/web/listings%POST = "ALL"
 # Matches GET method as no method specified
 /demo/api/v1.0/hello = "ALL"
 
@@ -34,3 +36,14 @@
 /cred/api/v1.0/cred%GET = "ALL"
 /cred/api/v1.0/cred%POST = "ALL"
 /cred/api/v1.0/cred%DELETE = "ALL"
+
+[groups/endpoint]
+
+[auth/endpoint]
+/endpoints/api/v1.0/site = "ALL"
+/endpoints/api/v1.0/site%POST = "ALL"
+/endpoints/api/v1.0/site%DELETE = "ALL"
+/endpoints/api/v1.0/sitemap%GET = "ALL"
+/endpoints/api/v1.0/sitemap%POST = "ALL"
+/endpoints/api/v1.0/sitemap%DELETE = "ALL"
+
