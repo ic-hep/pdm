@@ -52,3 +52,19 @@ class TransferClientFacade(TransferClient):
         if src_parts.scheme:
             kwargs['protocol'] = src_parts.scheme
         return super(TransferClientFacade, self).remove(src_parts.netloc, src_parts.path, **kwargs)
+
+class MockTransferClientFacade(object):
+
+    def __init__(self, token):
+        self.__token = token
+
+    def list(self, url, **kwargs):
+        return str(url)
+
+    def remove(self, url, **kwargs):
+        parts = urlparse(url)
+        return " File %s removed from site %s " % (parts.netloc, parts.path)
+
+    def copy(self, surl, turl, **kwargs ):
+        print " Mock copy called with ", surl, turl, kwargs
+        return " copy %s to %s succeeded " % (surl, turl)
