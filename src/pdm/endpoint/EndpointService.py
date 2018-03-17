@@ -18,11 +18,14 @@ class EndpointService(object):
     @staticmethod
     @startup_test
     def test_data():
-        """ Adds test data to the database.
+        """ Adds test data to the database if it is empty.
         """
         db = current_app.db
         Site = db.tables.Site
         Endpoint = db.tables.Endpoint
+        rows = Endpoint.query.count()
+        if rows:
+            return
         entries = [
             Site(site_id=1,
                  site_name='Site1',
