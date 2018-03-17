@@ -7,13 +7,14 @@ import os
 import pdm.CLI.user_subcommand as user_subcommand
 from pdm.utils.config import ConfigSystem
 
-def main():
+def main(conf_file=None):
     """
     Main CLI function. Read configuration aand add subparsers
     :return:
     """
     # config
-    conf_file = "../etc/users.conf"
+    if not conf_file:
+        conf_file = "../etc/users.conf"
     ConfigSystem.get_instance().setup(conf_file)
     os.chdir(os.path.dirname(conf_file))
     #
