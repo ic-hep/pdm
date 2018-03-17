@@ -45,6 +45,18 @@ class EndpointService(object):
             Endpoint(ep_id=4,
                      site_id=2,
                      ep_uri='ssh://localhost/site2'),
+            Site(site_id=3,
+                 site_name='CloudSite1',
+                 site_desc='Testing site in cloud (1)'),
+            Endpoint(ep_id=5,
+                     site_id=3,
+                     ep_uri='gsiftp://pdmtest1.grid.hep.ph.ic.ac.uk'),
+            Site(site_id=4,
+                 site_name='CloudSite2',
+                 site_desc='Testing site in cloud (2)'),
+            Endpoint(ep_id=6,
+                     site_id=4,
+                     ep_uri='gsiftp://pdmtest2.grid.hep.ph.ic.ac.uk'),
         ]
         for entry in entries:
             db.session.add(entry)
