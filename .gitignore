@@ -109,3 +109,4 @@ etc/certs
 
 # Test DB location
 test.db
+tmp/*
