@@ -5,6 +5,7 @@
 
 import os
 import json
+import uuid
 import fnmatch
 import logging
 import functools
@@ -182,9 +183,18 @@ class FlaskServer(Flask):
             parts of the app context into the request proxy object for ease of
             use.
         """
+        req_uuid = uuid.uuid4()
+        request.uuid = req_uuid
+        req_ip = request.remote_addr
+        current_app.__logger.debug("New request with UUID: %s (%s)",
+                                   req_uuid, req_ip)
         # Requests for static content don't have authentication
         if request.path.startswith('/static/'):
             return # Allow access
+        # Fast handling of 404 errors (also avoids 403 default code if page
+        # is not found.
+        if not request.url_rule:
+            return "404 Not Found", 404
         if current_app.test_auth:
             # We are in test mode and want fake authentication
             return FlaskServer.__test_init_handler()
@@ -203,10 +213,15 @@ class FlaskServer(Flask):
             except ValueError:
                 # Token decoding failed, it is probably corrupt or has been
                 # tampered with.
+                current_app.__logger.info("Request %s token validation failed.",
+                                          req_uuid)
                 return "403 Invalid Token", 403
             client_token = True
         # Now check request against policy
+        current_app.__logger.debug("Request %s, cert: %s, token: %s",
+                                   req_uuid, bool(client_dn), client_token)
         if not FlaskServer.__req_allowed(client_dn, client_token):
+            current_app.__logger.info("Request %s denied by policy.", req_uuid)
             return "403 Forbidden\n", 403
         # Finally, update request object
         request.dn = client_dn
@@ -216,6 +231,21 @@ class FlaskServer(Flask):
         else:
             request.token = None
         FlaskServer.__extend_request()
+
+    @staticmethod
+    def __access_log(resp):
+        """ This function writes to the access log, to log the request details
+            and the return code.
+        """
+        req_ip = request.remote_addr
+        req_uuid = request.uuid
+        method = request.method
+        uri = request.url
+        status_code = resp.status_code
+        resp_len = resp.content_length
+        current_app.__logger.info("%s: %s %s %s %s %u", req_uuid, req_ip,
+                                  method, uri, status_code, resp_len)
+        return resp
 
     def __update_dbctx(self, dbobj):
         """ Updates this objects database object within the application context.
@@ -248,6 +278,7 @@ class FlaskServer(Flask):
         Flask.__init__(self, server_name)
         self.debug = debug
         self.before_request(self.__init_handler)
+        self.after_request(self.__access_log)
         self.__update_dbctx(None)
         self.__db_classes = []
         self.__db_insts = []
