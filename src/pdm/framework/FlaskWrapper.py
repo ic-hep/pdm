@@ -286,7 +286,7 @@ class FlaskServer(Flask):
         self.__test_funcs = []
         self.__test_auth = None
         self.__logger = logger
-        self.token_svc = TokenService(token_key, server_name)
+        self.token_svc = TokenService(token_key, "pdmwebsvc")
         with self.app_context():
             current_app.test_auth = self.__test_auth
             current_app.log = logger
