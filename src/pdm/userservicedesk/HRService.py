@@ -329,6 +329,21 @@ class HRService(object):
         cs_key = unpacked_user_token.get('key', None)
         return cs_key
 
+    @staticmethod
+    def get_token_userid(token):
+        """
+        Get the value of the 'key' part of the token to be used to contact the CS
+        The token intenally holds:
+        id: user id
+        expiry: expiry info (to be decided)
+        key: hashed key (from pdm.utils.hashing.hash_pass() )
+        :param token encrypted token
+        :return: the value of the 'key' field of the token dictionary
+        """
+        unpacked_user_token = TokenService.unpack(token)
+        userid = unpacked_user_token.get('id', None)
+        return userid
+
         ### Quarantine below this line.
         ### Code which might be cosidered in the future version of the service
 

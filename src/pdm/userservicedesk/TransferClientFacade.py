@@ -66,5 +66,5 @@ class MockTransferClientFacade(object):
         return " File %s removed from site %s " % (parts.netloc, parts.path)
 
     def copy(self, surl, turl, **kwargs ):
-        print " Mock copy called with ", surl, turl, kwargs
+        #print " Mock copy called with ", surl, turl, kwargs
         return " copy %s to %s succeeded " % (surl, turl)

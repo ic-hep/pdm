@@ -4,9 +4,13 @@ Client API for the file transfer management
 
 from pdm.endpoint.EndpointClient import EndpointClient
 from pdm.cred.CredClient import CredClient
+from pdm.cred.CredService import CredService
 from pdm.framework.Tokens import TokenService
 from pdm.workqueue.WorkqueueClient import WorkqueueClient
-#from pdm.workqueue.WorkqueueDB import JobProtocol
+from pdm.userservicedesk.HRService import HRService
+
+
+# from pdm.workqueue.WorkqueueDB import JobProtocol
 
 
 class TransferClient(object):
@@ -21,21 +25,20 @@ class TransferClient(object):
         :param user_token: user token
         """
 
+        self.__user_token = user_token
         # endpoint
         self.__endp_client = EndpointClient()
         self.__endp_client.set_token(user_token)
         self.__sitelist = self.__endp_client.get_sites()
-        # CS client setup
+        # get user id and CS secret key
         unpacked_user_token = TokenService.unpack(user_token)
-        cs_key = unpacked_user_token['key']
-        cred_client = CredClient()
-        cred_client.set_token(user_token)
-        self.__credentials = cred_client.get_cred(cs_key)
+        self.__user_id = HRService.get_token_userid(user_token)
+        self.__cs_key = unpacked_user_token['key']
         # work queue client
         self.__wq_client = WorkqueueClient()
         self.__wq_client.set_token(user_token)
 
-    def list(self, src_site, src_filepath, **kwargs ):  #max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
+    def list(self, src_site, src_filepath, **kwargs):  # max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
         """
         List a given path. As for all client calls it need a user token set in a request beforehand.
         Args:
@@ -49,8 +52,11 @@ class TransferClient(object):
         src_siteid = [elem['site_id'] for elem in self.__sitelist if elem['site_name'] == src_site]
         if src_siteid:
             # list
-            response = self.__wq_client.list(src_siteid[0], src_filepath, self.__credentials, **kwargs)
-                                            # max_tries, priority, protocol=JobProtocol.GRIDFTP)
+            cred_client = CredClient()
+            cred_client.set_token(self.__user_token)
+            credentials = cred_client.add_cred(self.__user_id, self.__cs_key, CredService.CRED_TYPE_X509)
+            response = self.__wq_client.list(src_siteid[0], src_filepath, credentials, **kwargs)
+            # max_tries, priority, protocol=JobProtocol.GRIDFTP)
             return response
         else:
             return None
@@ -76,9 +82,12 @@ class TransferClient(object):
         if not (src_siteid and dst_siteid):
             return None
 
+        cred_client = CredClient()
+        cred_client.set_token(self.__user_token)
+        credentials = cred_client.add_cred(self.__user_id, self.__cs_key, CredService.CRED_TYPE_X509)
         response = self.__wq_client.copy(src_siteid[0], src_filepath, dst_siteid[0],
                                          # pylint: disable=too-many-arguments
-                                         dst_filepath, self.__credentials, **kwargs)
+                                         dst_filepath, credentials, **kwargs)
 
         return response
 
@@ -98,7 +107,10 @@ class TransferClient(object):
         if not src_siteid:
             return None
 
+        cred_client = CredClient()
+        cred_client.set_token(self.__user_token)
+        credentials = cred_client.add_cred(self.__user_id, self.__cs_key, CredService.CRED_TYPE_X509)
         response = self.__wq_client.remove(src_siteid[0], src_filepath,
-                                           self.__credentials,  # pylint: disable=too-many-arguments
+                                           credentials,  # pylint: disable=too-many-arguments
                                            **kwargs)
         return response

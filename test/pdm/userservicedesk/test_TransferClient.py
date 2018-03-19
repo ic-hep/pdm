@@ -15,16 +15,13 @@ class TestTransferClient(unittest.TestCase):
     # @mock.patch("pdm.workqueue.WorkqueueClient.WorkqueueClient")
     # @mock.patch("pdm.userservicedesk.TransferClient.WorkqueueClient")
 
+    ##@mock.patch.object(HRService, 'check_token')
     @mock.patch.object(Tokens.TokenService, 'unpack')
     @mock.patch("pdm.userservicedesk.HRService.CredClient")
-    @mock.patch("pdm.userservicedesk.TransferClient.CredClient")
     @mock.patch("pdm.userservicedesk.TransferClient.EndpointClient")
     @mock.patch("pdm.workqueue.WorkqueueClient.WorkqueueClient.__new__")
-    def setUp(self, wq_mock, endp_mock, tc_cred_mock, cred_mock, mocked_unpack):
+    def setUp(self, wq_mock, endp_mock, cred_mock, mocked_unpack):
         cred_mock.return_value = MockCredClient()
-        tc_cred_mock.return_value = MockCredClient()
-        tc_cred_mock.return_value.set_token = mock.MagicMock()
-        tc_cred_mock.return_value.get_cred = mock.MagicMock(return_value=('private_key', 'public_key'))
         endp_mock.return_value = MockEndpointClient()
         endp_mock.return_value.set_token = mock.MagicMock()
 
@@ -49,19 +46,9 @@ class TestTransferClient(unittest.TestCase):
         #
         db = self.__service.test_db()
         self.__service.before_startup(conf)  # to continue startup
-        # CS
-        """
-        self.__csservice = FlaskServer("pdm.cred.CredService")
-        self.__csservice.test_mode(CredService, None)  # to skip DB auto build
-        #token = {'id':1, 'expiry':None, 'key': 'unused'}
 
-        self.__csservice.fake_auth("TOKEN", token)
-        # database
-        self.__csservice.build_db()  # build manually
-        #
-        db = self.__csservice.test_db()
-        self.__csservice.before_startup(conf)  # to continue startup
-        """
+        #mock_ct.return_value =1
+
         mocked_unpack.return_value = token
         self.__htoken = 'whateverhash'
         self.__client = TransferClientFacade(self.__htoken)
@@ -69,7 +56,12 @@ class TestTransferClient(unittest.TestCase):
         mocked_unpack.assert_called_with(self.__htoken)
 
     # @mock.patch("pdm.userservicedesk.TransferClient.WorkqueueClient.list")
-    def test_list(self):
+    @mock.patch("pdm.userservicedesk.TransferClient.CredClient")
+    def test_list(self, tc_cred_mock):
+        tc_cred_mock.return_value = MockCredClient()
+        tc_cred_mock.return_value.set_token = mock.MagicMock()
+        tc_cred_mock.return_value.add_cred = mock.MagicMock(return_value=('private_key', 'public_key'))
+
         url = "http://localhost:8080/root/file.txt"
         parts = urlparse(url)
         # mock_list.return_value = 'root/file.txt'
@@ -87,8 +79,12 @@ class TestTransferClient(unittest.TestCase):
             assert self.__client.list(wrongurl, **{'priority': 2}) == None  # we return None
         assert not mock_list.called
 
+    @mock.patch("pdm.userservicedesk.TransferClient.CredClient")
+    def test_remove(self, tc_cred_mock):
+        tc_cred_mock.return_value = MockCredClient()
+        tc_cred_mock.return_value.set_token = mock.MagicMock()
+        tc_cred_mock.return_value.add_cred = mock.MagicMock(return_value=('private_key', 'public_key'))
 
-    def test_remove(self):
         url = "http://localhost:8080/root/file.txt"
         parts = urlparse(url)
         # mock_remove.return_value = 'root/file.txt'
@@ -106,7 +102,12 @@ class TestTransferClient(unittest.TestCase):
             assert self.__client.remove(wrongurl, **{'priority': 2}) == None  # we return None
         assert not mock_remove.called
 
-    def test_copy(self):
+    @mock.patch("pdm.userservicedesk.TransferClient.CredClient")
+    def test_copy(self, tc_cred_mock):
+        tc_cred_mock.return_value = MockCredClient()
+        tc_cred_mock.return_value.set_token = mock.MagicMock()
+        tc_cred_mock.return_value.add_cred = mock.MagicMock(return_value=('private_key', 'public_key'))
+
         surl = "http://localhost:8080/root/file.txt"
         turl = "http://remotehost:8080/root/file.txt"
         sparts = urlparse(surl)
