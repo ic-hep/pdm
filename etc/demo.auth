@@ -1,7 +1,5 @@
 # Demo application authentication
 
-[groups/demo]
-
 [auth/demo]
 # Home page
 / = "ALL"
