@@ -136,5 +136,5 @@ class WorkqueueClient(RESTClient):
                   job then there will be the additional key "listing" which will be a JSON encoded
                   list of files/directories each as a dict containing the following keys:
                   (permissions, nlinks, userid, groupid, size, datestamp, name, is_directory).
-            """
+        """
         return self.get('jobs/%s/output' % job_id)
