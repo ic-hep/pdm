@@ -107,5 +107,5 @@ etc/certs
 *.swp
 *~
 
-# Test DB location
-test.db
+# Test DB locations
+*.db
