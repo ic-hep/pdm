@@ -1,5 +1,8 @@
 # Demo application authentication
 
+[groups/web]
+user = ["TOKEN"]
+system = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=localhost"]
 [groups/users]
 user = ["TOKEN"]
 system = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=localhost"]
@@ -14,6 +17,12 @@ user = ["TOKEN"]
 system = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=localhost"]
 worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=worker"]
 
+[auth/webpage]
+/ = "ALL"
+/web/* = "ALL"
+/web/registration%POST = "ALL"
+/web/datamover%POST = "ALL"
+/web/listings%POST = "ALL"
 
 [auth/users]
 /users/api/v1.0/users%GET = "@user"
