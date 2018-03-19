@@ -77,13 +77,13 @@ class test_EndpointService(unittest.TestCase):
         data = {'site_name': TEST_NAME,
                 'site_desc': TEST_DESC}
         json_data = json.dumps(data)
-        res = self.__client.post('/endpoints/api/v1.0/site', data=json_data)
+        res = self.__client.post('/endpoint/api/v1.0/site', data=json_data)
         self.assertEqual(res.status_code, 200)
         # Check we got an ID number back
         site_id = json.loads(res.data)
         self.assertIsInstance(site_id, int)
         # Now get the site list
-        res = self.__client.get('/endpoints/api/v1.0/site')
+        res = self.__client.get('/endpoint/api/v1.0/site')
         self.assertEqual(res.status_code, 200)
         site_list = json.loads(res.data)
         # Check length, but there may be other test data
@@ -97,11 +97,11 @@ class test_EndpointService(unittest.TestCase):
 
     def test_site_missing_post(self):
         """ Check we get 400 on missing or bad POST data. """
-        res = self.__client.post('/endpoints/api/v1.0/site')
+        res = self.__client.post('/endpoint/api/v1.0/site')
         self.assertEqual(res.status_code, 400)
         data = {'bad_key': 'value'}
         json_data = json.dumps(data)
-        res = self.__client.post('/endpoints/api/v1.0/site', data=json_data)
+        res = self.__client.post('/endpoint/api/v1.0/site', data=json_data)
         self.assertEqual(res.status_code, 400)
 
     def test_duplicate_site_name(self):
@@ -113,9 +113,9 @@ class test_EndpointService(unittest.TestCase):
         data = {'site_name': TEST_NAME,
                 'site_desc': TEST_DESC}
         json_data = json.dumps(data)
-        res = self.__client.post('/endpoints/api/v1.0/site', data=json_data)
+        res = self.__client.post('/endpoint/api/v1.0/site', data=json_data)
         self.assertEqual(res.status_code, 200)
-        res = self.__client.post('/endpoints/api/v1.0/site', data=json_data)
+        res = self.__client.post('/endpoint/api/v1.0/site', data=json_data)
         self.assertEqual(res.status_code, 409)
 
     @mock.patch("pdm.endpoint.EndpointService.managed_session")
@@ -127,12 +127,12 @@ class test_EndpointService(unittest.TestCase):
         data = {'site_name': TEST_NAME,
                 'site_desc': TEST_DESC}
         json_data = json.dumps(data)
-        res = self.__client.post('/endpoints/api/v1.0/site', data=json_data)
+        res = self.__client.post('/endpoint/api/v1.0/site', data=json_data)
         self.assertEqual(res.status_code, 500)
 
     def test_del_site(self):
         """ Try deleting a site and checking it's gone. """
-        res = self.__client.delete('/endpoints/api/v1.0/site/1')
+        res = self.__client.delete('/endpoint/api/v1.0/site/1')
         self.assertEqual(res.status_code, 200)
         # Check site is really gone from DB
         db = self.__service.test_db()
@@ -144,14 +144,14 @@ class test_EndpointService(unittest.TestCase):
         entry = db.tables.UserMap.query.filter_by(site_id=1).first()
         self.assertIsNone(entry)
         # Do the delete again and check we get a 404 as site is gone
-        res = self.__client.delete('/endpoints/api/v1.0/site/1')
+        res = self.__client.delete('/endpoint/api/v1.0/site/1')
         self.assertEqual(res.status_code, 404)
 
     @mock.patch("pdm.endpoint.EndpointService.managed_session")
     def test_del_site_dberror(self, mock_session):
         """ Check that HTTP 500 is returned on DB errors. """
         self.__db_error(mock_session)
-        res = self.__client.delete('/endpoints/api/v1.0/site/1')
+        res = self.__client.delete('/endpoint/api/v1.0/site/1')
         self.assertEqual(res.status_code, 500)
 
     def test_add_endpoint(self):
@@ -162,12 +162,12 @@ class test_EndpointService(unittest.TestCase):
         data = {'ep_uri': TEST_URI}
         json_data = json.dumps(data)
         # Try adding another endpoint to site 10.
-        res = self.__client.post('endpoints/api/v1.0/site/10', data=json_data)
+        res = self.__client.post('endpoint/api/v1.0/site/10', data=json_data)
         self.assertEqual(res.status_code, 200)
         # Check we got an ID number back
         ep_id = json.loads(res.data)
         self.assertIsInstance(ep_id, int)
-        res = self.__client.get('endpoints/api/v1.0/site/10')
+        res = self.__client.get('endpoint/api/v1.0/site/10')
         self.assertEqual(res.status_code, 200)
         site_info = json.loads(res.data)
         # Check the site_info matches site 1 from the test data.
@@ -182,7 +182,7 @@ class test_EndpointService(unittest.TestCase):
         TEST_URI = "gsiftp://test_host/test"
         data = {'ep_uri': TEST_URI}
         json_data = json.dumps(data)
-        res = self.__client.post('endpoints/api/v1.0/site/1', data=json_data)
+        res = self.__client.post('endpoint/api/v1.0/site/1', data=json_data)
         self.assertEqual(res.status_code, 500)
 
     def test_add_endpoint_bad_post(self):
@@ -191,9 +191,9 @@ class test_EndpointService(unittest.TestCase):
         """
         bad_data = {'bad_key': 'value'}
         bad_json = json.dumps(bad_data)
-        res = self.__client.post('endpoints/api/v1.0/site/2', data=bad_json)
+        res = self.__client.post('endpoint/api/v1.0/site/2', data=bad_json)
         self.assertEqual(res.status_code, 400)
-        res = self.__client.post('endpoints/api/v1.0/site/3')
+        res = self.__client.post('endpoint/api/v1.0/site/3')
         self.assertEqual(res.status_code, 400)
 
     def test_del_endpoint(self):
@@ -201,7 +201,7 @@ class test_EndpointService(unittest.TestCase):
         # Remove the first endpoint from the test data
         ep_id = TEST_EPS[0]['ep_id']
         site_id = TEST_EPS[0]['site_id']
-        uri = 'endpoints/api/v1.0/site/%u/%u' % (site_id, ep_id)
+        uri = 'endpoint/api/v1.0/site/%u/%u' % (site_id, ep_id)
         res = self.__client.delete(uri)
         self.assertEqual(res.status_code, 200)
         # Check entry is really gone from DB
@@ -216,7 +216,7 @@ class test_EndpointService(unittest.TestCase):
     def test_del_endpoint_dberror(self, mock_session):
         """ Check that HTTP 500 is returned on DB errors. """
         self.__db_error(mock_session)
-        res = self.__client.delete('endpoints/api/v1.0/site/1/1')
+        res = self.__client.delete('endpoint/api/v1.0/site/1/1')
         self.assertEqual(res.status_code, 500)
 
     def test_add_sitemap(self):
@@ -226,7 +226,7 @@ class test_EndpointService(unittest.TestCase):
         data = {'user_id': TEST_UID,
                 'local_user': TEST_UNAME}
         json_data = json.dumps(data)
-        res = self.__client.post('endpoints/api/v1.0/sitemap/2',
+        res = self.__client.post('endpoint/api/v1.0/sitemap/2',
                                  data=json_data)
         self.assertEqual(res.status_code, 200)
         # Check the entry is in the database
@@ -235,7 +235,7 @@ class test_EndpointService(unittest.TestCase):
                                        .first()
         self.assertEqual(entry.username, TEST_UNAME)
         # Check that adding the same mapping again triggers a 409 error
-        res = self.__client.post('endpoints/api/v1.0/sitemap/2',
+        res = self.__client.post('endpoint/api/v1.0/sitemap/2',
                                  data=json_data)
         self.assertEqual(res.status_code, 409)
 
@@ -243,10 +243,10 @@ class test_EndpointService(unittest.TestCase):
         """ Check that add sitemap entry fails gracefully if POST data is
             missing or wrong.
         """
-        res = self.__client.post('endpoints/api/v1.0/sitemap/1')
+        res = self.__client.post('endpoint/api/v1.0/sitemap/1')
         self.assertEqual(res.status_code, 400)
         json_data = json.dumps({'a': 'b'})
-        res = self.__client.post('endpoints/api/v1.0/sitemap/1',
+        res = self.__client.post('endpoint/api/v1.0/sitemap/1',
                                  data=json_data)
         self.assertEqual(res.status_code, 400)
 
@@ -259,7 +259,7 @@ class test_EndpointService(unittest.TestCase):
         data = {'user_id': TEST_UID,
                 'local_user': TEST_UNAME}
         json_data = json.dumps(data)
-        res = self.__client.post('endpoints/api/v1.0/sitemap/1',
+        res = self.__client.post('endpoint/api/v1.0/sitemap/1',
                                  data=json_data)
         self.assertEqual(res.status_code, 500)
 
@@ -268,7 +268,7 @@ class test_EndpointService(unittest.TestCase):
         # Try to remove first entry from test data
         TEST_SITE = TEST_MAPPINGS[0]['site_id']
         TEST_UID = TEST_MAPPINGS[0]['user_id']
-        test_uri = 'endpoints/api/v1.0/sitemap/%u/%u' % (TEST_SITE, TEST_UID)
+        test_uri = 'endpoint/api/v1.0/sitemap/%u/%u' % (TEST_SITE, TEST_UID)
         res = self.__client.delete(test_uri)
         self.assertEqual(res.status_code, 200)
         # Check DB
@@ -285,7 +285,7 @@ class test_EndpointService(unittest.TestCase):
         """ Check that HTTP 500 is returned on DB errors. """
         TEST_SITE = TEST_MAPPINGS[0]['site_id']
         TEST_UID = TEST_MAPPINGS[0]['user_id']
-        test_uri = 'endpoints/api/v1.0/sitemap/%u/%u' % (TEST_SITE, TEST_UID)
+        test_uri = 'endpoint/api/v1.0/sitemap/%u/%u' % (TEST_SITE, TEST_UID)
         self.__db_error(mock_session)
         res = self.__client.delete(test_uri)
         self.assertEqual(res.status_code, 500)
@@ -303,7 +303,7 @@ class test_EndpointService(unittest.TestCase):
             db.session.add(new_map)
         db.session.commit()
         # Now remove the user
-        uri = 'endpoints/api/v1.0/sitemap/all/%u' % TEST_UID
+        uri = 'endpoint/api/v1.0/sitemap/all/%u' % TEST_UID
         res = self.__client.delete(uri)
         self.assertEqual(res.status_code, 200)
         # Check that user is gone from mapping DB
@@ -315,14 +315,14 @@ class test_EndpointService(unittest.TestCase):
         """ Check that HTTP 500 is returned on DB errors. """
         self.__db_error(mock_session)
         TEST_UID = TEST_MAPPINGS[0]['user_id']
-        test_uri = 'endpoints/api/v1.0/sitemap/all/%u' % TEST_UID
+        test_uri = 'endpoint/api/v1.0/sitemap/all/%u' % TEST_UID
         res = self.__client.delete(test_uri)
         self.assertEqual(res.status_code, 500)
 
     def test_get_sitemap(self):
         """ Test getting a sitemap for a specific site. """
         TEST_SITE = 1 # Use the first site from the test data
-        res = self.__client.get('endpoints/api/v1.0/sitemap/%u' % TEST_SITE)
+        res = self.__client.get('endpoint/api/v1.0/sitemap/%u' % TEST_SITE)
         self.assertEqual(res.status_code, 200)
         data = json.loads(res.data)
         # Now we have to build a dict of expected users from TEST_MAPPINGS

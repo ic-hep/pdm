@@ -10,7 +10,7 @@ from pdm.framework.FlaskWrapper import (db_model, export_ext, jsonify, \
 from pdm.endpoint.EndpointDB import EndpointDBModel
 from pdm.utils.db import managed_session
 
-@export_ext('/endpoints/api/v1.0')
+@export_ext('/endpoint/api/v1.0')
 @db_model(EndpointDBModel)
 class EndpointService(object):
     """ Endpoint service. """
@@ -107,7 +107,6 @@ class EndpointService(object):
         db = request.db
         Site = db.tables.Site
         site = Site.query.filter_by(site_id=site_id).first_or_404()
-        print site.endpoints
         # Manually build the repsonse object so we can combine
         # the endpoint list in the site object
         res = {}
