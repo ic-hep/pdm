@@ -17,6 +17,9 @@ class ExecutableServer(object):
     """ A base object for starting a WSGI+Flask debug server.
     """
 
+    # The section name for the default app configuration
+    DEF_APP_CONF = "server/DEFAULT"
+
     def __init__(self):
         """ Prepares the argument parser. """
         self.__wsgi_server = None
@@ -48,8 +51,9 @@ class ExecutableServer(object):
         """
         config = ConfigSystem.get_instance()
         config.setup(auth_conf)
-        auth_groups = config.get_section("groups/%s" % app_name)
+        auth_groups = config.get_section("groups")
         auth_rules = config.get_section("auth/%s" % app_name)
+        print "AUTH RULES for %s: %s" % (app_name, auth_rules)
         auth_policy = {}
         for uri, conf_rules in auth_rules.iteritems():
             auth_rules = []
@@ -65,18 +69,11 @@ class ExecutableServer(object):
         return auth_policy
 
     def __init_app(self, app_server, app_name, config):
-        """ Initialise an end application from the config.
-            app_server - An instance of FlaskServer to attach the loaded
-                         application to.
-            app_name - The config name of this server.
-            config - Application config object.
-            Returns None.
-        """
-        app_config = config.get_section("app/%s" % app_name)
-        auth_conf = self.__fix_path(app_config.pop("auth"))
+        """ Creates instances of all WSGI apps defined in the config. """
+        auth_conf = self.__fix_path(config.pop("auth"))
         auth_pol = self.__load_auth(app_name, auth_conf)
         app_server.add_auth_rules(auth_pol)
-        app_class = app_config.pop("class")
+        app_class = config.pop("class")
         try:
             app_inst = pydoc.locate(app_class)()
             app_server.attach_obj(app_inst)
@@ -84,31 +81,12 @@ class ExecutableServer(object):
             # We failed to import the client app, we need to raise the inner
             # exception to make debugging easier
             raise err.exc, err.value, err.tb
-        return app_inst
-
-    def __init_apps(self, app_server, app_names, config):
-        """ Creates instances of all WSGI apps defined in the config. """
-        all_config = {}
-        for app_name in app_names:
-            app_config = config.get_section("app/%s" % app_name)
-            auth_conf = self.__fix_path(app_config.pop("auth"))
-            auth_pol = self.__load_auth(app_name, auth_conf)
-            app_server.add_auth_rules(auth_pol)
-            app_class = app_config.pop("class")
-            try:
-                app_inst = pydoc.locate(app_class)()
-                app_server.attach_obj(app_inst)
-            except pydoc.ErrorDuringImport as err:
-                # We failed to import the client app, we need to raise the inner
-                # exception to make debugging easier
-                raise err.exc, err.value, err.tb
-            all_config.update(app_config)
         app_server.build_db()
-        app_server.before_startup(all_config, with_test=self.__test)
+        app_server.before_startup(config, with_test=self.__test)
         # Test if there are any unused keys in the dictionary
-        if all_config:
+        if config:
             # There are => Unused items = typos?
-            keys = ', '.join(all_config.keys())
+            keys = ', '.join(config.keys())
             raise ValueError("Unused config params: '%s'" % keys)
 
     def __init_wsgi(self, wsgi_name, config):
@@ -118,22 +96,25 @@ class ExecutableServer(object):
             config - The main application config object.
             Returns None.
         """
-        wsgi_config = config.get_section(wsgi_name)
-        port = wsgi_config["port"]
-        cafile = self.__fix_path(wsgi_config.get("cafile", None))
-        cert = self.__fix_path(wsgi_config.get("cert", None))
-        key = self.__fix_path(wsgi_config.get("key", None))
-        secret = wsgi_config.get("secret", None)
+        wsgi_config = config.get_section(self.DEF_APP_CONF)
+        wsgi_config.update(config.get_section(wsgi_name))
+        port = wsgi_config.pop("port")
+        cafile = self.__fix_path(wsgi_config.pop("cafile"))
+        cert = self.__fix_path(wsgi_config.pop("cert"))
+        key = self.__fix_path(wsgi_config.pop("key"))
+        secret = wsgi_config.pop("secret")
         # Create Flask server & config basics
         logger = logging.getLogger()
-        server_name = wsgi_config.get("static", wsgi_name)
+        log_file = wsgi_config.pop("log")
+        # TODO: Write log to log_file in non-debug mode
+        server_name = wsgi_config.pop("static", wsgi_name)
         app_server = FlaskServer(server_name, logger, self.__debug, secret)
-        db_uri = wsgi_config.get("db", None)
+        db_uri = wsgi_config.pop("db", None)
         if db_uri:
             app_server.enable_db(db_uri)
-        # Create child app instances
-        app_names = wsgi_config.get("apps", [])
-        self.__init_apps(app_server, app_names, config)
+        # Create child app instance
+        app_name = wsgi_name.split("/")[1]
+        self.__init_app(app_server, app_name, wsgi_config)
         self.__wsgi_server.add_server(port, app_server, cert, key, cafile)
 
     def run(self):
@@ -157,6 +138,9 @@ class ExecutableServer(object):
         # Create WSGI server instances
         self.__wsgi_server = WSGIServer()
         wsgi_names = [x for x in config.sections if x.startswith('server/')]
+        # Make sure we don't treat defaults as an actual server
+        if self.DEF_APP_CONF in wsgi_names:
+            wsgi_names.remove(self.DEF_APP_CONF)
         for wsgi_name in wsgi_names:
             self.__init_wsgi(wsgi_name, config)
         # Actually start the service

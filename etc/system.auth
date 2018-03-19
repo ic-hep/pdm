@@ -1,23 +1,11 @@
 # Demo application authentication
 
-[groups/web]
-user = ["TOKEN"]
-system = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=localhost"]
-[groups/users]
-user = ["TOKEN"]
-system = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=localhost"]
-[groups/cred]
-user = ["TOKEN"]
-system = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=localhost"]
-[groups/endpoint]
-user = ["TOKEN"]
-system = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=localhost"]
-[groups/workqueue]
+[groups]
 user = ["TOKEN"]
 system = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=localhost"]
 worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=worker"]
 
-[auth/webpage]
+[auth/web]
 / = "ALL"
 /web/* = "ALL"
 /web/registration%POST = "ALL"
