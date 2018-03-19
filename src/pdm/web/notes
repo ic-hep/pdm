@@ -1,0 +1,3 @@
+./build_ca.sh 
+./bin/test_server.py etc/demo.conf 
+./bin/test_demo.py etc/demo.conf 
