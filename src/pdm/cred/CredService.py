@@ -8,6 +8,7 @@ from flask import current_app, request
 from pdm.framework.FlaskWrapper import db_model, export_ext, startup, jsonify
 from pdm.framework.Tokens import TokenService
 from pdm.cred.CredDB import CredDBModel
+from pdm.utils.db import managed_session
 from pdm.utils.X509 import X509CA, X509Utils
 from pdm.utils.sshkey import SSHKeyUtils
 
@@ -90,8 +91,12 @@ class CredService(object):
                          priv_key=ca_obj.get_key(ca_key),
                          serial=ca_obj.get_serial())
         db.session.add(new_ca)
-        db.session.commit()
-        log.info("User CA generated and stored in DB successfully.")
+        try:
+            db.session.commit()
+            log.info("User CA generated and stored in DB successfully.")
+        except Exception:
+            log.exception("Failed to write CA to DB.")
+            db.session.rollback()
 
     @staticmethod
     def __load_ca():
@@ -201,8 +206,10 @@ class CredService(object):
                                               cert_life,
                                               email=user_email,
                                               passphrase=user_key)
-        ca_entry.serial = ca_obj.get_serial()
-        db.session.commit() # Store the CA serial back in the DB
+        with managed_session(request,
+                             "Failed to update CA serial",
+                             http_error_code=500) as session:
+            ca_entry.serial = ca_obj.get_serial()
         cert_expiry = X509Utils.get_cert_expiry(cert_pub)
         ca_cred = UserCred(user_id=user_id,
                            cred_type=CredService.CRED_TYPE_X509,
@@ -219,9 +226,11 @@ class CredService(object):
                             cred_pub=ssh_pub,
                             cred_priv=ssh_priv)
         # Finally add the new entries to the DB
-        db.session.add(ca_cred)
-        db.session.add(ssh_cred)
-        db.session.commit()
+        with managed_session(request,
+                             "Failed to add cred user",
+                             http_error_code=500) as session:
+            session.add(ca_cred)
+            session.add(ssh_cred)
         # Success, return an empty 200
         return ""
 
@@ -232,9 +241,11 @@ class CredService(object):
         db = request.db
         UserCred = db.tables.UserCred
         # This will cascade delete on the JobCred table
-        for old_cred in UserCred.query.filter_by(user_id=user_id).all():
-            db.session.delete(old_cred)
-        db.session.commit()
+        with managed_session(request,
+                             "Failed to del cred user",
+                             http_error_code=500) as session:
+            for old_cred in UserCred.query.filter_by(user_id=user_id).all():
+                 session.delete(old_cred)
         return ""
 
     @staticmethod
@@ -290,8 +301,10 @@ class CredService(object):
                            expiry_date=expiry,
                            cred_pub=new_pub,
                            cred_priv=new_priv)
-        db.session.add(new_cred)
-        db.session.commit()
+        with managed_session(request,
+                             "Failed to add cred",
+                             http_error_code=500) as session:
+            session.add(new_cred)
         # Generate the token for retrieving this credential
         token = current_app.ca_token_svc.issue(new_cred.cred_id)
         res = {'token': token}
@@ -307,8 +320,10 @@ class CredService(object):
             return "Invalid token", 403
         db = request.db
         JobCred = db.tables.JobCred
-        JobCred.query.filter_by(cred_id=cred_id).delete()
-        db.session.commit()
+        with managed_session(request,
+                             "Failed to del cred",
+                             http_error_code=500) as session:
+            JobCred.query.filter_by(cred_id=cred_id).delete()
         return ""
 
     @staticmethod
