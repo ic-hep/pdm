@@ -3,6 +3,7 @@
 import os
 import uuid
 import random
+import json
 # import shlex
 import socket
 import subprocess
@@ -63,9 +64,9 @@ class Worker(RESTClient, Daemon):
         self._logger.error("Error with job %d: %s", job_id, message)
         try:
             self.put('worker/%s' % job_id,
-                     data={'log': message,
-                           'returncode': 1,
-                           'host': socket.gethostbyaddr(socket.getfqdn)})
+                     data=json.dumps({'log': message,
+                                      'returncode': 1,
+                                      'host': socket.gethostbyaddr(socket.getfqdn)}))
         except RuntimeError:
             self._logger.exception("Error trying to PUT back abort message")
 
@@ -74,17 +75,18 @@ class Worker(RESTClient, Daemon):
         endpoint_client = EndpointClient()
         while True:
             try:
-                response = self.post('worker', data={'types': self._types})
+                response = self.post('worker', data=json.dumps({'types': self._types}))
             except Timeout:
                 continue
             except RuntimeError:
                 self._logger.exception("Error getting job from workqueue.")
                 continue
-            try:
-                job, token = response.json()
-            except ValueError:
-                self._logger.exception("Error decoding JSON job.")
-                continue
+            job, token = response
+#            try:
+#                job, token = json.loads(response.data())
+#            except ValueError:
+#                self._logger.exception("Error decoding JSON job.")
+#                continue
             src_endpoints = (urlsplit(site) for site
                              in endpoint_client.get_mappings(job['src_siteid']).itervalues())
             src = [urlunsplit(site._replace(path=job['src_filepath'])) for site in src_endpoints
@@ -128,9 +130,9 @@ class Worker(RESTClient, Daemon):
                 self.set_token(token)
                 try:
                     self.put('worker/%s' % job['id'],
-                             data={'log': log,
-                                   'returncode': self._current_process.returncode,
-                                   'host': socket.gethostbyaddr(socket.getfqdn)})
+                             data=json.dumps({'log': log,
+                                              'returncode': self._current_process.returncode,
+                                              'host': socket.gethostbyaddr(socket.getfqdn)}))
                 except RuntimeError:
                     self._logger.exception("Error trying to PUT back output from subcommand.")
                 finally:

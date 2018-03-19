@@ -2,10 +2,11 @@
 import os
 import json
 import re
+from functools import wraps
 
-from flask import request, abort, jsonify
+from flask import request, abort
 
-from pdm.framework.FlaskWrapper import export_ext, db_model
+from pdm.framework.FlaskWrapper import export_ext, db_model, jsonify
 from pdm.framework.Database import JSONTableEncoder
 from pdm.utils.config import getConfig
 from pdm.userservicedesk.HRService import HRService
@@ -23,6 +24,15 @@ LISTPARSE_REGEX = re.compile(r'^(?P<permissions>\S+)\s+'
                              '(?P<name>.*)$', re.MULTILINE)
 
 
+def decode_json_data(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not isinstance(request.data, dict):
+            request.data = json.loads(request.data)
+        return func(*args, **kwargs)
+    return wrapper
+
+
 @export_ext("/workqueue/api/v1.0")
 @db_model(WorkqueueModels)
 class WorkqueueService(object):
@@ -30,6 +40,7 @@ class WorkqueueService(object):
 
     @staticmethod
     @export_ext('worker', ["POST"])
+    @decode_json_data
     def get_next_job():
         """Get the next job."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
@@ -44,16 +55,17 @@ class WorkqueueService(object):
 
     @staticmethod
     @export_ext('worker/<int:job_id>', ['PUT'])
+    @decode_json_data
     def return_output(job_id):
         """Return a job."""
         if not request.token_ok:
             abort(403, description="Invalid token")
-        if request.token != job_id:
+        if int(request.token) != job_id:
             abort(403, description="Token not valid for job %d" % job_id)
-        Job = request.db.tables.Job  # pylint: disable=invalid-name
 
         # Update job status.
-        job = Job.query.filter_by(id=job_id).get_or_404()
+        Job = request.db.tables.Job  # pylint: disable=invalid-name
+        job = Job.query.get_or_404(job_id)
         job.attempts += 1
         job.status = JobStatus.DONE
         if request.data['returncode'] != 0:
@@ -64,21 +76,25 @@ class WorkqueueService(object):
         dir_ = os.path.join(getConfig("app/workqueue").get('workerlogs', '/tmp/workers'),
                             job.log_uid[:2],
                             job.log_uid)
-        os.makedirs(dir_)
+        if not os.path.exists(dir_):
+            os.makedirs(dir_)
         with open(os.path.join(dir_, 'attempt%i.log' % job.attempts), 'wb') as logfile:
             logfile.write("Job run on host: %s\n" % request.data['host'])
             logfile.write(request.data['log'])
+        return '', 200
 
     @staticmethod
     @export_ext("jobs", ['POST'])
+    @decode_json_data
     def post_job():
         """Add a job."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
         allowed_attrs = require_attrs('type', 'src_siteid', 'src_filepath') +\
-                        ('credentials', 'max_tries', 'priority', 'protocol')
+                        ('credentials', 'max_tries', 'priority', 'protocol', 'extra_opts')
         request.data['type'] = to_enum(request.data['type'], JobType)
-        request.data['protocol'] = to_enum(request.data['protocol'], JobProtocol)
         request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
+        if 'protocol' in request.data:
+            request.data['protocol'] = to_enum(request.data['protocol'], JobProtocol)
         if request.data['type'] == JobType.COPY:
             allowed_attrs += require_attrs('dst_siteid', 'dst_filepath')
             request.data['dst_filepath'] = shellpath_sanitise(request.data['dst_filepath'])
@@ -88,6 +104,7 @@ class WorkqueueService(object):
 
     @staticmethod
     @export_ext('list', ['POST'])
+    @decode_json_data
     def list():
         """List a remote dir."""
         request.data['type'] = JobType.LIST
@@ -103,6 +120,7 @@ class WorkqueueService(object):
 
     @staticmethod
     @export_ext('copy', ['POST'])
+    @decode_json_data
     def copy():
         """Copy."""
         request.data['type'] = JobType.COPY
@@ -118,6 +136,7 @@ class WorkqueueService(object):
 
     @staticmethod
     @export_ext('remove', ['POST'])
+    @decode_json_data
     def remove():
         """Remove."""
         request.data['type'] = JobType.REMOVE
@@ -143,8 +162,8 @@ class WorkqueueService(object):
     def get_job(job_id):
         """Get job."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
-        job = Job.query.filter_by(user_id=HRService.check_token(), id=job_id)\
-                       .get_or_404()
+        job = Job.query.filter_by(id=job_id, user_id=HRService.check_token())\
+                       .first_or_404()
         return job.enum_json()
 
     @staticmethod
@@ -152,13 +171,16 @@ class WorkqueueService(object):
     def get_output(job_id):
         """Get job output."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
-        job = Job.query.filter_by(user_id=HRService.check_token(), id=job_id)\
+        job = Job.query.filter_by(id=job_id, user_id=HRService.check_token())\
                        .filter(Job.status.in_((JobStatus.DONE, JobStatus.FAILED)))\
-                       .get_or_404()
-        dir_ = os.path.join(getConfig("app/workqueue").get('workerlogs', '/tmp/workers'),
-                            job.log.guid[:2],
-                            job.log.guid)
-        with open(os.path.join(dir_, "attempt%i.log" % job.attempts, 'rb')) as logfile:
+                       .first_or_404()
+        logfilename = os.path.join(getConfig("app/workqueue").get('workerlogs', '/tmp/workers'),
+                                   job.log_uid[:2],
+                                   job.log_uid,
+                                   "attempt%i.log" % job.attempts)
+        if not os.path.exists(logfilename):
+            abort(500, description="log directory/file not found.")
+        with open(logfilename, 'rb') as logfile:
             log = logfile.read()
 
         return_dict = {'jobid': job.id, 'log': log}
@@ -173,9 +195,9 @@ class WorkqueueService(object):
     def get_status(job_id):
         """Get job status."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
-        job = Job.query.filter_by(user_id=HRService.check_token(), id=job_id)\
-                       .get_or_404()
-        return json.dumps({'jobid': job.id, 'status': job.status.name})
+        job = Job.query.filter_by(id=job_id, user_id=HRService.check_token())\
+                       .first_or_404()
+        return json.dumps({'jobid': job.id, 'status': JobStatus(job.status).name})
 
 
 def subdict(dct, keys):
@@ -192,7 +214,7 @@ def shellpath_sanitise(path):
 
 def require_attrs(*attrs):
     """Require the given attrs."""
-    required = set(attrs).difference_update(request.data)
+    required = set(attrs).difference(request.data)
     if required:
         abort(400, description="Missing data attributes: %s" % list(required))
     return attrs
