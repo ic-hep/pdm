@@ -53,6 +53,8 @@ class ExecutableServer(object):
         config.setup(auth_conf)
         auth_groups = config.get_section("groups")
         auth_rules = config.get_section("auth/%s" % app_name)
+        if not auth_rules:
+            raise RuntimeError("Auth section 'auth/%s' not found." % app_name)
         auth_policy = {}
         for uri, conf_rules in auth_rules.iteritems():
             auth_rules = []
@@ -140,6 +142,8 @@ class ExecutableServer(object):
         # Make sure we don't treat defaults as an actual server
         if self.DEF_APP_CONF in wsgi_names:
             wsgi_names.remove(self.DEF_APP_CONF)
+        if not wsgi_names:
+            raise RuntimeError("No WSGI servers configured.")
         for wsgi_name in wsgi_names:
             self.__init_wsgi(wsgi_name, config)
         # Actually start the service
