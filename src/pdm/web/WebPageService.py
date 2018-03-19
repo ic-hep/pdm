@@ -11,7 +11,6 @@ from pdm.endpoint.EndpointClient import EndpointClient
 class WebPageService(object):
     """ The main endpoint container class for DemoService. """
 
-    #pylint disable=invalid-name
     @staticmethod
     @startup
     def preload_turtles(config):
@@ -24,12 +23,17 @@ class WebPageService(object):
         log = flask.current_app.log
         log.info("Hello Real Turtles")
         flask.current_app.hrclient = HRClient()
-    
         flask.current_app.epclient = EndpointClient()
+    
+    @staticmethod
+    def datamover_status():
+        """returns the current status of the data mover"""
+        status = "In development"
+        return status
 
-    # checks if user is logged in    
     @staticmethod
     def check_session():
+        """check if user is logged in"""
         if "token" in flask.session:
             # TODO: check if token is still valid
             return
@@ -47,7 +51,8 @@ class WebPageService(object):
     @staticmethod
     @export_ext("datamover")
     def website():
-        status = "In Development"
+        """to render the datamover entry/login page"""
+        status = WebPageService.datamover_status()
         return flask.render_template("datamover.html", status=status)
     
     @staticmethod
@@ -61,7 +66,8 @@ class WebPageService(object):
             flask.session["token"] = token
         except Exception as err:
             flash('Could not login user (%s)' % err)
-            return flask.render_template("datamover.html")
+            status = WebPageService.datamover_status()
+            return flask.render_template("datamover.html", status=status)
 
         return flask.redirect("/web/dashboard")    
 

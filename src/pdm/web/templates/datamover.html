@@ -5,18 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}
-    <ul class=flashes>
-      {% for message in messages %}
-      <li>{{ message }}</li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-    {% endwith %}
-
     <div class="inner">
       <div class="fpborder">
+	<font color="red">
+	{% with messages = get_flashed_messages() %}
+	{% if messages %}
+	<ul class=flashes>
+	  {% for message in messages %}
+	  <li>{{ message }}</li>
+	  {% endfor %}
+	</ul>
+	{% endif %}
+	{% endwith %}
+	</font>
+
+
 
 	<h1><img src="{{url_for('static', filename='pdm.png')}}" alt="Logo"> <br> The DataMover</h1>
 	<form method="POST" action="/web/datamover">
@@ -45,16 +48,23 @@
 		  </font></span></div>
 	      </td></tr>
 	      <tr>
-		<td><font size = "2em">New user ? </font><button class="sbutton" type="submit">Sign Up</button></td>
-		<td align="right"><button type="submit">Login</button></td>
+		<td><font size = "2em">New user ? </font><a href="registration" class="sbutton">Sign Up</a></td>
+		<td align="right"><button class="lbutton" type="submit">Login</button></td>
 	      </tr>
             </table>
           </center>
         </form>
       </div> <!--- fpborder --->
-      </div> <!--- inner --->
-      <a href="about">About</a><br>
-      Current status: {{ status }}
-
+    </div> <!--- inner --->
+    <div class="inner">
+      <!--- misuse a table to align two text pieces in the same line --->
+      <table width="100%">
+        <tr>
+	  <td align="left">Current status: {{ status }} 
+	  </td>
+	  <td align="right"><a href="about" class="abutton">About</a>
+	  </td>
+	</tr>
+    </div>
   </body>  
 </html>
