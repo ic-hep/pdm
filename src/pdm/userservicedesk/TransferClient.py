@@ -38,7 +38,7 @@ class TransferClient(object):
         self.__wq_client = WorkqueueClient()
         self.__wq_client.set_token(user_token)
 
-    def list(self, src_site, src_filepath, **kwargs):  # max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
+    def list(self, src_site, src_filepath, **kwargs):
         """
         List a given path. As for all client calls it need a user token set in a request beforehand.
         Args:
@@ -54,7 +54,8 @@ class TransferClient(object):
             # list
             cred_client = CredClient()
             cred_client.set_token(self.__user_token)
-            credentials = cred_client.add_cred(self.__user_id, self.__cs_key, CredService.CRED_TYPE_X509)
+            credentials = cred_client.add_cred(self.__user_id, self.__cs_key,
+                                               CredService.CRED_TYPE_X509)
             response = self.__wq_client.list(src_siteid[0], src_filepath, credentials, **kwargs)
             # max_tries, priority, protocol=JobProtocol.GRIDFTP)
             return response
@@ -84,7 +85,8 @@ class TransferClient(object):
 
         cred_client = CredClient()
         cred_client.set_token(self.__user_token)
-        credentials = cred_client.add_cred(self.__user_id, self.__cs_key, CredService.CRED_TYPE_X509)
+        credentials = cred_client.add_cred(self.__user_id, self.__cs_key,
+                                           CredService.CRED_TYPE_X509)
         response = self.__wq_client.copy(src_siteid[0], src_filepath, dst_siteid[0],
                                          # pylint: disable=too-many-arguments
                                          dst_filepath, credentials, **kwargs)
@@ -109,7 +111,8 @@ class TransferClient(object):
 
         cred_client = CredClient()
         cred_client.set_token(self.__user_token)
-        credentials = cred_client.add_cred(self.__user_id, self.__cs_key, CredService.CRED_TYPE_X509)
+        credentials = cred_client.add_cred(self.__user_id, self.__cs_key,
+                                           CredService.CRED_TYPE_X509)
         response = self.__wq_client.remove(src_siteid[0], src_filepath,
                                            credentials,  # pylint: disable=too-many-arguments
                                            **kwargs)

@@ -38,8 +38,8 @@ class TransferClientFacade(TransferClient):
         if src_parts.scheme:
             kwargs['protocol'] = src_parts.scheme
         return super(TransferClientFacade, self).copy(src_parts.netloc, src_parts.path,
-                                               dst_parts.netloc, dst_parts.path,
-                                               **kwargs)
+                                                      dst_parts.netloc, dst_parts.path,
+                                                      **kwargs)
 
     def remove(self, src_url, **kwargs):
         """
@@ -53,18 +53,41 @@ class TransferClientFacade(TransferClient):
             kwargs['protocol'] = src_parts.scheme
         return super(TransferClientFacade, self).remove(src_parts.netloc, src_parts.path, **kwargs)
 
-class MockTransferClientFacade(object):
 
+class MockTransferClientFacade(object):
+    """
+    Mock Transfer Client.
+    """
     def __init__(self, token):
         self.__token = token
-
+    @staticmethod
     def list(self, url, **kwargs):
+        """
+        :param url: url to list
+        :param kwargs: keywords agrs to match real list fcn
+        :return: an str(url)
+        """
+        #pylint: disable=unused-argument
         return str(url)
-
+    @staticmethod
     def remove(self, url, **kwargs):
+        """
+        Mock remove.
+        :param url: url to delete
+        :param kwargs:
+        :return: information message
+        """
+        #pylint: disable=unused-argument
         parts = urlparse(url)
         return " File %s removed from site %s " % (parts.netloc, parts.path)
-
-    def copy(self, surl, turl, **kwargs ):
-        #print " Mock copy called with ", surl, turl, kwargs
+    @staticmethod
+    def copy(self, surl, turl, **kwargs):
+        """
+        Mock copy
+        :param surl: source url
+        :param turl: target url
+        :param kwargs:
+        :return:
+        """
+        #pylint: disable=unused-argument
         return " copy %s to %s succeeded " % (surl, turl)
