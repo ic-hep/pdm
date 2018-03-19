@@ -7,5 +7,5 @@ IMP_PATH = os.path.join(TOP_PATH, "src")
 sys.path.append(IMP_PATH)
 
 from pdm.CLI import pdmcli
-pdmcli.main(os.path.join(TOP_PATH, "etc", "users.conf"))
+pdmcli.main(os.path.join(TOP_PATH, "etc", "system.client.conf"))
 
