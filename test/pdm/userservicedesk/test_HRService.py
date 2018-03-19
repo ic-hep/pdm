@@ -95,18 +95,18 @@ class TestHRService(unittest.TestCase):
 
         new_user = json.dumps(barney)  # pass too short !
         res = self.__test.post('/users/api/v1.0/users', data=new_user)
-        assert (res.status_code == 404)
+        assert (res.status_code == 400)
         #
         b_email = barney.pop('email')
         new_user = json.dumps(barney)
         res = self.__test.post('/users/api/v1.0/users', data=new_user)
-        assert (res.status_code == 404)
+        assert (res.status_code == 400)
 
         barney['email'] = b_email
         password = barney.pop('password')
         new_user = json.dumps(barney)
         res = self.__test.post('/users/api/v1.0/users', data=new_user)
-        assert (res.status_code == 404)
+        assert (res.status_code == 400)
 
     @mock.patch('pdm.cred.CredClient.MockCredClient.add_user')
     def test_add_user_CS_OK(self, mock_add_user):
@@ -131,7 +131,7 @@ class TestHRService(unittest.TestCase):
             'state': 0,}
         new_user = json.dumps(barney)
         res = self.__test.post('/users/api/v1.0/users', data=new_user)
-        assert (res.status_code == 404)
+        assert (res.status_code == 400)
         assert not mock_add_user.called
 
     @mock.patch('pdm.cred.CredClient.MockCredClient.add_user')
@@ -177,29 +177,29 @@ class TestHRService(unittest.TestCase):
         # same pass
         same_pass_data = json.dumps({'passwd': 'even_more_secret', 'newpasswd': 'even_more_secret'})
         res = self.__test.put('/users/api/v1.0/passwd', data=same_pass_data)
-        assert (res.status_code == 403)
+        assert (res.status_code == 400)
         # no pass
         no_pass = json.dumps({'passwd': None, 'newpasswd': 'even_more_secret'})
         res = self.__test.put('/users/api/v1.0/passwd', data=no_pass)
-        assert (res.status_code == 403)
+        assert (res.status_code == 400)
         no_pass = json.dumps({'newpasswd': 'even_more_secret'})
         res = self.__test.put('/users/api/v1.0/passwd', data=no_pass)
-        assert (res.status_code == 403)
+        assert (res.status_code == 400)
         no_pass = json.dumps({'passwd': 'even_more_secret'})
         res = self.__test.put('/users/api/v1.0/passwd', data=no_pass)
-        assert (res.status_code == 403)
+        assert (res.status_code == 400)
         #
         no_npass = json.dumps({'passwd': 'even_more_secret', 'newpasswd': None})
         res = self.__test.put('/users/api/v1.0/passwd', data=no_npass)
-        assert (res.status_code == 403)
+        assert (res.status_code == 400)
         # weak pass
         weak_pass = json.dumps({'passwd': 'even_more_secret', 'newpasswd': 'test'})
         res = self.__test.put('/users/api/v1.0/passwd', data=weak_pass)
-        assert (res.status_code == 403)
+        assert (res.status_code == 400)
         # non existing user
         self.__service.fake_auth("TOKEN", {'id':7, 'expiry':None, 'key': 'unused'})
         res = self.__test.put('/users/api/v1.0/passwd', data=new_pass_data)
-        assert (res.status_code == 404)
+        assert (res.status_code == 403)
 
     @mock.patch('pdm.cred.CredClient.MockCredClient.add_user')
     def test_change_password_CS_OK(self, mock_add_user):
@@ -220,7 +220,7 @@ class TestHRService(unittest.TestCase):
         new_pass_data = json.dumps({'passwd': 'very_secret', 'newpasswd': 'even_more_secret'})
         mock_add_user.side_effect = Exception()
         res = self.__test.put('/users/api/v1.0/passwd', data=new_pass_data)
-        assert (res.status_code == 403)
+        assert (res.status_code == 500)
         assert mock_add_user.called
         # check if the password was NOT modified:
         db = self.__service.test_db()
@@ -292,7 +292,7 @@ class TestHRService(unittest.TestCase):
 
         login_creds = json.dumps({'email': 'Johnny@example.com'})
         res = self.__test.post('/users/api/v1.0/login', data=login_creds)
-        assert (res.status_code == 404)
+        assert (res.status_code == 400)
         res = self.__test.post('/users/api/v1.0/login',
                                data=json.dumps({'email': 'Johnny@example.com', 'passwd': 'very_seCret'}))
         assert (res.status_code == 403)
@@ -301,7 +301,7 @@ class TestHRService(unittest.TestCase):
         assert (res.status_code == 403)
         res = self.__test.post('/users/api/v1.0/login',
                                data=json.dumps({'email': 'johnny@example.com', 'passwd': None}))
-        assert (res.status_code == 403)
+        assert (res.status_code == 400)
 
     def test_hello(self):
         res = self.__test.get('/users/api/v1.0/hello')

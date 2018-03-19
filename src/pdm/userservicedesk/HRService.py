@@ -82,14 +82,14 @@ class HRService(object):
 
         if not 'email' in data:
             HRService._logger.error("add user request:no email supplied")
-            abort(404)
+            abort(400)
 
         if not 'password' in data:
             HRService._logger.error("add user request:no password supplied")
-            abort(404)
+            abort(400)
 
         if not HRService.check_passwd(data['password']):
-            abort(404)
+            abort(400)
 
         data['password'] = hash_pass(data['password'])
         cs_hashed_key = hash_pass(data['password'], current_app.cs_key)
@@ -118,7 +118,7 @@ class HRService(object):
         except Exception:
             HRService._logger.error("Failed to add user: %s or post to the CS", sys.exc_info())
             db.session.rollback()
-            abort(403)
+            abort(403)  # 500 ?
 
         # dict
         response = jsonify(user)
@@ -141,10 +141,10 @@ class HRService(object):
             data = json.loads(request.data)
             if not 'newpasswd' in data:
                 HRService._logger.error("add user request:no new password supplied")
-                abort(403)
+                abort(400)
             if not 'passwd' in data:
                 HRService._logger.error("add user request:no old password supplied")
-                abort(403)
+                abort(400)
 
             password = data['passwd']
             newpasswd = data['newpasswd']
@@ -155,15 +155,15 @@ class HRService(object):
                 HRService._logger.error("passwd change request:" \
                                         "null password and/or new password, supplied: %s  ",
                                         request.json)
-                abort(403)
+                abort(400)
 
                 # user by id from the token
             user = User.query.filter_by(id=user_id).first()
 
             if not user:
-                # Raise an HTTPException with a 404 not found status code
+                # Raise an HTTPException with a 403 not found status code
                 HRService._logger.error("GET: requested user for id %s doesn't exist ", user_id)
-                abort(404)
+                abort(403)
 
         # OK, got the user matching the token, now verify the old passwd:
         email = user.email
@@ -171,7 +171,7 @@ class HRService(object):
 
             if check_hash(user.password, newpasswd):
                 HRService._logger.error("Password update FAILED for user %s (same password)", email)
-                abort(403)
+                abort(400)
 
             user.password = hash_pass(newpasswd)
             user.last_login = func.current_timestamp()
@@ -189,7 +189,7 @@ class HRService(object):
                 HRService._logger.error("Failed to change passwd: %s or post to the CS",
                                         sys.exc_info())
                 db.session.rollback()
-                abort(403)
+                abort(500)
 
         else:
             HRService._logger.error("Password update FAILED for user %s (wrong password)", email)
@@ -249,13 +249,13 @@ class HRService(object):
 
         if not ('email' in data and 'passwd' in data):
             HRService._logger.error("login request:no password or email supplied")
-            abort(404)
+            abort(400)
 
         HRService._logger.info("login request %s ", data['email'])
         passwd = data['passwd']
         if not (passwd and HRService.check_passwd(passwd)):
             HRService._logger.error("login request:None password supplied or too weak")
-            abort(403)
+            abort(400)
 
         User = request.db.tables.User
         user = User.query.filter_by(email=data['email']).first()

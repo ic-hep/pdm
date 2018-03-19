@@ -91,7 +91,7 @@ class TestHRClient(unittest.TestCase):
             res = self.__client.change_password('newpassword', None)
 
         the_exception = pwd_ex.exception
-        assert (the_exception[0] == 'Request failed with code 403')
+        assert (the_exception[0] == 'Request failed with code 400')
 
     def test_get_user(self):
         self.__service.fake_auth("TOKEN", {'id':1, 'expiry':None, 'key': 'unused'})
