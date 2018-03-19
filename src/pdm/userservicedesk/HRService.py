@@ -110,7 +110,8 @@ class HRService(object):
                 HRService._logger.error(
                     "Failed to get user id from the db for just added user:%s %s ",
                     user.email, sys.exc_info())
-                raise
+                raise Exception("Failed to get user id from the db for just added user:{0}".
+                                format(user.email))
 
             db.session.commit()
 

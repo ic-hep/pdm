@@ -61,7 +61,7 @@ class MockTransferClientFacade(object):
     def __init__(self, token):
         self.__token = token
     @staticmethod
-    def list(self, url, **kwargs):
+    def list(url, **kwargs):
         """
         :param url: url to list
         :param kwargs: keywords agrs to match real list fcn
@@ -70,7 +70,7 @@ class MockTransferClientFacade(object):
         #pylint: disable=unused-argument
         return str(url)
     @staticmethod
-    def remove(self, url, **kwargs):
+    def remove(url, **kwargs):
         """
         Mock remove.
         :param url: url to delete
@@ -81,7 +81,7 @@ class MockTransferClientFacade(object):
         parts = urlparse(url)
         return " File %s removed from site %s " % (parts.netloc, parts.path)
     @staticmethod
-    def copy(self, surl, turl, **kwargs):
+    def copy(surl, turl, **kwargs):
         """
         Mock copy
         :param surl: source url
