@@ -17,7 +17,7 @@ class EnumBase(IntEnum):
 
     def __str__(self):
         """Return the value of the enum."""
-        return str(self.value)
+        return str(self.value)  # pylint: disable=no-member
 
     @classmethod
     def values(cls):
@@ -59,14 +59,14 @@ class WorkqueueJobEncoder(JSONTableEncoder):
     Will turn enums into human readable form.
     """
 
-    #pylint: disable=method-hidden
+    # pylint: disable=method-hidden
     def default(self, obj):
         """Default encoding method."""
         return_obj = super(WorkqueueJobEncoder, self).default(obj)
         if isinstance(obj, JSONMixin):
-            return_obj['type'] = JobType(obj.type).name
-            return_obj['protocol'] = JobProtocol(obj.protocol).name
-            return_obj['status'] = JobStatus(obj.status).name
+            return_obj['type'] = JobType(obj.type).name  # pylint: disable=no-member
+            return_obj['protocol'] = JobProtocol(obj.protocol).name  # pylint: disable=no-member
+            return_obj['status'] = JobStatus(obj.status).name  # pylint: disable=no-member
         return return_obj
 
 
