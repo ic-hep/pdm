@@ -144,6 +144,7 @@ class RESTClientTest(RESTClient):
         client.set_test_info(test_client, base_uri)
         return (patcher, client)
 
+    #pylint: disable=super-init-not-called
     def __init__(self, _):
         """ Create a new instance of RESTClientTest, service parameter is
             ignored.

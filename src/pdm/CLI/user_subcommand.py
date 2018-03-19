@@ -46,7 +46,8 @@ class UserCommand(object):
         user_parser.add_argument('-p', '--priority', type=int)
         user_parser.set_defaults(func=self.remove)
         # copy
-        user_parser = subparsers.add_parser('copy', help="copy files from source to destination site.")
+        user_parser = subparsers.add_parser('copy',
+                                            help="copy files from source to destination site.")
         user_parser.add_argument('-t', '--token', type=str, required=True)
         user_parser.add_argument('src_url', type=str)
         user_parser.add_argument('dst_url', type=str)
@@ -155,7 +156,8 @@ class UserCommand(object):
             dst_url = args.dst_url
             # remove None values, position args, func and toke from the kwargs:
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
-                             value is not None and key not in ('func', 'src_url', 'dst_url', 'token')}
+                             value is not None
+                                 and key not in ('func', 'src_url', 'dst_url', 'token')}
             client.copy(src_url, dst_url, **accepted_args)
 
     def _get_token(self, args):

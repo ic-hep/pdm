@@ -2,7 +2,7 @@
 """ A module for handling client tokens. """
 
 import os
-from itsdangerous import URLSafeSerializer, BadData, BadSignature
+from itsdangerous import URLSafeSerializer, BadData
 
 class TokenService(object):
     """ This class issues and verifies client tokens using a given key.
