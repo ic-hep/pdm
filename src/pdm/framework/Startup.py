@@ -53,7 +53,6 @@ class ExecutableServer(object):
         config.setup(auth_conf)
         auth_groups = config.get_section("groups")
         auth_rules = config.get_section("auth/%s" % app_name)
-        print "AUTH RULES for %s: %s" % (app_name, auth_rules)
         auth_policy = {}
         for uri, conf_rules in auth_rules.iteritems():
             auth_rules = []
