@@ -255,7 +255,7 @@ class TestRESTClientTest(unittest.TestCase):
         self.__tc.get.return_value = res_obj
         self.__client.get('file')
         self.__tc.get.assert_called_with(TestRESTClientTest.TEST_BASE + \
-                                         "/file", data='null')
+                                         "/file", data=None)
 
     def test_put(self):
         """ Test put call, includes data """
@@ -266,7 +266,7 @@ class TestRESTClientTest(unittest.TestCase):
         self.__tc.put.return_value = res_obj
         self.__client.put('file', data=POST_DATA)
         self.__tc.put.assert_called_with(TestRESTClientTest.TEST_BASE + \
-                                         "/file", data=json.dumps(POST_DATA))
+                                         "/file", data=POST_DATA)
 
     def test_delete(self):
         """ Test the delete call. """
@@ -276,7 +276,7 @@ class TestRESTClientTest(unittest.TestCase):
         self.__tc.delete.return_value = res_obj
         self.__client.delete('file')
         self.__tc.delete.assert_called_with(TestRESTClientTest.TEST_BASE + \
-                                            "/file", data='null')
+                                            "/file", data=None)
 
     def test_post(self):
         """ Test post call, with data. """
@@ -287,7 +287,7 @@ class TestRESTClientTest(unittest.TestCase):
         self.__tc.post.return_value = res_obj
         self.__client.post('file', data=POST_DATA)
         self.__tc.post.assert_called_with(TestRESTClientTest.TEST_BASE + \
-                                          "/file", data=json.dumps(POST_DATA))
+                                          "/file", data=POST_DATA)
 
     def test_return_data(self):
         """ Check that reutrn data is actually returned. """

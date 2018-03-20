@@ -64,7 +64,7 @@ class TestDemoService(unittest.TestCase):
 
     def test_addGetDelTurtle(self):
         # Try adding a turtle and then get its info
-        new_turtle = json.dumps({'name': 'New Turtle'})
+        new_turtle = {'name': 'New Turtle'}
         res = self.__test.post('/demo/api/v1.0/turtles', data=new_turtle)
         assert(res.status_code == 200)
         turtle_id = json.loads(res.data)['id']
@@ -78,7 +78,7 @@ class TestDemoService(unittest.TestCase):
         # modify the turtle
         mod_turtle = {'name': 'New Lovely Turtle'}
         res = self.__test.put('/demo/api/v1.0/turtles/%u' % turtle_id,
-                              data=json.dumps(mod_turtle))
+                              data=mod_turtle)
         assert(res.status_code == 200)
         turtle = json.loads(res.data)
         assert(turtle['id'] == turtle_id)

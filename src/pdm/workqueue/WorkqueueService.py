@@ -204,9 +204,18 @@ def to_enum(obj, enum_type):
     if isinstance(obj, enum_type):
         return obj
     if isinstance(obj, int):
-        return enum_type(obj)
+        try:
+            return enum_type(obj)
+        except ValueError as err:
+            abort(400, description=err.message)
     if isinstance(obj, basestring):
         if obj.isdigit():
-            return enum_type(int(obj))
-        return enum_type[obj]
+            try:
+                return enum_type(int(obj))
+            except ValueError as err:
+                abort(400, description=err.message)
+        try:
+            return enum_type[obj.upper()]
+        except KeyError as err:
+            abort(400, description="%s is not a valid %s" % (err.message, enum_type.__name__))
     abort(400, description="Failed to convert '%s' to enum type '%s'" % (obj, enum_type))
