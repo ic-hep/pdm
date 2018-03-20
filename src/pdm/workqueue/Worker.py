@@ -75,7 +75,10 @@ class Worker(RESTClient, Daemon):
     def run(self):
         """Daemon main method."""
         endpoint_client = EndpointClient()
-        while True:
+        run = True
+        while run:
+            if self._one_shot:
+                run = False
             try:
                 response = self.post('worker', data={'types': self._types})
             except Timeout:
@@ -137,5 +140,3 @@ class Worker(RESTClient, Daemon):
                 finally:
                     self.set_token(None)
 
-                if self._one_shot:
-                    break
