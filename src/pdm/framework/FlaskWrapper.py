@@ -14,6 +14,7 @@ from pdm.framework.Tokens import TokenService
 from pdm.framework.Database import MemSafeSQLAlchemy, JSONTableEncoder
 
 from flask import Flask, Response, current_app, request
+from flask.testing import FlaskClient
 
 
 def export_inner(obj, ename, methods=None):
@@ -105,6 +106,21 @@ class DBContainer(object):
         of this object at runtime.
     """
     pass
+
+class FlaskClientWrapper(FlaskClient):
+    """ A wrapper around FlaskClient used in testing, which json encodes the
+        data input in the same manner as RESTClient for consistency across tests.
+    """
+    def __init__(self, *args, **kwargs):
+        super(FlaskClient, self).__init__(*args, **kwargs)
+    
+    def open(self, *args, **kwargs):
+        """ Call open on the super class but pre-encode the data arg (if
+            present) into json.
+        """
+        if 'data' in kwargs:
+            kwargs['data'] = json.dumps(kwargs['data'])
+        return FlaskClient.open(self, *args, **kwargs)
 
 #pylint: disable=too-many-instance-attributes
 class FlaskServer(Flask):
@@ -287,6 +303,9 @@ class FlaskServer(Flask):
         self.__test_auth = None
         self.__logger = logger
         self.token_svc = TokenService(token_key, "pdmwebsvc")
+        # We override the test client class from Flask with our
+        # custom one which is more similar to RESTClient
+        self.test_client_class = FlaskClientWrapper
         with self.app_context():
             current_app.test_auth = self.__test_auth
             current_app.log = logger

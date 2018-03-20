@@ -160,7 +160,9 @@ class RESTClientTest(RESTClient):
             and process the result in a similar way to RESTClient.
         """
         full_uri = "%s/%s" % (self.__base, uri)
-        res = call_fn(full_uri, data=json.dumps(data))
+        # We don't need to convert the data to json here, as the
+        #  inner test_client does that itself now.
+        res = call_fn(full_uri, data=data)
         if res.status_code not in (200, 201):
             raise RuntimeError("Request failed with code %u" % \
                                res.status_code)
