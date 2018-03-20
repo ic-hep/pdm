@@ -157,7 +157,7 @@ class UserCommand(object):
             # remove None values, position args, func and toke from the kwargs:
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
                              value is not None
-                                 and key not in ('func', 'src_url', 'dst_url', 'token')}
+                             and key not in ('func', 'src_url', 'dst_url', 'token')}
             client.copy(src_url, dst_url, **accepted_args)
 
     def _get_token(self, args):
