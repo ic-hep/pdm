@@ -6,6 +6,8 @@ from flask import request, flash
 from pdm.framework.FlaskWrapper import export, export_ext, startup, db_model, jsonify
 from pdm.userservicedesk.HRClient import HRClient
 from pdm.endpoint.EndpointClient import EndpointClient
+from pdm.userservicedesk.TransferClient import TransferClient
+
 
 @export_ext("/web")
 class WebPageService(object):
@@ -24,7 +26,8 @@ class WebPageService(object):
         log.info("Hello Real Turtles")
         flask.current_app.hrclient = HRClient()
         flask.current_app.epclient = EndpointClient()
-    
+
+
     @staticmethod
     def datamover_status():
         """returns the current status of the data mover"""
@@ -81,17 +84,32 @@ class WebPageService(object):
     @staticmethod
     @export_ext("dashboard")
     def dashboard():
+        """arrivals: what the user sees after logging in"""
         # will abort of user is not logged in
         WebPageService.check_session()
         return flask.render_template("dashboard.html")
 
     @staticmethod
-    @export_ext("listings", methods=["GET", "POST"])
+    @export_ext("listings", methods=["GET"])
     def listings():
         WebPageService.check_session()
         sites = flask.current_app.epclient.get_sites()
-        return str(sites)
-        # return flask.render_template("listings.html")
+        return flask.render_template("listings.html", sites=sites)
+
+    @staticmethod
+    @export_ext("listings", methods=["POST"])
+    def listings_post():
+        WebPageService.check_session()
+        siteid = request.form['Endpoints']
+        # temp hack:
+
+        site=flask.current_app.epclient.get_site(int(siteid))['site_name']
+        
+        user_token = flask.session['token']
+        tclient = TransferClient(user_token)
+        sitelist = tclient.list(site, "/")
+        return str(sitelist)
+        # return flask.redirect("/web/dashboard", siteid=siteid)
 
 
 
@@ -122,7 +140,7 @@ class WebPageService(object):
     @export_ext("registration", methods=["POST"])
     def registration_post():
         if request.form['password'] != request.form['cpassword']:
-            flash('The two passords do not match.')
+            flash('The two passwords do not match.')
             # to do: make sure page does not come back blank
             return flask.render_template("registration.html")
         # create dictionary to match HRClient input
@@ -136,7 +154,6 @@ class WebPageService(object):
         try:
             flask.current_app.hrclient.add_user(hrdict)
         except Exception as err:
-            raise
             flash('Could not add user (%s)' % err)
             return flask.render_template("registration.html")
             
