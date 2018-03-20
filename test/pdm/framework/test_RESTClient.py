@@ -170,6 +170,19 @@ class TestRESTClient(unittest.TestCase):
         real_timeout = mock_req.request.call_args[1]['timeout']
         self.assertEqual(real_timeout, TEST_TIMEOUT)
 
+    def test_bad_option(self):
+        """ Check that an exception is thrown if the client config has an
+            unrecognised option.
+        """
+        TEST_CA, TEST_CERT, TEST_KEY = ('/TESTCA', '/TESTCERT', '/TESTKEY')
+        ssl_conf = {
+            'cafile': TEST_CA,
+            'cert': TEST_CERT,
+            'key': TEST_KEY,
+            'badoption': 'yes',
+        }
+        self.assertRaises(ValueError, self.__get_inst, client_conf=ssl_conf)
+
     @mock.patch("pdm.framework.RESTClient.requests")
     def test_constr_ssl(self, mock_req):
         """ Test that configuring SSL via the constructor works and
