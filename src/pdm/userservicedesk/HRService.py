@@ -115,7 +115,6 @@ class HRService(object):
 
             db.session.commit()
 
-        # pylint: disable=broad-except
         except Exception:
             HRService._logger.error("Failed to add user: %s or post to the CS", sys.exc_info())
             db.session.rollback()
@@ -185,7 +184,6 @@ class HRService(object):
                 current_app.cs_client.add_user(user_id, cs_hashed_key)
                 db.session.commit()
                 HRService._logger.info("CS and password updated successfully for user %s ", email)
-            # pylint: disable=broad-except
             except Exception:
                 HRService._logger.error("Failed to change passwd: %s or post to the CS",
                                         sys.exc_info())
@@ -226,7 +224,6 @@ class HRService(object):
             current_app.cs_client.del_user(user_id)
             db.session.commit()
             HRService._logger.info(" User %s deleted successfully", user_id)
-            # pylint: disable=broad-except
         except Exception:
             db.session.rollback()
             HRService._logger.error(" Failed to delete a user %s (%s)", user_id, sys.exc_info())

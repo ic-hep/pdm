@@ -192,7 +192,6 @@ class CredService(object):
             if user_email:
                 # It may be unicode, convert to string
                 user_email = str(user_email)
-        #pylint: disable=broad-except
         except Exception: # Key or Value Error
             return "Malformed POST data", 500
         # Generate a new DN for the user
@@ -276,7 +275,6 @@ class CredService(object):
             # Cap max_lifetime to within config
             max_lifetime = min(max_lifetime,
                                current_app.ca_config['proxy_max_hours'])
-        #pylint: disable=broad-except
         except Exception:
             return "Malformed POST data", 500
         # Now prepare the DB

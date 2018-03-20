@@ -47,7 +47,6 @@ class ConfigSystem(object):
                 with open(filename, 'rb') as config_file:
                     config_parser.readfp(config_file)
                 self._logger.info("Read config file: %s", filename)
-            #pylint: disable=broad-except
             except Exception:
                 self._logger.warning("Failed to read config file: %s", filename)
                 if not ignore_errors:
