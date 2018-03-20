@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 """Worker start-up script."""
 import os
+import sys
+TOP_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+IMP_PATH = os.path.join(TOP_PATH, "src")
+sys.path.append(IMP_PATH)
+
 from argparse import ArgumentParser
 
 from pdm.utils.config import ConfigSystem
