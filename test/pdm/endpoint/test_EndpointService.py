@@ -76,8 +76,7 @@ class test_EndpointService(unittest.TestCase):
         # Add the test site
         data = {'site_name': TEST_NAME,
                 'site_desc': TEST_DESC}
-        json_data = json.dumps(data)
-        res = self.__client.post('/endpoint/api/v1.0/site', data=json_data)
+        res = self.__client.post('/endpoint/api/v1.0/site', data=data)
         self.assertEqual(res.status_code, 200)
         # Check we got an ID number back
         site_id = json.loads(res.data)
@@ -100,8 +99,7 @@ class test_EndpointService(unittest.TestCase):
         res = self.__client.post('/endpoint/api/v1.0/site')
         self.assertEqual(res.status_code, 400)
         data = {'bad_key': 'value'}
-        json_data = json.dumps(data)
-        res = self.__client.post('/endpoint/api/v1.0/site', data=json_data)
+        res = self.__client.post('/endpoint/api/v1.0/site', data=data)
         self.assertEqual(res.status_code, 400)
 
     def test_duplicate_site_name(self):
@@ -112,10 +110,9 @@ class test_EndpointService(unittest.TestCase):
         TEST_DESC = "A test site."
         data = {'site_name': TEST_NAME,
                 'site_desc': TEST_DESC}
-        json_data = json.dumps(data)
-        res = self.__client.post('/endpoint/api/v1.0/site', data=json_data)
+        res = self.__client.post('/endpoint/api/v1.0/site', data=data)
         self.assertEqual(res.status_code, 200)
-        res = self.__client.post('/endpoint/api/v1.0/site', data=json_data)
+        res = self.__client.post('/endpoint/api/v1.0/site', data=data)
         self.assertEqual(res.status_code, 409)
 
     @mock.patch("pdm.endpoint.EndpointService.managed_session")
@@ -126,8 +123,7 @@ class test_EndpointService(unittest.TestCase):
         TEST_DESC = "A test site."
         data = {'site_name': TEST_NAME,
                 'site_desc': TEST_DESC}
-        json_data = json.dumps(data)
-        res = self.__client.post('/endpoint/api/v1.0/site', data=json_data)
+        res = self.__client.post('/endpoint/api/v1.0/site', data=data)
         self.assertEqual(res.status_code, 500)
 
     def test_del_site(self):
@@ -160,9 +156,8 @@ class test_EndpointService(unittest.TestCase):
         """
         TEST_URI = "gsiftp://test_host/test"
         data = {'ep_uri': TEST_URI}
-        json_data = json.dumps(data)
         # Try adding another endpoint to site 10.
-        res = self.__client.post('endpoint/api/v1.0/site/10', data=json_data)
+        res = self.__client.post('endpoint/api/v1.0/site/10', data=data)
         self.assertEqual(res.status_code, 200)
         # Check we got an ID number back
         ep_id = json.loads(res.data)
@@ -181,8 +176,7 @@ class test_EndpointService(unittest.TestCase):
         self.__db_error(mock_session)
         TEST_URI = "gsiftp://test_host/test"
         data = {'ep_uri': TEST_URI}
-        json_data = json.dumps(data)
-        res = self.__client.post('endpoint/api/v1.0/site/1', data=json_data)
+        res = self.__client.post('endpoint/api/v1.0/site/1', data=data)
         self.assertEqual(res.status_code, 500)
 
     def test_add_endpoint_bad_post(self):
@@ -190,8 +184,7 @@ class test_EndpointService(unittest.TestCase):
             or bad.
         """
         bad_data = {'bad_key': 'value'}
-        bad_json = json.dumps(bad_data)
-        res = self.__client.post('endpoint/api/v1.0/site/2', data=bad_json)
+        res = self.__client.post('endpoint/api/v1.0/site/2', data=bad_data)
         self.assertEqual(res.status_code, 400)
         res = self.__client.post('endpoint/api/v1.0/site/3')
         self.assertEqual(res.status_code, 400)
@@ -225,9 +218,8 @@ class test_EndpointService(unittest.TestCase):
         TEST_UNAME = "attuser"
         data = {'user_id': TEST_UID,
                 'local_user': TEST_UNAME}
-        json_data = json.dumps(data)
         res = self.__client.post('endpoint/api/v1.0/sitemap/2',
-                                 data=json_data)
+                                 data=data)
         self.assertEqual(res.status_code, 200)
         # Check the entry is in the database
         db = self.__service.test_db()
@@ -236,7 +228,7 @@ class test_EndpointService(unittest.TestCase):
         self.assertEqual(entry.username, TEST_UNAME)
         # Check that adding the same mapping again triggers a 409 error
         res = self.__client.post('endpoint/api/v1.0/sitemap/2',
-                                 data=json_data)
+                                 data=data)
         self.assertEqual(res.status_code, 409)
 
     def test_add_sitemap_bad_post(self):
@@ -245,9 +237,8 @@ class test_EndpointService(unittest.TestCase):
         """
         res = self.__client.post('endpoint/api/v1.0/sitemap/1')
         self.assertEqual(res.status_code, 400)
-        json_data = json.dumps({'a': 'b'})
         res = self.__client.post('endpoint/api/v1.0/sitemap/1',
-                                 data=json_data)
+                                 data={'a':'b'})
         self.assertEqual(res.status_code, 400)
 
     @mock.patch("pdm.endpoint.EndpointService.managed_session")
@@ -258,9 +249,8 @@ class test_EndpointService(unittest.TestCase):
         TEST_UNAME = "attuser"
         data = {'user_id': TEST_UID,
                 'local_user': TEST_UNAME}
-        json_data = json.dumps(data)
         res = self.__client.post('endpoint/api/v1.0/sitemap/1',
-                                 data=json_data)
+                                 data=data)
         self.assertEqual(res.status_code, 500)
 
     def test_del_sitemap(self):

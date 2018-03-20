@@ -30,7 +30,7 @@ class TestWorkqueueService(unittest.TestCase):
 
     def test_get_next_job(self):
         """test worker get next job."""
-        request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [JobType.LIST]}))
+        request = self.__test.post('/workqueue/api/v1.0/worker', data={'types': [JobType.LIST]})
         self.assertEqual(request.status_code, 200, "Request to get worker job failed.")
         job, token = json.loads(request.data)
         self.assertIsInstance(token, basestring)
@@ -44,40 +44,40 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertIsNotNone(j)
         self.assertEqual(j.status, JobStatus.SUBMITTED, "Job status not updated in DB")
 
-        request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [JobType.COPY, JobType.REMOVE]}))
+        request = self.__test.post('/workqueue/api/v1.0/worker', data={'types': [JobType.COPY, JobType.REMOVE]})
         self.assertEqual(request.status_code, 200, "Failed to get copy or remove job.")
 
-        request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [JobType.COPY, JobType.REMOVE]}))
+        request = self.__test.post('/workqueue/api/v1.0/worker', data={'types': [JobType.COPY, JobType.REMOVE]})
         self.assertEqual(request.status_code, 200, "Failed to get copy or remove job.")
-        request = self.__test.post('/workqueue/api/v1.0/worker', data=json.dumps({'types': [JobType.COPY, JobType.REMOVE]}))
+        request = self.__test.post('/workqueue/api/v1.0/worker', data={'types': [JobType.COPY, JobType.REMOVE]})
         self.assertEqual(request.status_code, 404, "Trying to get a job that doesn't exist should return 404.")
 
     def test_return_output(self):
         request = self.__test.put('/workqueue/api/v1.0/worker/1',
-                                   data=json.dumps({'log': 'blah blah',
-                                                    'returncode': 0,
-                                                    'host': 'somehost.domain'}))
+                                   data={'log': 'blah blah',
+                                         'returncode': 0,
+                                         'host': 'somehost.domain'})
         self.assertEqual(request.status_code, 403)
 
         self.__service.fake_auth("TOKEN", "12")
         request = self.__test.put('/workqueue/api/v1.0/worker/1',
-                                   data=json.dumps({'log': 'blah blah',
-                                                    'returncode': 0,
-                                                    'host': 'somehost.domain'}))
+                                   data={'log': 'blah blah',
+                                         'returncode': 0,
+                                         'host': 'somehost.domain'})
         self.assertEqual(request.status_code, 403)
 
         self.__service.fake_auth("TOKEN", "100")
         request = self.__test.put('/workqueue/api/v1.0/worker/100',
-                                   data=json.dumps({'log': 'blah blah',
-                                                    'returncode': 0,
-                                                    'host': 'somehost.domain'}))
+                                   data={'log': 'blah blah',
+                                         'returncode': 0,
+                                         'host': 'somehost.domain'})
         self.assertEqual(request.status_code, 404)
 
         self.__service.fake_auth("TOKEN", "1")
         request = self.__test.put('/workqueue/api/v1.0/worker/1',
-                                   data=json.dumps({'log': 'blah blah',
-                                                    'returncode': 1,
-                                                    'host': 'somehost.domain'}))
+                                   data={'log': 'blah blah',
+                                         'returncode': 1,
+                                         'host': 'somehost.domain'})
         self.assertEqual(request.status_code, 200)
         Job = self.__service.test_db().tables.Job
         j = Job.query.filter_by(id=1).one()
@@ -94,9 +94,9 @@ class TestWorkqueueService(unittest.TestCase):
             self.assertEqual(log.read(), expected_log)
 
         request = self.__test.put('/workqueue/api/v1.0/worker/1',
-                                  data=json.dumps({'log': 'blah blah',
-                                                   'returncode': 0,
-                                                   'host': 'somehost.domain'}))
+                                  data={'log': 'blah blah',
+                                        'returncode': 0,
+                                        'host': 'somehost.domain'})
         self.assertEqual(request.status_code, 200)
         j = Job.query.filter_by(id=1).one()
         self.assertIsNotNone(j)
@@ -112,14 +112,14 @@ class TestWorkqueueService(unittest.TestCase):
 
         mock_hrservice.return_value = 10
         request = self.__test.post('/workqueue/api/v1.0/jobs',
-                                   data=json.dumps({'blah': 12}))
+                                   data={'blah': 12})
         self.assertEqual(request.status_code, 400)
 
         request = self.__test.post('/workqueue/api/v1.0/jobs',
-                                   data=json.dumps({'type': JobType.LIST,
-                                                    'src_siteid': 12,
-                                                    'src_filepath': '/data/somefile',
-                                                    'dst_siteid': 15}))
+                                   data={'type': JobType.LIST,
+                                         'src_siteid': 12,
+                                         'src_filepath': '/data/somefile',
+                                         'dst_siteid': 15})
         self.assertEqual(request.status_code, 200)
         returned_job = json.loads(request.data)
         job = Job.query.filter_by(user_id=10).one()
@@ -144,25 +144,25 @@ class TestWorkqueueService(unittest.TestCase):
 
         mock_hrservice.return_value = 12
         request = self.__test.post('/workqueue/api/v1.0/jobs',
-                                   data=json.dumps({'type': JobType.COPY,
-                                                    'src_siteid': 12,
-                                                    'src_filepath': '/data/somefile',
-                                                    'dst_siteid': 15}))
+                                   data={'type': JobType.COPY,
+                                         'src_siteid': 12,
+                                         'src_filepath': '/data/somefile',
+                                         'dst_siteid': 15})
         self.assertEqual(request.status_code, 400)
 
         request = self.__test.post('/workqueue/api/v1.0/jobs',
-                                   data=json.dumps({'type': JobType.COPY,
-                                                    'src_siteid': 12,
-                                                    'src_filepath': '/data/somefile',
-                                                    'dst_siteid': 15,
-                                                    'dst_filepath': '/data/someotherfile',
-                                                    'credentials': 'somesecret',
-                                                    'extra_opts': 'blah',
-                                                    'attempts': 30,
-                                                    'max_tries': 3,
-                                                    'priority': 2,
-                                                    'protocol': JobProtocol.SSH,
-                                                    'log_uid': 'my_log_uid'}))
+                                   data={'type': JobType.COPY,
+                                         'src_siteid': 12,
+                                         'src_filepath': '/data/somefile',
+                                         'dst_siteid': 15,
+                                         'dst_filepath': '/data/someotherfile',
+                                         'credentials': 'somesecret',
+                                         'extra_opts': 'blah',
+                                         'attempts': 30,
+                                         'max_tries': 3,
+                                         'priority': 2,
+                                         'protocol': JobProtocol.SSH,
+                                         'log_uid': 'my_log_uid'})
         self.assertEqual(request.status_code, 200)
         returned_job = json.loads(request.data)
         job = Job.query.filter_by(user_id=12).one()
@@ -193,9 +193,9 @@ class TestWorkqueueService(unittest.TestCase):
 
         mock_hrservice.return_value = 10
         request = self.__test.post('/workqueue/api/v1.0/list',
-                                   data=json.dumps({'type': JobType.COPY,
-                                                    'src_siteid': 12,
-                                                    'src_filepath': '/data/somefile'}))
+                                   data={'type': JobType.COPY,
+                                         'src_siteid': 12,
+                                         'src_filepath': '/data/somefile'})
         self.assertEqual(request.status_code, 200)
         returned_job = json.loads(request.data)
         job = Job.query.filter_by(user_id=10).one()
@@ -210,11 +210,11 @@ class TestWorkqueueService(unittest.TestCase):
 
         mock_hrservice.return_value = 10
         request = self.__test.post('/workqueue/api/v1.0/copy',
-                                   data=json.dumps({'type': JobType.LIST,
-                                                    'src_siteid': 12,
-                                                    'src_filepath': '/data/somefile',
-                                                    'dst_siteid': 15,
-                                                    'dst_filepath': '/data/someotherfile'}))
+                                   data={'type': JobType.LIST,
+                                         'src_siteid': 12,
+                                         'src_filepath': '/data/somefile',
+                                         'dst_siteid': 15,
+                                         'dst_filepath': '/data/someotherfile'})
         self.assertEqual(request.status_code, 200)
         returned_job = json.loads(request.data)
         job = Job.query.filter_by(user_id=10).one()
@@ -229,9 +229,9 @@ class TestWorkqueueService(unittest.TestCase):
 
         mock_hrservice.return_value = 10
         request = self.__test.post('/workqueue/api/v1.0/remove',
-                                   data=json.dumps({'type': JobType.COPY,
-                                                    'src_siteid': 12,
-                                                    'src_filepath': '/data/somefile'}))
+                                   data={'type': JobType.COPY,
+                                         'src_siteid': 12,
+                                         'src_filepath': '/data/somefile'})
         self.assertEqual(request.status_code, 200)
         returned_job = json.loads(request.data)
         job = Job.query.filter_by(user_id=10).one()
