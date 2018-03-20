@@ -3,7 +3,7 @@
 import os
 import uuid
 import random
-import json
+# import json
 # import shlex
 import socket
 import subprocess
@@ -41,16 +41,18 @@ def TempX509Files(token):
 class Worker(RESTClient, Daemon):
     """Worker Daemon."""
 
-    def __init__(self):
+    def __init__(self, debug=False, one_shot=False):
         """Initialisation."""
         RESTClient.__init__(self, 'workqueue')
         self._uid = uuid.uuid4()
         Daemon.__init__(self,
                         pidfile='/tmp/worker-%s.pid' % self._uid,
                         logfile='/tmp/worker-%s.log' % self._uid,
-                        target=self.run)
+                        target=self.run,
+                        debug=debug)
+        self._one_shot = one_shot
         self._types = [JobType[type_.upper()] for type_ in  # pylint: disable=unsubscriptable-object
-                       getConfig('client').get('types', ('LIST', 'COPY', 'REMOVE'))]
+                       getConfig('worker').get('types', ('LIST', 'COPY', 'REMOVE'))]
         self._current_process = None
 
     def terminate(self, *_):
@@ -64,9 +66,9 @@ class Worker(RESTClient, Daemon):
         self._logger.error("Error with job %d: %s", job_id, message)
         try:
             self.put('worker/%s' % job_id,
-                     data=json.dumps({'log': message,
-                                      'returncode': 1,
-                                      'host': socket.gethostbyaddr(socket.getfqdn())}))
+                     data={'log': message,
+                           'returncode': 1,
+                           'host': socket.gethostbyaddr(socket.getfqdn())})
         except RuntimeError:
             self._logger.exception("Error trying to PUT back abort message")
 
@@ -75,7 +77,7 @@ class Worker(RESTClient, Daemon):
         endpoint_client = EndpointClient()
         while True:
             try:
-                response = self.post('worker', data=json.dumps({'types': self._types}))
+                response = self.post('worker', data={'types': self._types})
             except Timeout:
                 continue
             except RuntimeError:
@@ -127,13 +129,13 @@ class Worker(RESTClient, Daemon):
                 self.set_token(token)
                 try:
                     self.put('worker/%s' % job['id'],
-                             data=json.dumps({'log': log,
-                                              'returncode': self._current_process.returncode,
-                                              'host': socket.gethostbyaddr(socket.getfqdn())}))
+                             data={'log': log,
+                                   'returncode': self._current_process.returncode,
+                                   'host': socket.gethostbyaddr(socket.getfqdn())})
                 except RuntimeError:
                     self._logger.exception("Error trying to PUT back output from subcommand.")
                 finally:
                     self.set_token(None)
 
-if __name__ == '__main__':
-    Worker().start()
+                if self._one_shot:
+                    break
