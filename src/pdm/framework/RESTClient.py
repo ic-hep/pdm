@@ -19,15 +19,14 @@ class RESTClient(object):
             raise KeyError("Failed to find endpoint for service '%s'" % service)
         return endpoints[service]
 
-    def __get_ssl_opts(self, ssl_opts):
-        """ Gets config file ssl_opts.
+    def __get_ssl_opts(self, ssl_opts, client_conf):
+        """ Gets config file ssl_opts from client_conf.
         """
+        cafile = client_conf.pop("cafile", None)
+        cert = client_conf.pop("cert", None)
+        key = client_conf.pop("key", None)
         if not ssl_opts:
             # No SSL client options, try config file
-            client_conf = self.__conf.get_section("client")
-            cafile = client_conf.pop("cafile", None)
-            cert = client_conf.pop("cert", None)
-            key = client_conf.pop("key", None)
             ssl_opts = (cafile, cert, key)
         return ssl_opts
 
@@ -40,11 +39,15 @@ class RESTClient(object):
             token - Optional token to include in the requests.
         """
         self.__conf = ConfigSystem.get_instance()
-        self.__url = self.__locate(service)
-        self.__ssl_opts = self.__get_ssl_opts(ssl_opts)
-        self.__token = token
         client_conf = self.__conf.get_section("client")
+        self.__url = self.__locate(service)
+        self.__ssl_opts = self.__get_ssl_opts(ssl_opts, client_conf)
+        self.__token = token
         self.__timeout = client_conf.pop("timeout", 20)
+        # Check that all config parameters were consumed
+        if client_conf:
+            keys = ', '.join(client_conf.keys())
+            raise ValueError("Unused config params: '%s'" % keys)
 
     def set_token(self, token):
         """ Set the token to use for future requests.
