@@ -26,5 +26,5 @@ openssl x509 -req -CA CA.crt -CAkey CA.key -CAcreateserial -days 365 -sha256 -in
 
 # Worker cert
 openssl genrsa -out worker.key 2048
-openssl req -new -batch -key client.key -subj "${BASEDN}/CN=worker" -out worker.csr
+openssl req -new -batch -key worker.key -subj "${BASEDN}/CN=worker" -out worker.csr
 openssl x509 -req -CA CA.crt -CAkey CA.key -CAcreateserial -days 365 -sha256 -in worker.csr -out worker.crt
