@@ -34,14 +34,14 @@ class UserCommand(object):
         # list
         user_parser = subparsers.add_parser('list', help="List remote site.")
         user_parser.add_argument('-t', '--token', type=str, required=True)
-        user_parser.add_argument('url', type=str)
+        user_parser.add_argument('site', type=str)
         user_parser.add_argument('-m', '--max_tries', type=int, help='max tries')
         user_parser.add_argument('-p', type=int, help='priority')
         user_parser.set_defaults(func=self.list)
         # remove
         user_parser = subparsers.add_parser('remove', help="remove files from remote site.")
         user_parser.add_argument('-t', '--token', type=str, required=True)
-        user_parser.add_argument('url', type=str)
+        user_parser.add_argument('site', type=str)
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
         user_parser.set_defaults(func=self.remove)
@@ -49,8 +49,8 @@ class UserCommand(object):
         user_parser = subparsers.add_parser('copy',
                                             help="copy files from source to destination site.")
         user_parser.add_argument('-t', '--token', type=str, required=True)
-        user_parser.add_argument('src_url', type=str)
-        user_parser.add_argument('dst_url', type=str)
+        user_parser.add_argument('src_site', type=str)
+        user_parser.add_argument('dst_site', type=str)
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
         user_parser.set_defaults(func=self.copy)
@@ -126,8 +126,8 @@ class UserCommand(object):
             client = TransferClientFacade(token)
             # remove None values, position args, func and toke from the kwargs:
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
-                             value is not None and key not in ('func', 'url', 'token')}
-            client.list(args.url, **accepted_args)  # max_tries, priority)
+                             value is not None and key not in ('func', 'site', 'token')}
+            client.list(args.site, **accepted_args)  # max_tries, priority)
 
     def remove(self, args):  # pylint: disable=no-self-use
         """
@@ -140,8 +140,8 @@ class UserCommand(object):
             client = TransferClientFacade(token)
             # remove None values, position args, func and toke from the kwargs:
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
-                             value is not None and key not in ('func', 'url', 'token')}
-            client.remove(args.url, **accepted_args)  # max_tries, priority)
+                             value is not None and key not in ('func', 'site', 'token')}
+            client.remove(args.site, **accepted_args)  # max_tries, priority)
 
     def copy(self, args):  # pylint: disable=no-self-use
         """
@@ -152,13 +152,13 @@ class UserCommand(object):
         token = self._get_token(args)
         if token:
             client = TransferClientFacade(token)
-            src_url = args.src_url
-            dst_url = args.dst_url
+            src_site = args.src_site
+            dst_site = args.dst_site
             # remove None values, position args, func and toke from the kwargs:
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
                              value is not None
-                             and key not in ('func', 'src_url', 'dst_url', 'token')}
-            client.copy(src_url, dst_url, **accepted_args)
+                             and key not in ('func', 'src_site', 'dst_site', 'token')}
+            client.copy(src_site, dst_site, **accepted_args)
 
     def _get_token(self, args):
         # TODO poosible token from a file
