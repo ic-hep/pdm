@@ -11,7 +11,7 @@ import logging
 import functools
 
 from pdm.framework.Tokens import TokenService
-from pdm.framework.Database import MemSafeSQAlchemy, JSONTableEncoder
+from pdm.framework.Database import MemSafeSQLAlchemy, JSONTableEncoder
 
 from flask import Flask, Response, current_app, request
 
@@ -301,7 +301,7 @@ class FlaskServer(Flask):
         """
         self.config['SQLALCHEMY_DATABASE_URI'] = db_uri
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        database = MemSafeSQAlchemy(self)
+        database = MemSafeSQLAlchemy(self)
         self.__update_dbctx(database)
 
     def build_db(self):
