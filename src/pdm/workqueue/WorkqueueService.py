@@ -215,7 +215,7 @@ def to_enum(obj, enum_type):
             except ValueError as err:
                 abort(400, description=err.message)
         try:
-            return enum_type[obj]
+            return enum_type[obj.upper()]
         except KeyError as err:
             abort(400, description="%s is not a valid %s" % (err.message, enum_type.__name__))
     abort(400, description="Failed to convert '%s' to enum type '%s'" % (obj, enum_type))
