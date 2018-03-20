@@ -3,7 +3,7 @@
 # We don't care about getting an info message for checks that were
 # disabled locally (that's partly the point in disabling it in the
 # first place)
-disable=locally-disabled
+disable=locally-disabled, broad-except
 
 [BASIC]
 

@@ -84,7 +84,6 @@ class EndpointService(object):
             raw_site_data = json.loads(request.data)
             site_data["site_name"] = raw_site_data["site_name"]
             site_data["site_desc"] = raw_site_data["site_desc"]
-        #pylint: disable=broad-except
         except Exception:
             return "Malformed POST data", 400
         # Add the new site
@@ -95,7 +94,7 @@ class EndpointService(object):
         except IntegrityError:
             # site_name almost certainly already exists
             return "site_name is not unique", 409
-        except Exception: #pylint: disable=broad-except
+        except Exception:
             # Some kind of other database error?
             return "Failed to add site to DB", 500
         return jsonify(site.site_id)
@@ -144,7 +143,6 @@ class EndpointService(object):
                 raise ValueError("Missing POST data")
             raw_ep_data = json.loads(request.data)
             ep_uri = raw_ep_data["ep_uri"]
-        #pylint: disable=broad-except
         except Exception:
             return "Malformed POST data", 400
         Site.query.filter_by(site_id=site_id).first_or_404()
@@ -193,7 +191,6 @@ class EndpointService(object):
             raw_map_data = json.loads(request.data)
             user_id = raw_map_data["user_id"]
             local_user = raw_map_data["local_user"]
-        #pylint: disable=broad-except
         except Exception:
             return "Malformed POST data", 400
         # Check that site exists
@@ -207,7 +204,7 @@ class EndpointService(object):
                 session.add(new_map)
         except FlushError:
             return "Mapping for user_id already exists", 409
-        except Exception: #pylint: disable=broad-except
+        except Exception:
             return "Failed to add sitemap to DB", 500
         return ""
 
