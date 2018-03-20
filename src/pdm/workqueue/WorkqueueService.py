@@ -7,7 +7,6 @@ from functools import wraps
 from flask import request, abort
 
 from pdm.framework.FlaskWrapper import export_ext, db_model, jsonify
-from pdm.framework.Database import JSONTableEncoder
 from pdm.utils.config import getConfig
 from pdm.userservicedesk.HRService import HRService
 
@@ -16,17 +15,18 @@ from .WorkqueueDB import WorkqueueModels, WorkqueueJobEncoder, JobStatus, JobTyp
 
 SHELLPATH_REGEX = re.compile(r'^/[a-zA-Z0-9/-_.*]*$')
 LISTPARSE_REGEX = re.compile(r'^(?P<permissions>\S+)\s+'
-                             '(?P<nlinks>\S+)\s+'
-                             '(?P<userid>\S+)\s+'
-                             '(?P<groupid>\S+)\s+'
-                             '(?P<size>\S+)\s+'
-                             '(?P<datestamp>\S+\s+\S+\s+\S+)\s+'
-                             '(?P<name>.*)$', re.MULTILINE)
+                             r'(?P<nlinks>\S+)\s+'
+                             r'(?P<userid>\S+)\s+'
+                             r'(?P<groupid>\S+)\s+'
+                             r'(?P<size>\S+)\s+'
+                             r'(?P<datestamp>\S+\s+\S+\s+\S+)\s+'
+                             r'(?P<name>.*)$', re.MULTILINE)
 
 
 def decode_json_data(func):
+    """Decorator to automatically decode json data."""
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args, **kwargs):  # pylint: disable=missing-docstring
         if not isinstance(request.data, dict):
             request.data = json.loads(request.data)
         return func(*args, **kwargs)
@@ -109,14 +109,6 @@ class WorkqueueService(object):
         """List a remote dir."""
         request.data['type'] = JobType.LIST
         return WorkqueueService.post_job()
-#        Job = request.db.tables.Job
-#        allowed_attrs = require_attrs('src_siteid', 'src_filepath')\
-#                        + ('credentials', 'max_tries', 'priority', 'protocol')
-#        request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
-#        # user_id to be replaced with one extracted via token from Janusz's service.
-#        job = Job(user_id=get_user_id(), type=JobType.LIST, **subdict(request.data, allowed_attrs))
-#        job.add()
-#        return json.dumps(job, cls=JSONTableEncoder)
 
     @staticmethod
     @export_ext('copy', ['POST'])
@@ -125,14 +117,6 @@ class WorkqueueService(object):
         """Copy."""
         request.data['type'] = JobType.COPY
         return WorkqueueService.post_job()
-#        Job = request.db.tables.Job
-#        allowed_attrs = require_attrs('src_siteid', 'src_filepath', 'dst_siteid', 'dst_filepath')\
-#                        +('credentials', 'max_tries', 'priority', 'protocol')
-#        request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
-#        request.data['dst_filepath'] = shellpath_sanitise(request.data['dst_filepath'])
-#        job = Job(user_id=get_user_id(), type=JobType.COPY, **subdict(request.data, allowed_attrs))
-#        job.add()
-#        return json.dumps(job, cls=JSONTableEncoder)
 
     @staticmethod
     @export_ext('remove', ['POST'])
@@ -141,13 +125,6 @@ class WorkqueueService(object):
         """Remove."""
         request.data['type'] = JobType.REMOVE
         return WorkqueueService.post_job()
-#        Job = request.db.tables.Job
-#        allowed_attrs = require_attrs('src_siteid', 'src_filepath') +\
-#                        ('credentials', 'max_tries', 'priority', 'protocol')
-#        request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
-#        job = Job(user_id=get_user_id(), type=JobType.REMOVE, **subdict(request.data, allowed_attrs))
-#        job.add()
-#        return json.dumps(job, cls=JSONTableEncoder)
 
     @staticmethod
     @export_ext("jobs", ['GET'])
@@ -186,7 +163,8 @@ class WorkqueueService(object):
         return_dict = {'jobid': job.id, 'log': log}
         if job.type == JobType.LIST:
             return_dict.update(listing=[dict(match.groupdict(),
-                                             is_directory=match.group('permissions').startswith('d'))
+                                             is_directory=match.group('permissions')
+                                                               .startswith('d'))
                                         for match in LISTPARSE_REGEX.finditer(log)])
         return json.dumps(return_dict)
 
@@ -197,6 +175,7 @@ class WorkqueueService(object):
         Job = request.db.tables.Job  # pylint: disable=invalid-name
         job = Job.query.filter_by(id=job_id, user_id=HRService.check_token())\
                        .first_or_404()
+        # pylint: disable=no-member
         return json.dumps({'jobid': job.id, 'status': JobStatus(job.status).name})
 
 
@@ -225,15 +204,18 @@ def to_enum(obj, enum_type):
     if isinstance(obj, enum_type):
         return obj
     if isinstance(obj, int):
-        return enum_type(obj)
+        try:
+            return enum_type(obj)
+        except ValueError as err:
+            abort(400, description=err.message)
     if isinstance(obj, basestring):
         if obj.isdigit():
-            return enum_type(int(obj))
-        return enum_type[obj]
+            try:
+                return enum_type(int(obj))
+            except ValueError as err:
+                abort(400, description=err.message)
+        try:
+            return enum_type[obj.upper()]
+        except KeyError as err:
+            abort(400, description="%s is not a valid %s" % (err.message, enum_type.__name__))
     abort(400, description="Failed to convert '%s' to enum type '%s'" % (obj, enum_type))
-
-
-# def get_user_id():
-#     """Placeholder for Janusz code to get token from request and return id."""
-#     # request.token -> id
-#     return 1

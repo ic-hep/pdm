@@ -110,11 +110,11 @@ class HRService(object):
                 HRService._logger.error(
                     "Failed to get user id from the db for just added user:%s %s ",
                     user.email, sys.exc_info())
-                raise
+                raise Exception("Failed to get user id from the db for just added user:{0}".
+                                format(user.email))
 
             db.session.commit()
 
-        # pylint: disable=broad-except
         except Exception:
             HRService._logger.error("Failed to add user: %s or post to the CS", sys.exc_info())
             db.session.rollback()
@@ -184,7 +184,6 @@ class HRService(object):
                 current_app.cs_client.add_user(user_id, cs_hashed_key)
                 db.session.commit()
                 HRService._logger.info("CS and password updated successfully for user %s ", email)
-            # pylint: disable=broad-except
             except Exception:
                 HRService._logger.error("Failed to change passwd: %s or post to the CS",
                                         sys.exc_info())
@@ -225,7 +224,6 @@ class HRService(object):
             current_app.cs_client.del_user(user_id)
             db.session.commit()
             HRService._logger.info(" User %s deleted successfully", user_id)
-            # pylint: disable=broad-except
         except Exception:
             db.session.rollback()
             HRService._logger.error(" Failed to delete a user %s (%s)", user_id, sys.exc_info())
@@ -328,6 +326,21 @@ class HRService(object):
         unpacked_user_token = TokenService.unpack(token)
         cs_key = unpacked_user_token.get('key', None)
         return cs_key
+
+    @staticmethod
+    def get_token_userid(token):
+        """
+        Get the value of the 'key' part of the token to be used to contact the CS
+        The token intenally holds:
+        id: user id
+        expiry: expiry info (to be decided)
+        key: hashed key (from pdm.utils.hashing.hash_pass() )
+        :param token encrypted token
+        :return: the value of the 'key' field of the token dictionary
+        """
+        unpacked_user_token = TokenService.unpack(token)
+        userid = unpacked_user_token.get('id', None)
+        return userid
 
         ### Quarantine below this line.
         ### Code which might be cosidered in the future version of the service

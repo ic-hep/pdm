@@ -66,7 +66,7 @@ class Worker(RESTClient, Daemon):
             self.put('worker/%s' % job_id,
                      data=json.dumps({'log': message,
                                       'returncode': 1,
-                                      'host': socket.gethostbyaddr(socket.getfqdn)}))
+                                      'host': socket.gethostbyaddr(socket.getfqdn())}))
         except RuntimeError:
             self._logger.exception("Error trying to PUT back abort message")
 
@@ -116,9 +116,6 @@ class Worker(RESTClient, Daemon):
                 command += " %s" % random.choice(dst)
 
             with TempX509Files(job['credentials']) as (certfile, keyfile):
-                # self._current_porcess = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=dict(os.environ, X509_USER_CERT=certfile.name, X509_USER_KEY=keyfile.name))
-                # stdout, stderr = self._current_process.communicate(timeout=2)
-                # self.put('jobs/%s' % job['id'], data={'stdout': stdout, 'stderr': stderr})
                 self._current_process = subprocess.Popen('(set -x && %s)' % command,
                                                          shell=True,
                                                          stdout=subprocess.PIPE,
@@ -132,7 +129,7 @@ class Worker(RESTClient, Daemon):
                     self.put('worker/%s' % job['id'],
                              data=json.dumps({'log': log,
                                               'returncode': self._current_process.returncode,
-                                              'host': socket.gethostbyaddr(socket.getfqdn)}))
+                                              'host': socket.gethostbyaddr(socket.getfqdn())}))
                 except RuntimeError:
                     self._logger.exception("Error trying to PUT back output from subcommand.")
                 finally:

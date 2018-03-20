@@ -192,7 +192,6 @@ class CredService(object):
             if user_email:
                 # It may be unicode, convert to string
                 user_email = str(user_email)
-        #pylint: disable=broad-except
         except Exception: # Key or Value Error
             return "Malformed POST data", 500
         # Generate a new DN for the user
@@ -245,7 +244,7 @@ class CredService(object):
                              "Failed to del cred user",
                              http_error_code=500) as session:
             for old_cred in UserCred.query.filter_by(user_id=user_id).all():
-                 session.delete(old_cred)
+                session.delete(old_cred)
         return ""
 
     @staticmethod
@@ -276,7 +275,6 @@ class CredService(object):
             # Cap max_lifetime to within config
             max_lifetime = min(max_lifetime,
                                current_app.ca_config['proxy_max_hours'])
-        #pylint: disable=broad-except
         except Exception:
             return "Malformed POST data", 500
         # Now prepare the DB
@@ -322,7 +320,7 @@ class CredService(object):
         JobCred = db.tables.JobCred
         with managed_session(request,
                              "Failed to del cred",
-                             http_error_code=500) as session:
+                             http_error_code=500):
             JobCred.query.filter_by(cred_id=cred_id).delete()
         return ""
 

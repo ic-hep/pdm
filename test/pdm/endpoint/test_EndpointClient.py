@@ -17,7 +17,7 @@ class test_EndpointClient(unittest.TestCase):
         self._test = self._service.test_client()
         patcher, inst = RESTClientTest.patch_client(EndpointClient,
                                                     self._test,
-                                                    '/endpoints/api/v1.0')
+                                                    '/endpoint/api/v1.0')
         self._patcher = patcher
         self._inst = inst
 

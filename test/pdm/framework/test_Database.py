@@ -6,18 +6,18 @@ import json
 import datetime
 import unittest
 
-from pdm.framework.Database import MemSafeSQAlchemy
+from pdm.framework.Database import MemSafeSQLAlchemy
 from pdm.framework.Database import JSONMixin, JSONTableEncoder
 
 
-class TestMemSafeSQAlchemy(unittest.TestCase):
-    """ Tests the MemSafeSQAlchemy driver. """
+class TestMemSafeSQLAlchemy(unittest.TestCase):
+    """ Tests the MemSafeSQLAlchemy driver. """
 
     def driver_test_helper(self, drivername, dbname):
-        """ Calls the SQAlchemy driver hacks with the given
+        """ Calls the SQLAlchemy driver hacks with the given
             drivername and dbname, returns the configured options.
         """
-        obj = MemSafeSQAlchemy()
+        obj = MemSafeSQLAlchemy()
         app = mock.Mock()
         info = mock.Mock()
         info.drivername = drivername
@@ -34,14 +34,14 @@ class TestMemSafeSQAlchemy(unittest.TestCase):
         """ Checks that the driver hacks
             are correctly applied.
         """
-        class SQAlchemyBase(object):
+        class SQLAlchemyBase(object):
             def apply_driver_hacks(self, app, info, options):
                 self.app = app
                 self.info = info
                 self.options = options
                 return app
-        patcher = mock.patch.object(MemSafeSQAlchemy, '__bases__', 
-                                    (SQAlchemyBase,))
+        patcher = mock.patch.object(MemSafeSQLAlchemy, '__bases__', 
+                                    (SQLAlchemyBase,))
         patcher.start()
         # Check that options are patched if a memory SQLite DB is used
         opts = self.driver_test_helper('sqlite', None)
@@ -86,7 +86,7 @@ class TestDBJson(unittest.TestCase):
             export the fields listed.
         """
         class TestCls(JSONMixin):
-            # Fake SQAlchemy table structure
+            # Fake SQLAlchemy table structure
             columns = (mock.Mock(), mock.Mock(), mock.Mock())
             columns[0].name = 'A'
             columns[1].name = 'B'

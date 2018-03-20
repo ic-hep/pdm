@@ -19,15 +19,14 @@ class RESTClient(object):
             raise KeyError("Failed to find endpoint for service '%s'" % service)
         return endpoints[service]
 
-    def __get_ssl_opts(self, ssl_opts):
-        """ Gets config file ssl_opts.
+    def __get_ssl_opts(self, ssl_opts, client_conf):
+        """ Gets config file ssl_opts from client_conf.
         """
+        cafile = client_conf.pop("cafile", None)
+        cert = client_conf.pop("cert", None)
+        key = client_conf.pop("key", None)
         if not ssl_opts:
             # No SSL client options, try config file
-            client_conf = self.__conf.get_section("client")
-            cafile = client_conf.pop("cafile", None)
-            cert = client_conf.pop("cert", None)
-            key = client_conf.pop("key", None)
             ssl_opts = (cafile, cert, key)
         return ssl_opts
 
@@ -40,11 +39,15 @@ class RESTClient(object):
             token - Optional token to include in the requests.
         """
         self.__conf = ConfigSystem.get_instance()
-        self.__url = self.__locate(service)
-        self.__ssl_opts = self.__get_ssl_opts(ssl_opts)
-        self.__token = token
         client_conf = self.__conf.get_section("client")
+        self.__url = self.__locate(service)
+        self.__ssl_opts = self.__get_ssl_opts(ssl_opts, client_conf)
+        self.__token = token
         self.__timeout = client_conf.pop("timeout", 20)
+        # Check that all config parameters were consumed
+        if client_conf:
+            keys = ', '.join(client_conf.keys())
+            raise ValueError("Unused config params: '%s'" % keys)
 
     def set_token(self, token):
         """ Set the token to use for future requests.
@@ -144,6 +147,7 @@ class RESTClientTest(RESTClient):
         client.set_test_info(test_client, base_uri)
         return (patcher, client)
 
+    #pylint: disable=super-init-not-called
     def __init__(self, _):
         """ Create a new instance of RESTClientTest, service parameter is
             ignored.
@@ -156,7 +160,9 @@ class RESTClientTest(RESTClient):
             and process the result in a similar way to RESTClient.
         """
         full_uri = "%s/%s" % (self.__base, uri)
-        res = call_fn(full_uri, data=json.dumps(data))
+        # We don't need to convert the data to json here, as the
+        #  inner test_client does that itself now.
+        res = call_fn(full_uri, data=data)
         if res.status_code not in (200, 201):
             raise RuntimeError("Request failed with code %u" % \
                                res.status_code)

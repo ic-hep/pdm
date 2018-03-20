@@ -22,7 +22,7 @@ def managed_session(request,
     try:
         yield request.db.session
         request.db.session.commit()
-    except Exception:  # pylint: disable=broad-except
+    except Exception:
         request.db.session.rollback()
         if logger is not None:
             logger.exception(message)

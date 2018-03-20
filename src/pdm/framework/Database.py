@@ -7,7 +7,7 @@ from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.pool import StaticPool
 
-class MemSafeSQAlchemy(SQLAlchemy):
+class MemSafeSQLAlchemy(SQLAlchemy):
     """ A wrapper around SQLAlchemy which detects if an in-memory database on
         sqlite and disables pooling.
         This is required or each pool will get a different handle,
@@ -20,7 +20,7 @@ class MemSafeSQAlchemy(SQLAlchemy):
             # This should be fine for testing as long as sqlite version is "high enough"
             options["connect_args"] = {'check_same_thread':False}
             options["poolclass"] = StaticPool
-        return super(MemSafeSQAlchemy, self).apply_driver_hacks(app, info, options)
+        return super(MemSafeSQLAlchemy, self).apply_driver_hacks(app, info, options)
 
 class JSONTableEncoder(json.JSONEncoder):
     """JSON DB Table Encoder."""

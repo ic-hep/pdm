@@ -1,23 +1,11 @@
 # Demo application authentication
 
-[groups/web]
-user = ["TOKEN"]
-system = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=localhost"]
-[groups/users]
-user = ["TOKEN"]
-system = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=localhost"]
-[groups/cred]
-user = ["TOKEN"]
-system = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=localhost"]
-[groups/endpoint]
-user = ["TOKEN"]
-system = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=localhost"]
-[groups/workqueue]
+[groups]
 user = ["TOKEN"]
 system = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=localhost"]
 worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=worker"]
 
-[auth/webpage]
+[auth/web]
 / = "ALL"
 /web/* = "ALL"
 /web/registration%POST = "ALL"
@@ -40,16 +28,16 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 /cred/api/v1.0/user%POST = "@system"
 /cred/api/v1.0/user%DELETE = "@system"
 /cred/api/v1.0/cred%GET = "@system"
-/cred/api/v1.0/cred%POST = "@system"
+/cred/api/v1.0/cred%POST = "@user"
 /cred/api/v1.0/cred%DELETE = "@system"
 
 [auth/endpoint]
-/endpoints/api/v1.0/site = "ALL"
-/endpoints/api/v1.0/site%POST = "@system"
-/endpoints/api/v1.0/site%DELETE = "@system"
-/endpoints/api/v1.0/sitemap%GET = "@system"
-/endpoints/api/v1.0/sitemap%POST = "@system"
-/endpoints/api/v1.0/sitemap%DELETE = "@system"
+/endpoint/api/v1.0/site = "ALL"
+/endpoint/api/v1.0/site%POST = "@system"
+/endpoint/api/v1.0/site%DELETE = "@system"
+/endpoint/api/v1.0/sitemap%GET = "@system"
+/endpoint/api/v1.0/sitemap%POST = "@system"
+/endpoint/api/v1.0/sitemap%DELETE = "@system"
 
 [auth/workqueue]
 /workqueue/api/v1.0/jobs%GET = "@user"

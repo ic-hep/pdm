@@ -175,7 +175,7 @@ class Daemon(object):
                 self._logger.info("Daemon target starting...")
                 try:
                     self._target(*self._args, **self._kwargs)
-                except Exception:  # pylint: disable=broad-except
+                except Exception:
                     self._logger.exception("Daemon runtime error in target.")
 
                 if not self._debug:

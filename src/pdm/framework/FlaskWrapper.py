@@ -11,9 +11,10 @@ import logging
 import functools
 
 from pdm.framework.Tokens import TokenService
-from pdm.framework.Database import MemSafeSQAlchemy, JSONTableEncoder
+from pdm.framework.Database import MemSafeSQLAlchemy, JSONTableEncoder
 
 from flask import Flask, Response, current_app, request
+from flask.testing import FlaskClient
 
 
 def export_inner(obj, ename, methods=None):
@@ -106,6 +107,21 @@ class DBContainer(object):
     """
     pass
 
+class FlaskClientWrapper(FlaskClient):
+    """ A wrapper around FlaskClient used in testing, which json encodes the
+        data input in the same manner as RESTClient for consistency across tests.
+    """
+    def __init__(self, *args, **kwargs):
+        super(FlaskClient, self).__init__(*args, **kwargs)
+    
+    def open(self, *args, **kwargs):
+        """ Call open on the super class but pre-encode the data arg (if
+            present) into json.
+        """
+        if 'data' in kwargs:
+            kwargs['data'] = json.dumps(kwargs['data'])
+        return FlaskClient.open(self, *args, **kwargs)
+
 #pylint: disable=too-many-instance-attributes
 class FlaskServer(Flask):
     """ A wrapper around a flask application server providing additional
@@ -186,8 +202,8 @@ class FlaskServer(Flask):
         req_uuid = uuid.uuid4()
         request.uuid = req_uuid
         req_ip = request.remote_addr
-        current_app.__logger.debug("New request with UUID: %s (%s)",
-                                   req_uuid, req_ip)
+        current_app.log.debug("New request with UUID: %s (%s)",
+                              req_uuid, req_ip)
         # Requests for static content don't have authentication
         if request.path.startswith('/static/'):
             return # Allow access
@@ -213,15 +229,15 @@ class FlaskServer(Flask):
             except ValueError:
                 # Token decoding failed, it is probably corrupt or has been
                 # tampered with.
-                current_app.__logger.info("Request %s token validation failed.",
-                                          req_uuid)
+                current_app.log.info("Request %s token validation failed.",
+                                     req_uuid)
                 return "403 Invalid Token", 403
             client_token = True
         # Now check request against policy
-        current_app.__logger.debug("Request %s, cert: %s, token: %s",
-                                   req_uuid, bool(client_dn), client_token)
+        current_app.log.debug("Request %s, cert: %s, token: %s",
+                              req_uuid, bool(client_dn), client_token)
         if not FlaskServer.__req_allowed(client_dn, client_token):
-            current_app.__logger.info("Request %s denied by policy.", req_uuid)
+            current_app.log.info("Request %s denied by policy.", req_uuid)
             return "403 Forbidden\n", 403
         # Finally, update request object
         request.dn = client_dn
@@ -243,8 +259,8 @@ class FlaskServer(Flask):
         uri = request.url
         status_code = resp.status_code
         resp_len = resp.content_length
-        current_app.__logger.info("%s: %s %s %s %s %u", req_uuid, req_ip,
-                                  method, uri, status_code, resp_len)
+        current_app.log.info("%s: %s %s %s %s %u", req_uuid, req_ip,
+                             method, uri, status_code, resp_len)
         return resp
 
     def __update_dbctx(self, dbobj):
@@ -287,6 +303,9 @@ class FlaskServer(Flask):
         self.__test_auth = None
         self.__logger = logger
         self.token_svc = TokenService(token_key, "pdmwebsvc")
+        # We override the test client class from Flask with our
+        # custom one which is more similar to RESTClient
+        self.test_client_class = FlaskClientWrapper
         with self.app_context():
             current_app.test_auth = self.__test_auth
             current_app.log = logger
@@ -301,7 +320,7 @@ class FlaskServer(Flask):
         """
         self.config['SQLALCHEMY_DATABASE_URI'] = db_uri
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        database = MemSafeSQAlchemy(self)
+        database = MemSafeSQLAlchemy(self)
         self.__update_dbctx(database)
 
     def build_db(self):
