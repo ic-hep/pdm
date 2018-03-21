@@ -27,6 +27,14 @@ class TransferClientFacade(TransferClient):
             print "Malformed site path (probably missing colon)", site
             return None
 
+    def output(self, job_id):
+        """
+        Get job output
+        :param job_id:
+        :return: see workqueueclient
+        """
+        return super(TransferClientFacade, self).output(job_id)
+
     def copy(self, src_site, dst_site, **kwargs):
         """
         Copy files or directories from one site to another.
@@ -97,6 +105,10 @@ class MockTransferClientFacade(object):
         """
         # pylint: disable=unused-argument
         return str(site)
+
+    @staticmethod
+    def output(self, id):
+        return "job id %s listnig: whatever", id
 
     @staticmethod
     def remove(site, **kwargs):

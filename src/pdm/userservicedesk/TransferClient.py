@@ -62,6 +62,12 @@ class TransferClient(object):
         else:
             return None
 
+    def output(self, job_id):
+        # get output
+        response = self.__wq_client.output(job_id)
+        return response
+
+
     def copy(self, src_site, src_filepath, dst_site,  # pylint: disable=too-many-arguments
              dst_filepath, **kwargs):
         """

@@ -33,16 +33,25 @@ class TestUsercommand(unittest.TestCase):
 
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
     @mock.patch.object(MockTransferClientFacade, 'list')
-    def test_list(self, mock_list, mocked_facade):
+    @mock.patch.object(MockTransferClientFacade, 'output')
+    def test_list(self, mock_output, mock_list, mocked_facade):
         """ test if possible extra keys have been removed from keywords arguments passed to TransferClientFacade
             Currently: token, func handle and positionals and None dict values
         """
         mocked_facade.return_value = MockTransferClientFacade("anything")
-
+        mock_list.return_value={'status':'DONE', 'id': 1}
+        mock_output.return_value = {'listing':'/mydit/file.txt'} # not really, OK for now
         args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
         args.func(args)
-
+        mock_output.assert_called_with(1)
         mock_list.assert_called_with('source', max_tries=3)
+
+        mock_output.reset_mock()
+        mock_list.reset_mock()
+        mock_list.return_value={'status':'NEW', 'id': 1}
+        args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
+        args.func(args)
+        assert not mock_output.called
 
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
     @mock.patch.object(MockTransferClientFacade, 'remove')

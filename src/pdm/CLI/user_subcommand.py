@@ -5,6 +5,7 @@ Example usage: pdm register -e fred@flintstones.com -n Fred -s Flintstone
 from getpass import getpass
 from pdm.userservicedesk.HRClient import HRClient
 from pdm.userservicedesk.TransferClientFacade import TransferClientFacade
+from time import sleep
 
 
 class UserCommand(object):
@@ -121,13 +122,33 @@ class UserCommand(object):
         :param args:
         :return:
         """
+        max_iter = 50
+        nap = 0.2
+        #
         token = self._get_token(args)
         if token:
             client = TransferClientFacade(token)
             # remove None values, position args, func and toke from the kwargs:
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
                              value is not None and key not in ('func', 'site', 'token')}
-            client.list(args.site, **accepted_args)  # max_tries, priority)
+            resp = client.list(args.site, **accepted_args)  # max_tries, priority)
+            if resp:
+                while resp['status'] not in ('DONE', 'FAILED'):
+                    sleep(nap)  # seconds
+                    resp = client.list(args.site, **accepted_args)
+                    max_iter += 1
+                    if max_iter >= 51: break
+                else:
+                    if resp['status'] == 'DONE':
+                        listing_dict = client.output(resp['id'])
+                        listing = listing_dict['listing']
+                        print listing
+                    elif resp['status'] == 'FAILED':
+                        print " Failed to obtain a listing"
+                    else:
+                        print "Timeout. Last status is %s", resp['status']
+            else:
+                print " No such site %s", args.site
 
     def remove(self, args):  # pylint: disable=no-self-use
         """
