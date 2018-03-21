@@ -6,7 +6,7 @@ import mock
 import unittest
 import functools
 
-from pdm.framework.RESTClient import RESTClient, RESTClientTest
+from pdm.framework.RESTClient import RESTClient, RESTClientTest, RESTException
 
 class TestRESTClient(unittest.TestCase):
     """ Test the RESTClient class. """
@@ -112,7 +112,7 @@ class TestRESTClient(unittest.TestCase):
         """
         client = self.__get_inst()
         self.__mock_req(mock_req, 500, "")
-        self.assertRaises(RuntimeError, client.get, '/test_url')
+        self.assertRaises(RESTException, client.get, '/test_url')
 
     @mock.patch("pdm.framework.RESTClient.requests")
     def test_token(self, mock_req):
@@ -314,4 +314,15 @@ class TestRESTClientTest(unittest.TestCase):
         res_obj.status_code = 500
         res_obj.data = ""
         self.__tc.get.return_value = res_obj
-        self.assertRaises(RuntimeError, self.__client.get, 'file')
+        self.assertRaises(RESTException, self.__client.get, 'file')
+
+    def test_rest_exception(self):
+        """ Check basic RESTException functionality. """
+        res_obj = mock.Mock()
+        res_obj.status_code = 500
+        res_obj.data = "Something Went Wrong"
+        self.__tc.get.return_value = res_obj
+        with self.assertRaises(RESTException) as err:
+            self.__client.get('file')
+        self.assertEqual(err.exception.code, res_obj.status_code)
+        self.assertIn(res_obj.data, err.exception.message)
