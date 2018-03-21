@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """ Starting point for all things WebPage related """
 
+import json
 import flask
 from flask import request, flash
 from pdm.framework.FlaskWrapper import export, export_ext, startup, db_model, jsonify
@@ -72,7 +73,11 @@ class WebPageService(object):
             status = WebPageService.datamover_status()
             return flask.render_template("datamover.html", status=status)
 
-        return flask.redirect("/web/dashboard")    
+        resp = flask.make_response(flask.redirect("/web/dashboard"))
+        resp.set_cookie('name', 'I am cookie')
+        return resp       
+
+        # return flask.redirect("/web/dashboard")    
 
     @staticmethod
     @export_ext("logout")
@@ -87,7 +92,8 @@ class WebPageService(object):
         """arrivals: what the user sees after logging in"""
         # will abort of user is not logged in
         WebPageService.check_session()
-        return flask.render_template("dashboard.html")
+        sites = flask.current_app.epclient.get_sites()
+        return flask.render_template("dashboard.html", sites=sites)
 
     @staticmethod
     @export_ext("listings", methods=["GET"])
@@ -160,3 +166,40 @@ class WebPageService(object):
         return '%s' % request.form
 
 
+
+    @staticmethod
+    @export_ext("js/list")
+    def js_list():
+        """lists a directory"""
+        WebPageService.check_session()
+        # decode parameters
+        siteid = request.args.get('siteid', None)
+        sitepath = request.args.get('sitepath', None)
+        if (not siteid) or (not sitepath):
+            return "Missing request parameter", 400
+        
+        user_token = flask.session['token']
+        tclient = TransferClient(user_token)
+        jobinfo = tclient.list(siteid, sitepath)
+        return json.dumps(jobinfo['id'])
+
+        
+
+        # once done return status and results
+
+    @staticmethod
+    @export_ext("js/status")
+    def js_status():
+        """returns the status for a given jobid"""
+        WebPageService.check_session()
+        jobid = request.args.get('jobid', None)
+        if not jobid:
+            return "No JOBID returned", 400
+        user_token = flask.session['token']
+        tclient = TransferClient(user_token)
+        # tclient.status(jobid) ... hopefully
+        res = {'status' : 'DONE', 'files' : []}
+        
+        return json.dumps(res)
+
+        

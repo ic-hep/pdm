@@ -3,10 +3,72 @@
     <title>Dashboard</title>
     <link rel="stylesheet" href="/static/webpage.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script
+         src="https://code.jquery.com/jquery-3.3.1.js"
+         integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60="
+         crossorigin="anonymous">
+    </script>
+
+    <script>
+      function getstatus(jobid) {
+        var fullpath = "/web/js/status?jobid="+jobid;
+        $.ajax({url: fullpath, success: function(result) {
+          alert(result);        
+          var jobobj = JSON.parse(result);
+          $("#theend").html(jobobj.status);
+        }});
+       }
+      
+      $(document).ready(function(){
+        $("#listbutton").click(function(){
+          var sitename = encodeURIComponent($("#Endpoints").val());
+          var sitepath = encodeURIComponent($("#pathatsite").val());
+          var fullpath = "/web/js/list?siteid="+sitename+"&sitepath="+sitepath;
+          $.ajax({url: fullpath, success: function(result) { 
+            $("#jobnumberfield").val(result);
+          }});
+        });
+        $("#checkbutton").click(function(){
+          var j = encodeURIComponent($("#jobnumberfield").val());
+          getstatus(j);
+        });
+      });
+
+
+      
+
+    </script>
   </head>
 
   <body>
     Hello: You are doomed. <br> <br><br>
     <a href="listings" class="abutton">Listings page</a>
+
+    <br><br>
+
+    <select id="Endpoints">
+        {% for site in sites %}
+        {% set sitename = site['site_name'] %}
+        <option value="{{ sitename }}">{{ sitename }}</option>
+        {% endfor %}
+    </select>
+
+    <br><br>
+
+   
+    <button class="lbutton" id="listbutton">List</button>    
+
+    <br><br>
+    
+    directory: <input type="text" id="pathatsite" value="/"/> <br>
+
+    <br>
+    <button class="lbutton" id="checkbutton">Check</button>
+    job number  <input type="text" id="jobnumberfield"/> <br>
+
+    Status of the job is: <p id="theend"> Placeholder </p>
+    
+
+
   </body>
 </html>
