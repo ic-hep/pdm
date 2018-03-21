@@ -44,6 +44,7 @@ class Worker(RESTClient, Daemon):
     def __init__(self, debug=False, one_shot=False):
         """Initialisation."""
         RESTClient.__init__(self, 'workqueue')
+        conf = getConfig('worker')
         self._uid = uuid.uuid4()
         Daemon.__init__(self,
                         pidfile='/tmp/worker-%s.pid' % self._uid,
@@ -52,8 +53,19 @@ class Worker(RESTClient, Daemon):
                         debug=debug)
         self._one_shot = one_shot
         self._types = [JobType[type_.upper()] for type_ in  # pylint: disable=unsubscriptable-object
-                       getConfig('worker').get('types', ('LIST', 'COPY', 'REMOVE'))]
+                       conf.pop('types', ('LIST', 'COPY', 'REMOVE'))]
+        self._script_path = conf.pop('script_path', None)
+        if self._script_path:
+            self._script_path = os.path.abspath(self._script_path)
+        else:
+            code_path = os.path.abspath(os.path.dirname(__file__))
+            self._script_path = os.path.join(code_path, 'scripts')
+        self._logger.info("Script search path is: %s", self._script_path)
         self._current_process = None
+        # Check for unused config options
+        if conf:
+            keys = ', '.join(conf.keys())
+            raise ValueError("Unused worker config params: '%s'" % keys)
 
     def terminate(self, *_):
         """Terminate worker daemon."""
@@ -123,13 +135,15 @@ class Worker(RESTClient, Daemon):
                 command += " %s" % random.choice(dst)
 
             with TempX509Files(job['credentials']) as (certfile, keyfile):
+                env = dict(os.environ,
+                           X509_USER_CERT=certfile.name,
+                           X509_USER_KEY=keyfile.name)
+                env['PATH'] = self._script_path
                 self._current_process = subprocess.Popen('(set -x && %s)' % command,
                                                          shell=True,
                                                          stdout=subprocess.PIPE,
                                                          stderr=subprocess.STDOUT,
-                                                         env=dict(os.environ,
-                                                                  X509_USER_CERT=certfile.name,
-                                                                  X509_USER_KEY=keyfile.name))
+                                                         env=env)
                 log, _ = self._current_process.communicate()
                 self.set_token(token)
                 try:
