@@ -120,8 +120,7 @@ class test_CredService(unittest.TestCase):
         TEST_INPUT = {'user_id': TEST_USER_ID,
                       'user_key': TEST_USER_KEY,
                       'user_email': TEST_USER_EMAIL}
-        json_input = json.dumps(TEST_INPUT)
-        res = self.__client.post('/cred/api/v1.0/user', data=json_input)
+        res = self.__client.post('/cred/api/v1.0/user', data=TEST_INPUT)
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.data, "")
         # Check credentials in database
@@ -164,15 +163,15 @@ class test_CredService(unittest.TestCase):
         TEST_CRED_TYPE = CredService.CRED_TYPE_X509
         TEST_LIFETIME = 6
         # First add the test user
-        add_user = json.dumps({'user_id': TEST_USER_ID,
-                               'user_key': TEST_USER_KEY})
+        add_user = {'user_id': TEST_USER_ID,
+                    'user_key': TEST_USER_KEY}
         res = self.__client.post('/cred/api/v1.0/user', data=add_user)
         self.assertEqual(res.status_code, 200)
         # Then create a credential
-        add_cred = json.dumps({'user_id': TEST_USER_ID,
-                               'user_key': TEST_USER_KEY,
-                               'cred_type': TEST_CRED_TYPE,
-                               'max_lifetime': TEST_LIFETIME})
+        add_cred = {'user_id': TEST_USER_ID,
+                    'user_key': TEST_USER_KEY,
+                    'cred_type': TEST_CRED_TYPE,
+                    'max_lifetime': TEST_LIFETIME}
         res = self.__client.post('/cred/api/v1.0/cred', data=add_cred)
         self.assertEqual(res.status_code, 200)
         res_obj = json.loads(res.data)
@@ -190,15 +189,15 @@ class test_CredService(unittest.TestCase):
         TEST_CRED_TYPE = CredService.CRED_TYPE_SSH
         TEST_LIFETIME = 6
         # First add the test user
-        add_user = json.dumps({'user_id': TEST_USER_ID,
-                               'user_key': TEST_USER_KEY})
+        add_user = {'user_id': TEST_USER_ID,
+                    'user_key': TEST_USER_KEY}
         res = self.__client.post('/cred/api/v1.0/user', data=add_user)
         self.assertEqual(res.status_code, 200)
         # Then create a credential
-        add_cred = json.dumps({'user_id': TEST_USER_ID,
-                               'user_key': TEST_USER_KEY,
-                               'cred_type': TEST_CRED_TYPE,
-                               'max_lifetime': TEST_LIFETIME})
+        add_cred = {'user_id': TEST_USER_ID,
+                    'user_key': TEST_USER_KEY,
+                    'cred_type': TEST_CRED_TYPE,
+                    'max_lifetime': TEST_LIFETIME}
         res = self.__client.post('/cred/api/v1.0/cred', data=add_cred)
         self.assertEqual(res.status_code, 200)
         res_obj = json.loads(res.data)
@@ -217,15 +216,15 @@ class test_CredService(unittest.TestCase):
         TEST_CRED_TYPE = 999
         TEST_LIFETIME = 6
         # First add the test user
-        add_user = json.dumps({'user_id': TEST_USER_ID,
-                               'user_key': TEST_USER_KEY})
+        add_user = {'user_id': TEST_USER_ID,
+                    'user_key': TEST_USER_KEY}
         res = self.__client.post('/cred/api/v1.0/user', data=add_user)
         self.assertEqual(res.status_code, 200)
         # Then create a credential
-        add_cred = json.dumps({'user_id': TEST_USER_ID,
-                               'user_key': TEST_USER_KEY,
-                               'cred_type': TEST_CRED_TYPE,
-                               'max_lifetime': TEST_LIFETIME})
+        add_cred = {'user_id': TEST_USER_ID,
+                    'user_key': TEST_USER_KEY,
+                    'cred_type': TEST_CRED_TYPE,
+                    'max_lifetime': TEST_LIFETIME}
         res = self.__client.post('/cred/api/v1.0/cred', data=add_cred)
         self.assertEqual(res.status_code, 404)
         # Manually create an unknown cred type in DB
@@ -343,15 +342,15 @@ class test_CredService(unittest.TestCase):
         TEST_USER_KEY = "anotherUserKey"
         TEST_LIFETIME = 12
         # First add the test user
-        add_user = json.dumps({'user_id': TEST_USER_ID,
-                               'user_key': TEST_USER_KEY})
+        add_user = {'user_id': TEST_USER_ID,
+                    'user_key': TEST_USER_KEY}
         res = self.__client.post('/cred/api/v1.0/user', data=add_user)
         self.assertEqual(res.status_code, 200)
         # Then create a credential
-        add_cred = json.dumps({'user_id': TEST_USER_ID,
-                               'user_key': TEST_USER_KEY,
-                               'cred_type': cred_type,
-                               'max_lifetime': TEST_LIFETIME})
+        add_cred = {'user_id': TEST_USER_ID,
+                    'user_key': TEST_USER_KEY,
+                    'cred_type': cred_type,
+                    'max_lifetime': TEST_LIFETIME}
         res = self.__client.post('/cred/api/v1.0/cred', data=add_cred)
         self.assertEqual(res.status_code, 200)
         res_obj = json.loads(res.data)
