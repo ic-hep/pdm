@@ -3,7 +3,7 @@
 import os
 import uuid
 import random
-import json
+# import json
 # import shlex
 import socket
 import subprocess
@@ -32,7 +32,7 @@ def TempX509Files(token):
         certfile.flush()
         os.fsync(certfile.fileno())
 
-        keyfile.wite(key)
+        keyfile.write(key)
         keyfile.flush()
         os.fsync(keyfile.fileno())
         yield certfile, keyfile
@@ -41,16 +41,18 @@ def TempX509Files(token):
 class Worker(RESTClient, Daemon):
     """Worker Daemon."""
 
-    def __init__(self):
+    def __init__(self, debug=False, one_shot=False):
         """Initialisation."""
         RESTClient.__init__(self, 'workqueue')
         self._uid = uuid.uuid4()
         Daemon.__init__(self,
                         pidfile='/tmp/worker-%s.pid' % self._uid,
                         logfile='/tmp/worker-%s.log' % self._uid,
-                        target=self.run)
+                        target=self.run,
+                        debug=debug)
+        self._one_shot = one_shot
         self._types = [JobType[type_.upper()] for type_ in  # pylint: disable=unsubscriptable-object
-                       getConfig('client').get('types', ('LIST', 'COPY', 'REMOVE'))]
+                       getConfig('worker').get('types', ('LIST', 'COPY', 'REMOVE'))]
         self._current_process = None
 
     def terminate(self, *_):
@@ -64,18 +66,21 @@ class Worker(RESTClient, Daemon):
         self._logger.error("Error with job %d: %s", job_id, message)
         try:
             self.put('worker/%s' % job_id,
-                     data=json.dumps({'log': message,
-                                      'returncode': 1,
-                                      'host': socket.gethostbyaddr(socket.getfqdn())}))
+                     data={'log': message,
+                           'returncode': 1,
+                           'host': socket.gethostbyaddr(socket.getfqdn())})
         except RuntimeError:
             self._logger.exception("Error trying to PUT back abort message")
 
     def run(self):
         """Daemon main method."""
         endpoint_client = EndpointClient()
-        while True:
+        run = True
+        while run:
+            if self._one_shot:
+                run = False
             try:
-                response = self.post('worker', data=json.dumps({'types': self._types}))
+                response = self.post('worker', data={'types': self._types})
             except Timeout:
                 continue
             except RuntimeError:
@@ -87,10 +92,11 @@ class Worker(RESTClient, Daemon):
 #            except ValueError:
 #                self._logger.exception("Error decoding JSON job.")
 #                continue
-            src_endpoints = (urlsplit(site) for site
-                             in endpoint_client.get_mappings(job['src_siteid']).itervalues())
+            src_site = endpoint_client.get_site(job['src_siteid'])
+            src_endpoints = [urlsplit(site) for site
+                             in src_site['endpoints'].itervalues()]
             src = [urlunsplit(site._replace(path=job['src_filepath'])) for site in src_endpoints
-                   if site.schema == PROTOCOLMAP[job['protocol']]]
+                   if site.scheme == PROTOCOLMAP[job['protocol']]]
             if not src:
                 self._abort(job['id'], "Protocol '%s' not supported at src site with id %d"
                             % (job['protocol'], job['src_siteid']))
@@ -105,10 +111,11 @@ class Worker(RESTClient, Daemon):
                     self._abort(job['id'], "No dst site filepath set for copy operation")
                     continue
 
-                dst_endpoints = (urlsplit(site) for site
-                                 in endpoint_client.get_mappings(job['dst_siteid']).itervalues())
+                dst_site = endpoint_client.get_site(job['dst_siteid'])
+                dst_endpoints = [urlsplit(site) for site
+                                 in dst_site['endpoints'].itervalues()]
                 dst = [urlunsplit(site._replace(path=job['dst_filepath'])) for site in dst_endpoints
-                       if site.schema == PROTOCOLMAP[job['protocol']]]
+                       if site.scheme == PROTOCOLMAP[job['protocol']]]
                 if not dst:
                     self._abort(job['id'], "Protocol '%s' not supported at dst site with id %d"
                                 % (job['protocol'], job['dst_siteid']))
@@ -127,13 +134,11 @@ class Worker(RESTClient, Daemon):
                 self.set_token(token)
                 try:
                     self.put('worker/%s' % job['id'],
-                             data=json.dumps({'log': log,
-                                              'returncode': self._current_process.returncode,
-                                              'host': socket.gethostbyaddr(socket.getfqdn())}))
+                             data={'log': log,
+                                   'returncode': self._current_process.returncode,
+                                   'host': socket.gethostbyaddr(socket.getfqdn())})
                 except RuntimeError:
                     self._logger.exception("Error trying to PUT back output from subcommand.")
                 finally:
                     self.set_token(None)
 
-if __name__ == '__main__':
-    Worker().start()

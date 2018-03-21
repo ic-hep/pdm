@@ -1,7 +1,6 @@
-""" The Facade for the TransferClient. Uses URL as an argument to most
+""" The Facade for the TransferClient. Uses site as an argument to most
     of the methods (rather them its parts)
 """
-from urlparse import urlparse
 from pdm.userservicedesk.TransferClient import TransferClient
 
 
@@ -13,81 +12,111 @@ class TransferClientFacade(TransferClient):
     def __init__(self, token):
         super(TransferClientFacade, self).__init__(token)
 
-    def list(self, url, **kwargs):
+    def list(self, site, **kwargs):
         """
-        List the resource specified by URL.
-        :param url: URL of the resource
+        List the resource specified by site.
+        :param site: site to list
         :param kwargs: additional arguments (like max_tries or priority)
         :return: the resource listing
         """
-        parts = urlparse(url)
-        if parts.scheme:
-            kwargs['protocol'] = parts.scheme
-        return super(TransferClientFacade, self).list(parts.netloc, parts.path, **kwargs)
 
-    def copy(self, src_url, dst_url, **kwargs):
+        sitename, path = self.split_site_path(site)
+        if sitename:
+            return super(TransferClientFacade, self).list(sitename, path, **kwargs)
+        else:
+            print "Malformed site path (probably missing colon)", site
+            return None
+
+    def copy(self, src_site, dst_site, **kwargs):
         """
         Copy files or directories from one site to another.
-        :param src_url: source resource URL
-        :param dst_url: destination resource URL
+        :param src_site: source site
+        :param dst_site: destination site
         :param kwargs: addition arguments (like max_tries ot priority)
         :return: copy result message
         """
-        dst_parts = urlparse(dst_url)
-        src_parts = urlparse(src_url)
-        if src_parts.scheme:
-            kwargs['protocol'] = src_parts.scheme
-        return super(TransferClientFacade, self).copy(src_parts.netloc, src_parts.path,
-                                                      dst_parts.netloc, dst_parts.path,
+
+        src_sitename, src_path = self.split_site_path(src_site)
+        dst_sitename, dst_path = self.split_site_path(dst_site)
+
+        if not src_sitename:
+            print "Malformed site path (probably missing colon)", src_site
+            return None
+
+        if not dst_sitename:
+            print "Malformed site path (probably missing colon)", dst_site
+            return None
+
+        return super(TransferClientFacade, self).copy(src_sitename, src_path,
+                                                      dst_sitename, dst_path,
                                                       **kwargs)
 
-    def remove(self, src_url, **kwargs):
+    def remove(self, src_site, **kwargs):
         """
         Remove the resources (file or directory)
-        :param src_url: URL of the resource
+        :param src_site: site to remove from
         :param kwargs: additional arguments (like max_tries or priority)
         :return: remove result message
         """
-        src_parts = urlparse(src_url)
-        if src_parts.scheme:
-            kwargs['protocol'] = src_parts.scheme
-        return super(TransferClientFacade, self).remove(src_parts.netloc, src_parts.path, **kwargs)
+
+        sitename, path = self.split_site_path(src_site)
+        if sitename:
+            return super(TransferClientFacade, self).remove(sitename, path, **kwargs)
+        else:
+            print "Malformed site path (probably missing colon)", src_site
+            return None
+
+    @staticmethod
+    def split_site_path(path):
+        """
+        Split a site string at the first colon. Return a tuple containing a (site, path) or
+        (None, None) if the colon is missing.
+        """
+
+        parts = path.split(':', 1)
+        if len(parts) == 2:
+            return parts
+        else:
+            return None, None
 
 
 class MockTransferClientFacade(object):
     """
     Mock Transfer Client.
     """
+
     def __init__(self, token):
         self.__token = token
+
     @staticmethod
-    def list(url, **kwargs):
+    def list(site, **kwargs):
         """
-        :param url: url to list
+        :param site: site to list
         :param kwargs: keywords agrs to match real list fcn
-        :return: an str(url)
+        :return: an str(site)
         """
-        #pylint: disable=unused-argument
-        return str(url)
+        # pylint: disable=unused-argument
+        return str(site)
+
     @staticmethod
-    def remove(url, **kwargs):
+    def remove(site, **kwargs):
         """
         Mock remove.
-        :param url: url to delete
+        :param site: site to delete
         :param kwargs:
         :return: information message
         """
-        #pylint: disable=unused-argument
-        parts = urlparse(url)
-        return " File %s removed from site %s " % (parts.netloc, parts.path)
+        # pylint: disable=unused-argument
+        return " Resource %s removed " % site
+
     @staticmethod
-    def copy(surl, turl, **kwargs):
+    def copy(ssite, tsite, **kwargs):
         """
         Mock copy
-        :param surl: source url
-        :param turl: target url
+        :param ssite: source site
+        :param tsite: target site
         :param kwargs:
         :return:
         """
-        #pylint: disable=unused-argument
-        return " copy %s to %s succeeded " % (surl, turl)
+        # pylint: disable=unused-argument
+        return " copy %s to %s succeeded " % (ssite, tsite)
