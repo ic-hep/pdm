@@ -26,16 +26,12 @@ from .WorkqueueDB import COMMANDMAP, PROTOCOLMAP, JobType
 def TempX509Files(token):
     """Create temporary grid credential files."""
     cert, key = CredClient().get_cred(token)
-    with NamedTemporaryFile() as certfile,\
-            NamedTemporaryFile() as keyfile:
-        certfile.write(cert)
-        certfile.flush()
-        os.fsync(certfile.fileno())
-
-        keyfile.write(key)
-        keyfile.flush()
-        os.fsync(keyfile.fileno())
-        yield certfile, keyfile
+    with NamedTemporaryFile() as proxyfile:
+        proxyfile.write(key)
+        proxyfile.write(cert)
+        proxyfile.flush()
+        os.fsync(proxyfile.fileno())
+        yield proxyfile
 
 
 class Worker(RESTClient, Daemon):
@@ -134,16 +130,14 @@ class Worker(RESTClient, Daemon):
                     continue
                 command += " %s" % random.choice(dst)
 
-            with TempX509Files(job['credentials']) as (certfile, keyfile):
-                env = dict(os.environ,
-                           X509_USER_CERT=certfile.name,
-                           X509_USER_KEY=keyfile.name)
-                env['PATH'] = self._script_path
+            with TempX509Files(job['credentials']) as proxyfile:
                 self._current_process = subprocess.Popen('(set -x && %s)' % command,
                                                          shell=True,
                                                          stdout=subprocess.PIPE,
                                                          stderr=subprocess.STDOUT,
-                                                         env=env)
+                                                         env=dict(os.environ,
+                                                                  PATH=self._script_path,
+                                                                  X509_USER_PROXY=proxyfile.name))
                 log, _ = self._current_process.communicate()
                 self.set_token(token)
                 try:
