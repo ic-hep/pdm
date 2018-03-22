@@ -51,6 +51,7 @@ class Worker(RESTClient, Daemon):
         self._one_shot = one_shot
         self._types = [JobType[type_.upper()] for type_ in  # pylint: disable=unsubscriptable-object
                        conf.pop('types', ('LIST', 'COPY', 'REMOVE'))]
+        self._interpoll_sleep_time = conf.pop('poll_time', 2)
         self._script_path = conf.pop('script_path', None)
         if self._script_path:
             self._script_path = os.path.abspath(self._script_path)
@@ -84,7 +85,6 @@ class Worker(RESTClient, Daemon):
     def run(self):
         """Daemon main method."""
         endpoint_client = EndpointClient()
-        interpoll_sleep_time = getConfig('worker').get('poll_time', 2)
         run = True
         while run:
             if self._one_shot:
@@ -97,7 +97,7 @@ class Worker(RESTClient, Daemon):
             except RESTException as err:
                 if err.code == 404:
                     self._logger.debug("No work to pick up.")
-                    time.sleep(interpoll_sleep_time)
+                    time.sleep(self._interpoll_sleep_time)
                 else:
                     self._logger.exception("Error trying to get job from WorkqueueService.")
                 continue
