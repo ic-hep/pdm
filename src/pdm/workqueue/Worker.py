@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Worker script."""
 import os
+import time
 import uuid
 import random
 # import json
@@ -13,7 +14,7 @@ from contextlib import contextmanager
 
 from requests.exceptions import Timeout
 
-from pdm.framework.RESTClient import RESTClient
+from pdm.framework.RESTClient import RESTClient, RESTException
 from pdm.cred.CredClient import CredClient
 from pdm.endpoint.EndpointClient import EndpointClient
 from pdm.utils.daemon import Daemon
@@ -65,12 +66,13 @@ class Worker(RESTClient, Daemon):
                      data={'log': message,
                            'returncode': 1,
                            'host': socket.gethostbyaddr(socket.getfqdn())})
-        except RuntimeError:
+        except RESTException:
             self._logger.exception("Error trying to PUT back abort message")
 
     def run(self):
         """Daemon main method."""
         endpoint_client = EndpointClient()
+        interpoll_sleep_time = getConfig('worker').get('poll_time', 2)
         run = True
         while run:
             if self._one_shot:
@@ -78,9 +80,14 @@ class Worker(RESTClient, Daemon):
             try:
                 response = self.post('worker', data={'types': self._types})
             except Timeout:
+                self._logger.warning("Timed out contacting the WorkqueueService.")
                 continue
-            except RuntimeError:
-                self._logger.exception("Error getting job from workqueue.")
+            except RESTException as err:
+                if err.code == 404:
+                    self._logger.debug("No work to pick up.")
+                    time.sleep(interpoll_sleep_time)
+                else:
+                    self._logger.exception("Error trying to get job from WorkqueueService.")
                 continue
             job, token = response
 #            try:
@@ -132,7 +139,7 @@ class Worker(RESTClient, Daemon):
                              data={'log': log,
                                    'returncode': self._current_process.returncode,
                                    'host': socket.gethostbyaddr(socket.getfqdn())})
-                except RuntimeError:
+                except RESTException:
                     self._logger.exception("Error trying to PUT back output from subcommand.")
                 finally:
                     self.set_token(None)
