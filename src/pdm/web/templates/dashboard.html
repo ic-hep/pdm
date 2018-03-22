@@ -1,7 +1,8 @@
 <html>
   <head>
     <title>Dashboard</title>
-    <link rel="stylesheet" href="/static/webpage.css">
+    <link rel="stylesheet" href="/static/dashboard.css">
+    <link rel="shortcut icon" href="/static/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script
          src="https://code.jquery.com/jquery-3.3.1.js"
@@ -9,40 +10,33 @@
          crossorigin="anonymous">
     </script>
 
-    <script>
-      function getstatus(jobid) {
-        var fullpath = "/web/js/status?jobid="+jobid;
-        $.ajax({url: fullpath, success: function(result) {
-          alert(result);        
-          var jobobj = JSON.parse(result);
-          $("#theend").html(jobobj.status);
-        }});
-       }
-      
-      $(document).ready(function(){
-        $("#listbutton").click(function(){
-          var sitename = encodeURIComponent($("#Endpoints").val());
-          var sitepath = encodeURIComponent($("#pathatsite").val());
-          var fullpath = "/web/js/list?siteid="+sitename+"&sitepath="+sitepath;
-          $.ajax({url: fullpath, success: function(result) { 
-            $("#jobnumberfield").val(result);
-          }});
-        });
-        $("#checkbutton").click(function(){
-          var j = encodeURIComponent($("#jobnumberfield").val());
-          getstatus(j);
-        });
-      });
+     <script src="/static/listinghelpers.js"> </script>
 
 
-      
+     <script>
+	 $(document).ready(function(){
+             $("#listbutton").click(function(){
+		 var sitename = encodeURIComponent($("#Endpoints").val());
+		 var sitepath = encodeURIComponent($("#pathatsite").val());
+		 var fullpath = "/web/js/list?siteid="+sitename+"&sitepath="+sitepath;
+		 $.ajax({url: fullpath, success: function(result) { 
+		     $("#jobnumberfield").val(result);
+		 }});
+             });
+             $("#checkbutton").click(function(){
+		 var j = encodeURIComponent($("#jobnumberfield").val());
+		 getstatus(j);
+             });
+	 });
 
     </script>
+
   </head>
 
   <body>
-    Hello: You are doomed. <br> <br><br>
-    <a href="listings" class="abutton">Listings page</a>
+    <center><h2>Your Dashboard</h2></center>
+    <br>
+    <a href="listings" class="pseudobutton">Listings page</a>
 
     <br><br>
 
@@ -67,7 +61,12 @@
     job number  <input type="text" id="jobnumberfield"/> <br>
 
     Status of the job is: <p id="theend"> Placeholder </p>
+       
+    <br>
     
+    <div id="tableDiv" style="margin-top: 20px">
+        Table should go here.
+    </div>
 
 
   </body>

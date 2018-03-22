@@ -1,0 +1,55 @@
+/* html */
+
+body {
+    background-color: snow;
+}
+
+
+/* table for file listing */
+/* this is just a dummy for now */
+table {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+td, th {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}
+
+tr:nth-child(even) {
+    background-color: #dddddd;
+}
+
+
+/* pseudo button (just a link) */
+a.pseudobutton {
+    -webkit-appearance: button;
+    -moz-appearance : button;
+    appearance: button;
+    background-color: white;
+    border-style : solid;
+    border-radius: 10px;
+    border-width : thin;
+    border-color : darkgray;
+    padding: 10px 10px;
+    text-decoration: none;
+    color: black; /* text color */
+}
+
+
+/* this needs fixing */
+.lbutton {
+    background-color: lightblue;
+    border : hidden;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 1em;
+    color: black; /* text colour */
+    padding: 18px 18px;
+    margin: 8px 0;
+    cursor: pointer;
+}
+
