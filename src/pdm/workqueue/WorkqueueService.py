@@ -4,10 +4,9 @@ import json
 import re
 from functools import wraps
 
-from flask import request, abort
+from flask import request, abort, current_app
 
-from pdm.framework.FlaskWrapper import export_ext, db_model, jsonify
-from pdm.utils.config import getConfig
+from pdm.framework.FlaskWrapper import export_ext, db_model, jsonify, startup
 from pdm.userservicedesk.HRService import HRService
 
 from .WorkqueueDB import WorkqueueModels, WorkqueueJobEncoder, JobStatus, JobType, JobProtocol
@@ -37,6 +36,12 @@ def decode_json_data(func):
 @db_model(WorkqueueModels)
 class WorkqueueService(object):
     """Workqueue Service."""
+
+    @staticmethod
+    @startup
+    def configure_workqueueservice(config):
+        """Setup the WorkqueueService."""
+        current_app.workqueueservice_workerlogs = config.pop('workerlogs', '/tmp/workers')
 
     @staticmethod
     @export_ext('worker', ["POST"])
@@ -73,7 +78,7 @@ class WorkqueueService(object):
         job.update()
 
         # Write log file.
-        dir_ = os.path.join(getConfig("app/workqueue").get('workerlogs', '/tmp/workers'),
+        dir_ = os.path.join(current_app.workqueueservice_workerlogs,
                             job.log_uid[:2],
                             job.log_uid)
         if not os.path.exists(dir_):
@@ -151,7 +156,7 @@ class WorkqueueService(object):
         job = Job.query.filter_by(id=job_id, user_id=HRService.check_token())\
                        .filter(Job.status.in_((JobStatus.DONE, JobStatus.FAILED)))\
                        .first_or_404()
-        logfilename = os.path.join(getConfig("app/workqueue").get('workerlogs', '/tmp/workers'),
+        logfilename = os.path.join(current_app.workqueueservice_workerlogs,
                                    job.log_uid[:2],
                                    job.log_uid,
                                    "attempt%i.log" % job.attempts)
