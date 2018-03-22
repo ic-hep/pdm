@@ -61,6 +61,7 @@ class TransferClient(object):
             return response
         else:
             return None
+            #return {'status':'No such site {}'.format(src_site)}
 
     def output(self, job_id):
         # get output

@@ -31,10 +31,11 @@ class TestUsercommand(unittest.TestCase):
 
         mock_copy.assert_called_with('source', 'dest', max_tries=3)
 
+    @mock.patch('pdm.CLI.user_subcommand.sleep')
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
     @mock.patch.object(MockTransferClientFacade, 'list')
     @mock.patch.object(MockTransferClientFacade, 'output')
-    def test_list(self, mock_output, mock_list, mocked_facade):
+    def test_list(self, mock_output, mock_list, mocked_facade, mock_sleep):
         """ test if possible extra keys have been removed from keywords arguments passed to TransferClientFacade
             Currently: token, func handle and positionals and None dict values
         """
@@ -51,6 +52,7 @@ class TestUsercommand(unittest.TestCase):
         mock_list.return_value={'status':'NEW', 'id': 1}
         args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
         args.func(args)
+        assert mock_list.call_count == 50
         assert not mock_output.called
 
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')

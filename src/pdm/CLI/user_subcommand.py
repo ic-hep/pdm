@@ -124,6 +124,7 @@ class UserCommand(object):
         """
         max_iter = 50
         nap = 0.2
+        count = 1
         #
         token = self._get_token(args)
         if token:
@@ -136,8 +137,11 @@ class UserCommand(object):
                 while resp['status'] not in ('DONE', 'FAILED'):
                     sleep(nap)  # seconds
                     resp = client.list(args.site, **accepted_args)
-                    max_iter += 1
-                    if max_iter >= 51: break
+                    count += 1
+                    if not resp:
+                        resp = {'status': 'None'}  # to make while-else
+                        # below work (no such site)
+                    if count >= max_iter: break
                 else:
                     if resp['status'] == 'DONE':
                         listing_dict = client.output(resp['id'])
@@ -148,7 +152,7 @@ class UserCommand(object):
                     else:
                         print "Timeout. Last status is %s", resp['status']
             else:
-                print " No such site %s", args.site
+                print " No such site %s ?", args.site
 
     def remove(self, args):  # pylint: disable=no-self-use
         """
