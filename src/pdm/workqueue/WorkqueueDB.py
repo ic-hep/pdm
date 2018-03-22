@@ -73,7 +73,7 @@ class WorkqueueJobEncoder(JSONTableEncoder):
 PROTOCOLMAP = {JobProtocol.GRIDFTP: 'gsiftp',
                JobProtocol.SSH: 'ssh'}
 
-COMMANDMAP = {JobType.LIST: {JobProtocol.GRIDFTP: 'listing.sh',
+COMMANDMAP = {JobType.LIST: {JobProtocol.GRIDFTP: 'list.sh',
                              JobProtocol.SSH: 'sftp'},
               JobType.REMOVE: {JobProtocol.GRIDFTP: 'remove.sh',
                                JobProtocol.SSH: 'sftp'},
