@@ -61,6 +61,13 @@ class TransferClient(object):
             return response
         else:
             return None
+            #return {'status':'No such site {}'.format(src_site)}
+
+    def output(self, job_id):
+        # get output
+        response = self.__wq_client.output(job_id)
+        return response
+
 
     def copy(self, src_site, src_filepath, dst_site,  # pylint: disable=too-many-arguments
              dst_filepath, **kwargs):

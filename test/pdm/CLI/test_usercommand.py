@@ -31,18 +31,47 @@ class TestUsercommand(unittest.TestCase):
 
         mock_copy.assert_called_with('source', 'dest', max_tries=3)
 
+    @mock.patch('pdm.CLI.user_subcommand.sleep')
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
     @mock.patch.object(MockTransferClientFacade, 'list')
-    def test_list(self, mock_list, mocked_facade):
+    @mock.patch.object(MockTransferClientFacade, 'output')
+    def test_list(self, mock_output, mock_list, mocked_facade, mock_sleep):
         """ test if possible extra keys have been removed from keywords arguments passed to TransferClientFacade
             Currently: token, func handle and positionals and None dict values
         """
         mocked_facade.return_value = MockTransferClientFacade("anything")
-
+        mock_list.return_value={'status':'DONE', 'id': 1}
+        mock_output.return_value = {'listing':'/mydit/file.txt'} # not really, OK for now
         args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
         args.func(args)
-
+        mock_output.assert_called_with(1)
         mock_list.assert_called_with('source', max_tries=3)
+
+        mock_output.reset_mock()
+        mock_list.reset_mock()
+        mock_list.return_value={'status':'NEW', 'id': 1}
+        args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
+        args.func(args)
+        assert mock_list.call_count == 50
+        assert not mock_output.called
+
+        mock_output.reset_mock()
+        mock_list.reset_mock()
+        mock_list.return_value = None
+        args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
+        args.func(args)
+        assert mock_list.call_count == 1  # immediate failue, no such site
+        assert not mock_output.called
+
+        mock_output.reset_mock()
+        mock_list.reset_mock()
+        ret_list = [None]*50
+        ret_list[0] = {'status':'NEW', 'id': 1} # fisrt new, and then failures
+        mock_list.side_effect = ret_list
+        args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
+        args.func(args)
+        assert mock_list.call_count == 50  # immediate failue, no such site
+        assert not mock_output.called
 
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
     @mock.patch.object(MockTransferClientFacade, 'remove')

@@ -99,6 +99,10 @@ class MockTransferClientFacade(object):
         return str(site)
 
     @staticmethod
+    def output(self, id):
+        return "job id %s listnig: whatever", id
+
+    @staticmethod
     def remove(site, **kwargs):
         """
         Mock remove.
