@@ -52,18 +52,15 @@ class Worker(RESTClient, Daemon):
         self._types = [JobType[type_.upper()] for type_ in  # pylint: disable=unsubscriptable-object
                        conf.pop('types', ('LIST', 'COPY', 'REMOVE'))]
         self._interpoll_sleep_time = conf.pop('poll_time', 2)
-        self._script_path = conf.pop('script_path', None)
-        if self._script_path:
-            self._script_path = os.path.abspath(self._script_path)
-        else:
-            code_path = os.path.abspath(os.path.dirname(__file__))
-            self._script_path = os.path.join(code_path, 'scripts')
-        self._logger.info("Script search path is: %s", self._script_path)
+        self._script_path = conf.pop('script_path',
+                                     os.path.join(os.path.dirname(__file__), 'scripts'))
+        self._script_path = os.path.abspath(self._script_path)
+        self._logger.info("Script search path is: %r", self._script_path)
         self._current_process = None
+
         # Check for unused config options
         if conf:
-            keys = ', '.join(conf.keys())
-            raise ValueError("Unused worker config params: '%s'" % keys)
+            raise ValueError("Unused worker config params: '%s'" % ', '.join(conf.keys()))
 
     def terminate(self, *_):
         """Terminate worker daemon."""
@@ -116,7 +113,9 @@ class Worker(RESTClient, Daemon):
                 self._abort(job['id'], "Protocol '%s' not supported at src site with id %d"
                             % (job['protocol'], job['src_siteid']))
                 continue
-            command = "%s %s" % (COMMANDMAP[job['type']][job['protocol']], random.choice(src))
+            script_env = dict(os.environ,
+                              PATH=self._script_path,
+                              SRC_PATH=random.choice(src))
 
             if job['type'] == JobType.COPY:
                 if job['dst_siteid'] is None:
@@ -135,16 +134,16 @@ class Worker(RESTClient, Daemon):
                     self._abort(job['id'], "Protocol '%s' not supported at dst site with id %d"
                                 % (job['protocol'], job['dst_siteid']))
                     continue
-                command += " %s" % random.choice(dst)
+                script_env['DST_PATH'] = random.choice(dst)
 
+            command = COMMANDMAP[job['type']][job['protocol']]
             with TempX509Files(job['credentials']) as proxyfile:
+                script_env['X509_USER_PROXY'] = proxyfile.name
                 self._current_process = subprocess.Popen('(set -x && %s)' % command,
                                                          shell=True,
                                                          stdout=subprocess.PIPE,
                                                          stderr=subprocess.STDOUT,
-                                                         env=dict(os.environ,
-                                                                  PATH=self._script_path,
-                                                                  X509_USER_PROXY=proxyfile.name))
+                                                         env=script_env)
                 log, _ = self._current_process.communicate()
                 self.set_token(token)
                 try:
