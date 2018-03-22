@@ -40,7 +40,9 @@ class TestUsercommand(unittest.TestCase):
             Currently: token, func handle and positionals and None dict values
         """
         mocked_facade.return_value = MockTransferClientFacade("anything")
+        mocked_facade.return_value.status = mock.MagicMock()
         mock_list.return_value={'status':'DONE', 'id': 1}
+        mocked_facade.return_value.status.return_value = {'status':'DONE', 'id': 1}
         mock_output.return_value = {'listing':'/mydit/file.txt'} # not really, OK for now
         args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
         args.func(args)
@@ -52,25 +54,29 @@ class TestUsercommand(unittest.TestCase):
         mock_list.return_value={'status':'NEW', 'id': 1}
         args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
         args.func(args)
-        assert mock_list.call_count == 50
-        assert not mock_output.called
+        assert mock_list.call_count == 1
+        assert mocked_facade.return_value.status.call_count == 2 # one at the beginning and then get the 'DONE'
+        assert mock_output.called
 
         mock_output.reset_mock()
         mock_list.reset_mock()
         mock_list.return_value = None
         args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
         args.func(args)
-        assert mock_list.call_count == 1  # immediate failue, no such site
+        assert mock_list.call_count == 1  # immediate failure, no such site
         assert not mock_output.called
 
         mock_output.reset_mock()
         mock_list.reset_mock()
-        ret_list = [None]*50
-        ret_list[0] = {'status':'NEW', 'id': 1} # fisrt new, and then failures
-        mock_list.side_effect = ret_list
+        mocked_facade.return_value.status.reset_mock()
+        mock_list.return_value={'status':'NEW', 'id': 1}
+        status_list = [{'status':'NEW', 'id': 1}]*50
+        mocked_facade.return_value.status.side_effect = status_list
+        # keep list return value, timeout the status
         args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
         args.func(args)
-        assert mock_list.call_count == 50  # immediate failue, no such site
+        assert mock_list.call_count == 1
+        assert mocked_facade.return_value.status.call_count == 50
         assert not mock_output.called
 
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')

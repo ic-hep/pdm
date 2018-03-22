@@ -64,10 +64,25 @@ class TransferClient(object):
             #return {'status':'No such site {}'.format(src_site)}
 
     def output(self, job_id):
-        # get output
+        """
+        Get job output
+        :param job_id: job id
+        :return: output as specified by workqueue client
+        """
         response = self.__wq_client.output(job_id)
         return response
 
+    def status(self, job_id):
+        """
+        Return status of a job.
+        :param job_id: job id to get the status of.
+        :return:
+        """
+        response = self.__wq_client.status(job_id)
+        return response
+
+    def list_sites(self):
+        return self.__sitelist
 
     def copy(self, src_site, src_filepath, dst_site,  # pylint: disable=too-many-arguments
              dst_filepath, **kwargs):
