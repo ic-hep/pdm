@@ -133,24 +133,23 @@ class UserCommand(object):
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
                              value is not None and key not in ('func', 'site', 'token')}
             resp = client.list(args.site, **accepted_args)  # max_tries, priority)
+            # resp and status both carry job id:
             if resp:
-                while resp['status'] not in ('DONE', 'FAILED'):
+                status = client.status(resp['id'])
+                while status['status'] not in ('DONE', 'FAILED'):
                     sleep(nap)  # seconds
-                    resp = client.list(args.site, **accepted_args)
+                    status = client.status(resp['id'])
                     count += 1
-                    if not resp:
-                        resp = {'status': None}
-                        
                     if count >= max_iter: break
 
-                if resp['status'] == 'DONE':
+                if status['status'] == 'DONE':
                     listing_dict = client.output(resp['id'])
                     listing = listing_dict['listing']
                     print listing
                 elif resp['status'] == 'FAILED':
-                    print " Failed to obtain a listing"
+                    print " Failed to obtain a listing for job %d " % (resp['id'],)
                 else:
-                    print "Timeout. Last status is %s" % (resp['status'],)
+                    print "Timeout. Last status is %s for job id %d" % (status['status'], resp['id'])
             else:
                 print " No such site: %s ?" % (args.site,)
 
