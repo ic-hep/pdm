@@ -139,18 +139,18 @@ class UserCommand(object):
                     resp = client.list(args.site, **accepted_args)
                     count += 1
                     if not resp:
-                        resp = {'status': None}  # to make while-else
-                        # below work (no such site)
+                        resp = {'status': None}
+                        
                     if count >= max_iter: break
+
+                if resp['status'] == 'DONE':
+                    listing_dict = client.output(resp['id'])
+                    listing = listing_dict['listing']
+                    print listing
+                elif resp['status'] == 'FAILED':
+                    print " Failed to obtain a listing"
                 else:
-                    if resp['status'] == 'DONE':
-                        listing_dict = client.output(resp['id'])
-                        listing = listing_dict['listing']
-                        print listing
-                    elif resp['status'] == 'FAILED':
-                        print " Failed to obtain a listing"
-                    else:
-                        print "Timeout. Last status is %s" % (resp['status'],)
+                    print "Timeout. Last status is %s" % (resp['status'],)
             else:
                 print " No such site: %s ?" % (args.site,)
 
