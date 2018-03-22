@@ -139,7 +139,7 @@ class UserCommand(object):
                     resp = client.list(args.site, **accepted_args)
                     count += 1
                     if not resp:
-                        resp = {'status': 'None'}  # to make while-else
+                        resp = {'status': None}  # to make while-else
                         # below work (no such site)
                     if count >= max_iter: break
                 else:
@@ -150,9 +150,9 @@ class UserCommand(object):
                     elif resp['status'] == 'FAILED':
                         print " Failed to obtain a listing"
                     else:
-                        print "Timeout. Last status is %s", resp['status']
+                        print "Timeout. Last status is %s" % (resp['status'],)
             else:
-                print " No such site %s ?", args.site
+                print " No such site: %s ?" % (args.site,)
 
     def remove(self, args):  # pylint: disable=no-self-use
         """

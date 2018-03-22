@@ -55,6 +55,24 @@ class TestUsercommand(unittest.TestCase):
         assert mock_list.call_count == 50
         assert not mock_output.called
 
+        mock_output.reset_mock()
+        mock_list.reset_mock()
+        mock_list.return_value = None
+        args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
+        args.func(args)
+        assert mock_list.call_count == 1  # immediate failue, no such site
+        assert not mock_output.called
+
+        mock_output.reset_mock()
+        mock_list.reset_mock()
+        ret_list = [None]*50
+        ret_list[0] = {'status':'NEW', 'id': 1} # fisrt new, and then failures
+        mock_list.side_effect = ret_list
+        args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
+        args.func(args)
+        assert mock_list.call_count == 50  # immediate failue, no such site
+        assert not mock_output.called
+
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
     @mock.patch.object(MockTransferClientFacade, 'remove')
     def test_remove(self, mock_remove, mocked_facade):
