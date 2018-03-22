@@ -41,6 +41,7 @@ class Worker(RESTClient, Daemon):
     def __init__(self, debug=False, one_shot=False):
         """Initialisation."""
         RESTClient.__init__(self, 'workqueue')
+        conf = getConfig('worker')
         self._uid = uuid.uuid4()
         Daemon.__init__(self,
                         pidfile='/tmp/worker-%s.pid' % self._uid,
@@ -49,8 +50,17 @@ class Worker(RESTClient, Daemon):
                         debug=debug)
         self._one_shot = one_shot
         self._types = [JobType[type_.upper()] for type_ in  # pylint: disable=unsubscriptable-object
-                       getConfig('worker').get('types', ('LIST', 'COPY', 'REMOVE'))]
+                       conf.pop('types', ('LIST', 'COPY', 'REMOVE'))]
+        self._interpoll_sleep_time = conf.pop('poll_time', 2)
+        self._script_path = conf.pop('script_path',
+                                     os.path.join(os.path.dirname(__file__), 'scripts'))
+        self._script_path = os.path.abspath(self._script_path)
+        self._logger.info("Script search path is: %r", self._script_path)
         self._current_process = None
+
+        # Check for unused config options
+        if conf:
+            raise ValueError("Unused worker config params: '%s'" % ', '.join(conf.keys()))
 
     def terminate(self, *_):
         """Terminate worker daemon."""
@@ -72,7 +82,6 @@ class Worker(RESTClient, Daemon):
     def run(self):
         """Daemon main method."""
         endpoint_client = EndpointClient()
-        interpoll_sleep_time = getConfig('worker').get('poll_time', 2)
         run = True
         while run:
             if self._one_shot:
@@ -85,7 +94,7 @@ class Worker(RESTClient, Daemon):
             except RESTException as err:
                 if err.code == 404:
                     self._logger.debug("No work to pick up.")
-                    time.sleep(interpoll_sleep_time)
+                    time.sleep(self._interpoll_sleep_time)
                 else:
                     self._logger.exception("Error trying to get job from WorkqueueService.")
                 continue
@@ -104,7 +113,9 @@ class Worker(RESTClient, Daemon):
                 self._abort(job['id'], "Protocol '%s' not supported at src site with id %d"
                             % (job['protocol'], job['src_siteid']))
                 continue
-            command = "%s %s" % (COMMANDMAP[job['type']][job['protocol']], random.choice(src))
+            script_env = dict(os.environ,
+                              PATH=self._script_path,
+                              SRC_PATH=random.choice(src))
 
             if job['type'] == JobType.COPY:
                 if job['dst_siteid'] is None:
@@ -123,15 +134,16 @@ class Worker(RESTClient, Daemon):
                     self._abort(job['id'], "Protocol '%s' not supported at dst site with id %d"
                                 % (job['protocol'], job['dst_siteid']))
                     continue
-                command += " %s" % random.choice(dst)
+                script_env['DST_PATH'] = random.choice(dst)
 
+            command = COMMANDMAP[job['type']][job['protocol']]
             with TempX509Files(job['credentials']) as proxyfile:
+                script_env['X509_USER_PROXY'] = proxyfile.name
                 self._current_process = subprocess.Popen('(set -x && %s)' % command,
                                                          shell=True,
                                                          stdout=subprocess.PIPE,
                                                          stderr=subprocess.STDOUT,
-                                                         env=dict(os.environ,
-                                                                  X509_USER_PROXY=proxyfile.name))
+                                                         env=script_env)
                 log, _ = self._current_process.communicate()
                 self.set_token(token)
                 try:
