@@ -63,7 +63,7 @@ class TestHRClient(unittest.TestCase):
             res = self.__client.login('Johnny@example.com', 'very_secret1')
 
         the_exception = login_ex.exception
-        assert (the_exception[0] == 'Request failed with code 403')
+        assert (the_exception.code == 403)
 
     def test_add_user(self):
         userdict = {
@@ -78,7 +78,7 @@ class TestHRClient(unittest.TestCase):
             res = self.__client.add_user(userdict)
 
         the_exception = add_ex.exception
-        assert (the_exception[0] == 'Request failed with code 403')
+        assert (the_exception.code == 403)
 
     def test_change_password(self):
         self.__service.fake_auth("TOKEN", {'id':1, 'expiry':None, 'key': 'unused'})
@@ -91,7 +91,7 @@ class TestHRClient(unittest.TestCase):
             res = self.__client.change_password('newpassword', None)
 
         the_exception = pwd_ex.exception
-        assert (the_exception[0] == 'Request failed with code 400')
+        assert (the_exception.code == 400)
 
     def test_get_user(self):
         self.__service.fake_auth("TOKEN", {'id':1, 'expiry':None, 'key': 'unused'})
