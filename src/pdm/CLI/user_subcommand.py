@@ -186,7 +186,7 @@ class UserCommand(object):
         gid_s = max(len(d['groupid']) for d in listing)
 
         fmt = '{permissions:12s}{nlinks:>%ds} {userid:%ds} {groupid:%ds} ' \
-              '{size:>%ds} {datestamp:14s}{name:s}' % (links_len, uid_s, gid_s, size_len)
+              '{size:>%ds} {datestamp:14s} {name:s}' % (links_len, uid_s, gid_s, size_len)
         # print fmt
         for elem in listing:
             print fmt.format(**elem)
