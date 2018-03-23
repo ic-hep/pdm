@@ -39,11 +39,18 @@ class TestUsercommand(unittest.TestCase):
         """ test if possible extra keys have been removed from keywords arguments passed to TransferClientFacade
             Currently: token, func handle and positionals and None dict values
         """
+        list_dicts = \
+            [{u'is_directory': True, u'name': u'bin\t', u'userid': u'0', u'nlinks': u'1', u'datestamp': u'Feb 28 11:01', u'size': u'24576', u'groupid': u'0', u'permissions': u'dr-xr-xr-x'},
+             {u'is_directory': True, u'name': u'etc\t', u'userid': u'0', u'nlinks': u'1', u'datestamp': u'Nov  5  2016', u'size': u'6', u'groupid': u'0', u'permissions': u'drwxr-xr-x'},
+             {u'is_directory': True, u'name': u'games\t', u'userid': u'0', u'nlinks': u'1', u'datestamp': u'Nov 5 2016', u'size': u'6', u'groupid': u'0', u'permissions': u'drwxr-xr-x'},
+             {u'is_directory': True, u'name': u'include\t', u'userid': u'0', u'nlinks': u'1', u'datestamp': u'Mar  1  2017', u'size': u'23', u'groupid': u'0', u'permissions': u'drwxr-xr-x'},
+             {u'is_directory': True, u'name': u'lib\t', u'userid': u'0', u'nlinks': u'1', u'datestamp': u'Feb 27 12:07', u'size': u'8192', u'groupid': u'0', u'permissions': u'dr-xr-xr-x'}]
+
         mocked_facade.return_value = MockTransferClientFacade("anything")
         mocked_facade.return_value.status = mock.MagicMock()
         mock_list.return_value={'status':'DONE', 'id': 1}
         mocked_facade.return_value.status.return_value = {'status':'DONE', 'id': 1}
-        mock_output.return_value = {'listing':'/mydit/file.txt'} # not really, OK for now
+        mock_output.return_value = {'listing':list_dicts}
         args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
         args.func(args)
         mock_output.assert_called_with(1)
