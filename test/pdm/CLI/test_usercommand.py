@@ -32,7 +32,7 @@ class TestUsercommand(unittest.TestCase):
         args = self._parser.parse_args('copy source dest -m 3 -t gfsdgfhsgdfh'.split())
         args.func(args)
 
-        mock_copy.assert_called_with('source', 'dest', block=False, max_tries=3)
+        mock_copy.assert_called_with('source', 'dest', max_tries=3)
         assert mocked_facade.return_value.status.call_count == 1
         # NEW, only once:
         mocked_facade.return_value.status.reset_mock()
@@ -110,7 +110,7 @@ class TestUsercommand(unittest.TestCase):
         args = self._parser.parse_args('remove source  -m 3 -t gfsdgfhsgdfh'.split())
         args.func(args)
 
-        mock_remove.assert_called_with('source', block=False, max_tries=3)
+        mock_remove.assert_called_with('source', max_tries=3)
         assert mocked_facade.return_value.status.call_count == 1
 
         mocked_facade.return_value.status.reset_mock()
