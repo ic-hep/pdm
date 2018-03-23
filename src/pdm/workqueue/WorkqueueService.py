@@ -13,13 +13,13 @@ from .WorkqueueDB import WorkqueueModels, WorkqueueJobEncoder, JobStatus, JobTyp
 
 
 SHELLPATH_REGEX = re.compile(r'^/[a-zA-Z0-9/_.*~-]*$')
-LISTPARSE_REGEX = re.compile(r'^(?P<permissions>\S+)\s+'
+LISTPARSE_REGEX = re.compile(r'^(?=[-dlpscbD])(?P<permissions>\S+)\s+'
                              r'(?P<nlinks>\S+)\s+'
                              r'(?P<userid>\S+)\s+'
                              r'(?P<groupid>\S+)\s+'
                              r'(?P<size>\S+)\s+'
                              r'(?P<datestamp>\S+\s+\S+\s+\S+)\s+'
-                             r'(?P<name>.*)$', re.MULTILINE)
+                             r'(?P<name>[^\t\n\r\f\v]*)\s*$', re.MULTILINE)
 
 
 def decode_json_data(func):

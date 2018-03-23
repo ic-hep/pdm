@@ -19,6 +19,8 @@ class test_Worker(unittest.TestCase):
         self._service.fake_auth("ALL")
         self._test = self._service.test_client()
 
+        # Daemon won't setup logger for us so need one in place.
+        Worker._logger = logging.getLogger("Worker")
         with mock.patch('pdm.workqueue.Worker.RESTClient.__init__'),\
              mock.patch('pdm.workqueue.Worker.Daemon.__init__'):
 
@@ -31,7 +33,7 @@ class test_Worker(unittest.TestCase):
             # only sets two variables to none which are set properly above in the patch_client
             # call which calls set_test_info so we actually dont want to set them None again.
 #            RESTClientTest.__init__(self._inst, 'workqueue')
-            self._inst._logger = logging.getLogger("Worker")
+#            self._inst._logger = logging.getLogger("Worker")
 
     def tearDown(self):
         self._patcher.stop()
