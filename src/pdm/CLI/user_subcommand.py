@@ -14,6 +14,12 @@ class UserCommand(object):
     """
 
     def __init__(self, subparsers):
+
+        # some constants:
+        self.__max_iter = 50
+        self.__nap = 0.5
+        self.__count = 1
+
         # register
         user_parser = subparsers.add_parser('register')
         user_parser.add_argument('-e', '--email', type=str, required=True)
@@ -45,6 +51,7 @@ class UserCommand(object):
         user_parser.add_argument('site', type=str)
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
+        user_parser.add_argument('-b', '--block', action='store_true')
         user_parser.set_defaults(func=self.remove)
         # copy
         user_parser = subparsers.add_parser('copy',
@@ -54,12 +61,21 @@ class UserCommand(object):
         user_parser.add_argument('dst_site', type=str)
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
+        user_parser.add_argument('-b', '--block', action='store_true')
         user_parser.set_defaults(func=self.copy)
         # site list
         user_parser = subparsers.add_parser('sites',
                                             help="list available sites")
         user_parser.add_argument('-t', '--token', type=str, required=True)
         user_parser.set_defaults(func=self.sitelist)
+        # status
+        user_parser = subparsers.add_parser('status',
+                                            help="get status of a job/task")
+        user_parser.add_argument('-t', '--token', type=str, required=True)
+        st_help = "periodically check the job status (up to %d times)" % (self.__max_iter,)
+        user_parser.add_argument('-b', '--block', action='store_true', help=st_help)
+        user_parser.set_defaults(func=self.status)
+
 
 
         # sub-command functions
@@ -191,6 +207,35 @@ class UserCommand(object):
         for elem in listing:
             print fmt.format(**elem)
 
+    def status(self, args, job_id):
+        """
+        Get and print status of a job (task)
+        :param args:
+        :return:
+        """
+        token = self._get_token(args)
+        block = args.block
+        if token:
+            client = TransferClientFacade(token)
+            self._status(job_id, client, block=block)
+
+    def _status(self, job_id, client, block=False):
+
+        status = client.status(job_id)
+        sleep(self.__nap)  # seconds
+
+        if block:
+            while status['status'] not in ('DONE', 'FAILED'):
+                sleep(self.__nap)  # seconds
+                status = client.status(job_id)
+                self.__count += 1
+                if self.__count >= self.__max_iter:
+                    print "Timeout .."
+                    break
+                print "(%2d) job id: %d status: %s " % (self.__count, job_id, status['status'])
+
+        print " job id: %d status: %s " % (job_id, status['status'])
+
     def remove(self, args):  # pylint: disable=no-self-use
         """
         Remove files at remote site
@@ -203,7 +248,8 @@ class UserCommand(object):
             # remove None values, position args, func and toke from the kwargs:
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
                              value is not None and key not in ('func', 'site', 'token')}
-            client.remove(args.site, **accepted_args)  # max_tries, priority)
+            response = client.remove(args.site, **accepted_args)  # max_tries, priority)
+            self._status(response['job_id'], client, block=args.block)
 
     def copy(self, args):  # pylint: disable=no-self-use
         """
@@ -220,7 +266,8 @@ class UserCommand(object):
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
                              value is not None
                              and key not in ('func', 'src_site', 'dst_site', 'token')}
-            client.copy(src_site, dst_site, **accepted_args)
+            response = client.copy(src_site, dst_site, **accepted_args)
+            self._status(response['job_id'], client, block=args.block)
 
     def _get_token(self, args):
         # TODO poosible token from a file
