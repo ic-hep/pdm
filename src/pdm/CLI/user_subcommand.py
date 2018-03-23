@@ -182,9 +182,11 @@ class UserCommand(object):
         """
         size_len = max(len(d['size']) for d in listing)
         links_len = max(len(d['nlinks']) for d in listing)
+        uid_s = max(len(d['userid']) for d in listing)
+        gid_s = max(len(d['groupid']) for d in listing)
 
-        fmt = '{permissions:12s}{nlinks:%ds} {userid:4s}{groupid:4s}{size:%ds}' \
-              '  {datestamp:14s}{name:50s}' %(links_len, size_len)
+        fmt = '{permissions:12s}{nlinks:>%ds} {userid:%ds} {groupid:%ds} ' \
+              '{size:>%ds} {datestamp:14s}{name:s}' % (links_len, uid_s, gid_s, size_len)
         # print fmt
         for elem in listing:
             print fmt.format(**elem)
