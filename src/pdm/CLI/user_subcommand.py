@@ -3,9 +3,9 @@ Define pdm subcommands and action functions for them:
 Example usage: pdm register -e fred@flintstones.com -n Fred -s Flintstone
 """
 from getpass import getpass
+from time import sleep
 from pdm.userservicedesk.HRClient import HRClient
 from pdm.userservicedesk.TransferClientFacade import TransferClientFacade
-from time import sleep
 
 
 class UserCommand(object):
@@ -55,6 +55,11 @@ class UserCommand(object):
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
         user_parser.set_defaults(func=self.copy)
+        # site list
+        user_parser = subparsers.add_parser('sites',
+                                            help="list available sites")
+        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.set_defaults(func=self.sitelist)
 
 
         # sub-command functions
@@ -140,18 +145,51 @@ class UserCommand(object):
                     sleep(nap)  # seconds
                     status = client.status(resp['id'])
                     count += 1
-                    if count >= max_iter: break
+                    if count >= max_iter:
+                        break
 
                 if status['status'] == 'DONE':
                     listing_dict = client.output(resp['id'])
                     listing = listing_dict['listing']
-                    print listing
+                    self._print_formatted_listing(listing)
                 elif resp['status'] == 'FAILED':
                     print " Failed to obtain a listing for job %d " % (resp['id'],)
                 else:
-                    print "Timeout. Last status is %s for job id %d" % (status['status'], resp['id'])
+                    print "Timeout. Last status is %s for job id %d" % \
+                          (status['status'], resp['id'])
             else:
                 print " No such site: %s ?" % (args.site,)
+
+    def sitelist(self, args):
+        """
+        Print list of available sites
+        :param args: carry a user token
+        :return: None
+        """
+        token = self._get_token(args)
+        if token:
+            client = TransferClientFacade(token)
+            sites = client.list_sites()
+            print '{0:40}{1:50}'.format('site', 'description')
+            for elem in sites:
+                print '{site_name:40s}{site_desc:50s}'.format(**elem)
+
+    def _print_formatted_listing(self, listing):  # pylint: disable=no-self-use
+        """
+        Print formatted file listing.
+        :param listing: listing (dictionary) to be pretty-printed a'la ls -l
+        :return: None
+        """
+        size_len = max(len(d['size']) for d in listing)
+        links_len = max(len(d['nlinks']) for d in listing)
+        uid_s = max(len(d['userid']) for d in listing)
+        gid_s = max(len(d['groupid']) for d in listing)
+
+        fmt = '{permissions:12s}{nlinks:>%ds} {userid:%ds} {groupid:%ds} ' \
+              '{size:>%ds} {datestamp:14s} {name:s}' % (links_len, uid_s, gid_s, size_len)
+        # print fmt
+        for elem in listing:
+            print fmt.format(**elem)
 
     def remove(self, args):  # pylint: disable=no-self-use
         """

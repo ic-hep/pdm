@@ -82,7 +82,13 @@ class TransferClient(object):
         return response
 
     def list_sites(self):
-        return self.__sitelist
+        """
+        Get list of lites
+        :return: list of dictionaries with all key:value pair but site_id key and value
+        """
+        unwanted_keys = ['site_id']
+        filtered_sites = [dict(filter(lambda i:i[0] not in unwanted_keys, elem.iteritems())) for elem in self.__sitelist]
+        return filtered_sites
 
     def copy(self, src_site, src_filepath, dst_site,  # pylint: disable=too-many-arguments
              dst_filepath, **kwargs):

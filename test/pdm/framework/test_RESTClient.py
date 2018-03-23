@@ -5,6 +5,7 @@ import json
 import mock
 import unittest
 import functools
+import requests
 
 from pdm.framework.RESTClient import RESTClient, RESTClientTest, RESTException
 
@@ -113,6 +114,18 @@ class TestRESTClient(unittest.TestCase):
         client = self.__get_inst()
         self.__mock_req(mock_req, 500, "")
         self.assertRaises(RESTException, client.get, '/test_url')
+
+    @mock.patch("pdm.framework.RESTClient.requests")
+    def test_rest_exception(self, mock_req):
+        """ Check that a requests exception (such as connection refused)
+            gets correctly converted to a RESTException error.
+        """
+        client = self.__get_inst()
+        err_str = "Connection refused"
+        mock_req.request.side_effect = requests.exceptions.ConnectionError(err_str)
+        with self.assertRaises(RESTException) as err:
+            client.get('/file')
+        self.assertIn(err_str, str(err.exception))
 
     @mock.patch("pdm.framework.RESTClient.requests")
     def test_token(self, mock_req):
