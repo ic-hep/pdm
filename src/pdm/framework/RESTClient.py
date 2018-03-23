@@ -4,11 +4,15 @@
 
 import json
 import requests
+from requests.exceptions import RequestException
 
 from pdm.utils.config import ConfigSystem
 
 class RESTException(RuntimeError):
-    """ An exception for all server-side errors.
+    """ An exception for all HTTP errors.
+
+        In the case of local errors (connection-refused, etc...), the code
+        will be set to None and the msg will be set to a user readable error.
     """
 
     def __init__(self, code, msg=None):
@@ -21,7 +25,10 @@ class RESTException(RuntimeError):
             self.__msg = msg
         else:
             self.__msg = "Request failed with no return message"
-        self.__usr_msg = "HTTP %u: %s" % (self.__code, self.__msg)
+        if self.__code:
+            self.__usr_msg = "HTTP %u: %s" % (self.__code, self.__msg)
+        else:
+            self.__usr_msg = "HTTP Err: %s" % self.__msg
         super(RESTException, self).__init__(self.__usr_msg)
 
     @property
@@ -111,7 +118,10 @@ class RESTClient(object):
         request_args['verify'] = cafile
         request_args['cert'] = client_cert
         request_args['timeout'] = self.__timeout
-        resp = requests.request(method, full_url, **request_args)
+        try:
+            resp = requests.request(method, full_url, **request_args)
+        except RequestException as err:
+            raise RESTException(None, str(err))
         #pylint: disable=no-member
         if resp.status_code not in (requests.codes.ok, requests.codes.created):
             raise RESTException(resp.status_code, resp.text)
