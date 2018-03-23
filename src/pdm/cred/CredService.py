@@ -25,6 +25,15 @@ class CredService(object):
     CRED_TYPE_SSH = 1
 
     @staticmethod
+    def cred_type_to_str(type_id):
+        """ Convert a cred type int to a string. """
+        if type_id == CredService.CRED_TYPE_X509:
+            return "X.509"
+        elif type_id == CredService.CRED_TYPE_SSH:
+            return "SSH"
+        return "UNKNOWN"
+
+    @staticmethod
     @startup
     def configure_ca(config):
         """ Configure a new CA if one doesn't already exist in the DB.
@@ -179,6 +188,7 @@ class CredService(object):
         """ Builds all base credentials for a new user or renews an
             existing set of credentials if user already exists.
         """
+        log = current_app.log
         db = request.db
         UserCred = db.tables.UserCred
         # Decode POST data
@@ -230,6 +240,8 @@ class CredService(object):
                              http_error_code=500) as session:
             session.add(ca_cred)
             session.add(ssh_cred)
+        log.info("Added new credentials for user %u, DN: %s",
+                 user_id, user_dn)
         # Success, return an empty 200
         return ""
 
@@ -245,6 +257,7 @@ class CredService(object):
                              http_error_code=500) as session:
             for old_cred in UserCred.query.filter_by(user_id=user_id).all():
                 session.delete(old_cred)
+        current_app.log.info("Deleted credentials for user %u.", user_id)
         return ""
 
     @staticmethod
@@ -303,6 +316,9 @@ class CredService(object):
                              "Failed to add cred",
                              http_error_code=500) as session:
             session.add(new_cred)
+        current_app.log.info("Added new proxy cred (type %s) to user %u (ID: %u).",
+                             CredService.cred_type_to_str(cred_type),
+                             user_id, new_cred.cred_id)
         # Generate the token for retrieving this credential
         token = current_app.ca_token_svc.issue(new_cred.cred_id)
         res = {'token': token}
@@ -322,6 +338,7 @@ class CredService(object):
                              "Failed to del cred",
                              http_error_code=500):
             JobCred.query.filter_by(cred_id=cred_id).delete()
+        current_app.log.info("Deleted proxy cred ID %u.", cred_id)
         return ""
 
     @staticmethod
@@ -341,6 +358,7 @@ class CredService(object):
         new_pub, new_priv, _ = CredService.__delegate_cred(base_cred,
                                                            base_key=None,
                                                            limited=True)
+        current_app.log.info("Fetched proxy cred ID %u.", cred_id)
         res = {'cred_type': base_cred.cred_type,
                'pub_key': new_pub,
                'priv_key': new_priv}

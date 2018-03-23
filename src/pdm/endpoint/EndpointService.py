@@ -75,6 +75,7 @@ class EndpointService(object):
     @export_ext("site", ["POST"])
     def add_site():
         """ Add a site to the database. """
+        log = current_app.log
         db = request.db
         Site = db.tables.Site
         site_data = {}
@@ -93,10 +94,16 @@ class EndpointService(object):
                 session.add(site)
         except IntegrityError:
             # site_name almost certainly already exists
+            log.info("Failed to add new non-unique site %s.",
+                     site_data['site_name'])
             return "site_name is not unique", 409
-        except Exception:
+        except Exception as err:
             # Some kind of other database error?
+            log.error("Failed to add new site %s (%s).",
+                      site_data['site_name'], str(err))
             return "Failed to add site to DB", 500
+        log.info("Added site %s (ID %u).", site_data['site_name'],
+                 site.site_id)
         return jsonify(site.site_id)
 
     @staticmethod
@@ -122,6 +129,7 @@ class EndpointService(object):
     @export_ext("site/<int:site_id>", ["DELETE"])
     def del_site(site_id):
         """ Delete a site (including all endpoints & mappings). """
+        log = current_app.log
         db = request.db
         Site = db.tables.Site
         site = Site.query.filter_by(site_id=site_id).first_or_404()
@@ -129,12 +137,14 @@ class EndpointService(object):
                              message="Database error while deleting site",
                              http_error_code=500) as session:
             session.delete(site)
+        log.info("Deleted site ID %u.", site_id)
         return ""
 
     @staticmethod
     @export_ext("site/<int:site_id>", ["POST"])
     def add_endpoint(site_id):
         """ Add an endpoint to a specific site. """
+        log = current_app.log
         db = request.db
         Site = db.tables.Site
         Endpoint = db.tables.Endpoint
@@ -152,12 +162,15 @@ class EndpointService(object):
                              message="Failed to add endpoint to DB",
                              http_error_code=500) as session:
             session.add(new_ep)
+        log.info("Added site endpoint (Site ID: %u, EP ID: %u): %s",
+                 site_id, new_ep.ep_id, ep_uri)
         return jsonify(new_ep.ep_id)
 
     @staticmethod
     @export_ext("site/<int:site_id>/<int:ep_id>", ["DELETE"])
     def del_endpoint(site_id, ep_id):
         """ Delete an endpoint. """
+        log = current_app.log
         db = request.db
         Endpoint = db.tables.Endpoint
         endpoint = Endpoint.query.filter_by(site_id=site_id,
@@ -166,6 +179,8 @@ class EndpointService(object):
                              message="Failed to delete endpoint from DB",
                              http_error_code=500) as session:
             session.delete(endpoint)
+        log.info("Deleted site (ID: %u), endpoint ID %u.",
+                 site_id, ep_id)
         return ""
 
     @staticmethod
@@ -182,6 +197,7 @@ class EndpointService(object):
     @export_ext("sitemap/<int:site_id>", ["POST"])
     def add_sitemap_entry(site_id):
         """ Add an entry to the sitemap. """
+        log = current_app.log
         db = request.db
         Site = db.tables.Site
         UserMap = db.tables.UserMap
@@ -203,15 +219,22 @@ class EndpointService(object):
             with managed_session(request) as session:
                 session.add(new_map)
         except FlushError:
+            log.info("Failed to add mapping for user %s at site %u (duplicate entry).",
+                     local_user, site_id)
             return "Mapping for user_id already exists", 409
-        except Exception:
+        except Exception as err:
+            log.info("Failed to add mapping for user %s at site %u (%s).",
+                     local_user, site_id, str(err))
             return "Failed to add sitemap to DB", 500
+        log.info("Added sitemap entry (%s:%u) at site %u.",
+                 local_user, user_id, site_id)
         return ""
 
     @staticmethod
     @export_ext("sitemap/<int:site_id>/<int:user_id>", ["DELETE"])
     def del_sitemap_entry(site_id, user_id):
         """ Delete an entry from the sitemap. """
+        log = current_app.log
         db = request.db
         UserMap = db.tables.UserMap
         entry = UserMap.query.filter_by(site_id=site_id,
@@ -220,21 +243,27 @@ class EndpointService(object):
                              message="Failed to del sitemap from DB",
                              http_error_code=500) as session:
             session.delete(entry)
+        log.info("Deleted mapping user ID %u from site ID %u.",
+                 user_id, site_id)
         return ""
 
     @staticmethod
     @export_ext("sitemap/all/<int:user_id>", ["DELETE"])
     def del_sitemap_user(user_id):
         """ Delete a user from all site maps. """
+        log = current_app.log
         db = request.db
         UserMap = db.tables.UserMap
         # We do this the long way with managed_session to make testing
         # more easy, otherwise we could just do .delete() instead of
         # .all()
+        num_mappings = 0
         with managed_session(request,
                              message="Failed to del user from sitemaps",
                              http_error_code=500) as session:
             mappings = UserMap.query.filter_by(user_id=user_id).all()
             for entry in mappings:
+                num_mappings += 1
                 session.delete(entry)
+        log.info("Deleted %u mappings for user id %u.", num_mappings, user_id)
         return ""
