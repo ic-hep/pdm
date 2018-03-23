@@ -7,6 +7,33 @@ import requests
 
 from pdm.utils.config import ConfigSystem
 
+class RESTException(RuntimeError):
+    """ An exception for all server-side errors.
+    """
+
+    def __init__(self, code, msg=None):
+        """ Create a new REST exception.
+            code - int - The HTTP error code.
+            msg - str - The error string returned by the server.
+        """
+        self.__code = code
+        if msg:
+            self.__msg = msg
+        else:
+            self.__msg = "Request failed with no return message"
+        self.__usr_msg = "HTTP %u: %s" % (self.__code, self.__msg)
+        super(RESTException, self).__init__(self.__usr_msg)
+
+    @property
+    def code(self):
+        """ Get the HTTP error code. """
+        return self.__code
+
+    @property
+    def message(self):
+        """ Get the error message. """
+        return self.__usr_msg
+
 
 class RESTClient(object):
     """ A REST client base class. """
@@ -87,9 +114,7 @@ class RESTClient(object):
         resp = requests.request(method, full_url, **request_args)
         #pylint: disable=no-member
         if resp.status_code not in (requests.codes.ok, requests.codes.created):
-            # TODO: Better excpetions here
-            raise RuntimeError("Request failed with code %u" % \
-                               resp.status_code)
+            raise RESTException(resp.status_code, resp.text)
         if resp.text:
             return resp.json()
         return None
@@ -164,8 +189,7 @@ class RESTClientTest(RESTClient):
         #  inner test_client does that itself now.
         res = call_fn(full_uri, data=data)
         if res.status_code not in (200, 201):
-            raise RuntimeError("Request failed with code %u" % \
-                               res.status_code)
+            raise RESTException(res.status_code, res.data)
         if res.data:
             return json.loads(res.data)
         return None

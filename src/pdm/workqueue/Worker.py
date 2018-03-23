@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Worker script."""
 import os
+import time
 import uuid
 import random
 # import json
@@ -13,7 +14,7 @@ from contextlib import contextmanager
 
 from requests.exceptions import Timeout
 
-from pdm.framework.RESTClient import RESTClient
+from pdm.framework.RESTClient import RESTClient, RESTException
 from pdm.cred.CredClient import CredClient
 from pdm.endpoint.EndpointClient import EndpointClient
 from pdm.utils.daemon import Daemon
@@ -26,16 +27,12 @@ from .WorkqueueDB import COMMANDMAP, PROTOCOLMAP, JobType
 def TempX509Files(token):
     """Create temporary grid credential files."""
     cert, key = CredClient().get_cred(token)
-    with NamedTemporaryFile() as certfile,\
-            NamedTemporaryFile() as keyfile:
-        certfile.write(cert)
-        certfile.flush()
-        os.fsync(certfile.fileno())
-
-        keyfile.write(key)
-        keyfile.flush()
-        os.fsync(keyfile.fileno())
-        yield certfile, keyfile
+    with NamedTemporaryFile() as proxyfile:
+        proxyfile.write(key)
+        proxyfile.write(cert)
+        proxyfile.flush()
+        os.fsync(proxyfile.fileno())
+        yield proxyfile
 
 
 class Worker(RESTClient, Daemon):
@@ -44,6 +41,7 @@ class Worker(RESTClient, Daemon):
     def __init__(self, debug=False, one_shot=False):
         """Initialisation."""
         RESTClient.__init__(self, 'workqueue')
+        conf = getConfig('worker')
         self._uid = uuid.uuid4()
         Daemon.__init__(self,
                         pidfile='/tmp/worker-%s.pid' % self._uid,
@@ -52,8 +50,17 @@ class Worker(RESTClient, Daemon):
                         debug=debug)
         self._one_shot = one_shot
         self._types = [JobType[type_.upper()] for type_ in  # pylint: disable=unsubscriptable-object
-                       getConfig('worker').get('types', ('LIST', 'COPY', 'REMOVE'))]
+                       conf.pop('types', ('LIST', 'COPY', 'REMOVE'))]
+        self._interpoll_sleep_time = conf.pop('poll_time', 2)
+        self._script_path = conf.pop('script_path',
+                                     os.path.join(os.path.dirname(__file__), 'scripts'))
+        self._script_path = os.path.abspath(self._script_path)
+        self._logger.info("Script search path is: %r", self._script_path)
         self._current_process = None
+
+        # Check for unused config options
+        if conf:
+            raise ValueError("Unused worker config params: '%s'" % ', '.join(conf.keys()))
 
     def terminate(self, *_):
         """Terminate worker daemon."""
@@ -69,7 +76,7 @@ class Worker(RESTClient, Daemon):
                      data={'log': message,
                            'returncode': 1,
                            'host': socket.gethostbyaddr(socket.getfqdn())})
-        except RuntimeError:
+        except RESTException:
             self._logger.exception("Error trying to PUT back abort message")
 
     def run(self):
@@ -82,9 +89,14 @@ class Worker(RESTClient, Daemon):
             try:
                 response = self.post('worker', data={'types': self._types})
             except Timeout:
+                self._logger.warning("Timed out contacting the WorkqueueService.")
                 continue
-            except RuntimeError:
-                self._logger.exception("Error getting job from workqueue.")
+            except RESTException as err:
+                if err.code == 404:
+                    self._logger.debug("No work to pick up.")
+                    time.sleep(self._interpoll_sleep_time)
+                else:
+                    self._logger.exception("Error trying to get job from WorkqueueService.")
                 continue
             job, token = response
 #            try:
@@ -101,7 +113,9 @@ class Worker(RESTClient, Daemon):
                 self._abort(job['id'], "Protocol '%s' not supported at src site with id %d"
                             % (job['protocol'], job['src_siteid']))
                 continue
-            command = "%s %s" % (COMMANDMAP[job['type']][job['protocol']], random.choice(src))
+            script_env = dict(os.environ,
+                              PATH=self._script_path,
+                              SRC_PATH=random.choice(src))
 
             if job['type'] == JobType.COPY:
                 if job['dst_siteid'] is None:
@@ -120,16 +134,16 @@ class Worker(RESTClient, Daemon):
                     self._abort(job['id'], "Protocol '%s' not supported at dst site with id %d"
                                 % (job['protocol'], job['dst_siteid']))
                     continue
-                command += " %s" % random.choice(dst)
+                script_env['DST_PATH'] = random.choice(dst)
 
-            with TempX509Files(job['credentials']) as (certfile, keyfile):
+            command = COMMANDMAP[job['type']][job['protocol']]
+            with TempX509Files(job['credentials']) as proxyfile:
+                script_env['X509_USER_PROXY'] = proxyfile.name
                 self._current_process = subprocess.Popen('(set -x && %s)' % command,
                                                          shell=True,
                                                          stdout=subprocess.PIPE,
                                                          stderr=subprocess.STDOUT,
-                                                         env=dict(os.environ,
-                                                                  X509_USER_CERT=certfile.name,
-                                                                  X509_USER_KEY=keyfile.name))
+                                                         env=script_env)
                 log, _ = self._current_process.communicate()
                 self.set_token(token)
                 try:
@@ -137,7 +151,7 @@ class Worker(RESTClient, Daemon):
                              data={'log': log,
                                    'returncode': self._current_process.returncode,
                                    'host': socket.gethostbyaddr(socket.getfqdn())})
-                except RuntimeError:
+                except RESTException:
                     self._logger.exception("Error trying to PUT back output from subcommand.")
                 finally:
                     self.set_token(None)
