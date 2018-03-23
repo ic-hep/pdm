@@ -71,6 +71,8 @@ class UserCommand(object):
         # status
         user_parser = subparsers.add_parser('status',
                                             help="get status of a job/task")
+        user_parser.add_argument('job', type=str, help = "job id as obtained"
+                                                         " from copy of remove")
         user_parser.add_argument('-t', '--token', type=str, required=True)
         st_help = "periodically check the job status (up to %d times)" % (self.__max_iter,)
         user_parser.add_argument('-b', '--block', action='store_true', help=st_help)
@@ -207,7 +209,7 @@ class UserCommand(object):
         for elem in listing:
             print fmt.format(**elem)
 
-    def status(self, args, job_id):
+    def status(self, args):
         """
         Get and print status of a job (task)
         :param args:
@@ -215,6 +217,7 @@ class UserCommand(object):
         """
         token = self._get_token(args)
         block = args.block
+        job_id = args.job
         if token:
             client = TransferClientFacade(token)
             self._status(job_id, client, block=block)
