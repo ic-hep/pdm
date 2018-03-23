@@ -71,8 +71,8 @@ class UserCommand(object):
         # status
         user_parser = subparsers.add_parser('status',
                                             help="get status of a job/task")
-        user_parser.add_argument('job', type=str, help = "job id as obtained"
-                                                         " from copy of remove")
+        user_parser.add_argument('job', type=str, help="job id as obtained"
+                                                       " from copy of remove")
         user_parser.add_argument('-t', '--token', type=str, required=True)
         st_help = "periodically check the job status (up to %d times)" % (self.__max_iter,)
         user_parser.add_argument('-b', '--block', action='store_true', help=st_help)
