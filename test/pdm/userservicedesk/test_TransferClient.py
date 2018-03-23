@@ -79,6 +79,13 @@ class TestTransferClient(unittest.TestCase):
             assert self.__client.list(wrongurl, **{'priority': 2}) == None  # we return None
         assert not mock_list.called
 
+    def test_sitelist(self):
+        sites = self.__client.list_sites()
+        print sites
+        assert sites[0]['site_name'] == 'localhost'
+        assert sites[1]['site_name'] == 'remotehost'
+        assert 'site_id' not in [dd.keys() for dd in sites]
+
     @mock.patch("pdm.userservicedesk.TransferClient.CredClient")
     def test_remove(self, tc_cred_mock):
         tc_cred_mock.return_value = MockCredClient()
