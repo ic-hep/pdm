@@ -336,8 +336,8 @@ class TestWorkqueueService(unittest.TestCase):
             os.makedirs(remove_job_dir)
 
         listoutput = dedent('''
-        drwx------. 3 arichard res0 4.0K Mar 12 16:15 bin/
-        drwx------. 4 arichard res0 4.0K Feb 14 10:08 test/
+        drwx------. 3 arichard res0 4020 Mar 12 16:15 bin/
+        drwx------. 4 arichard res0 4001 Feb 14 10:08 test/
         -rw-------. 1 arichard res0  871 Mar  7 15:38 testdata.txt
         -rw-------. 1 arichard res0  604 Mar  7 17:09 test.py
         ''').strip()
@@ -357,37 +357,37 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(request.status_code, 200)
         returned_dict = json.loads(request.data)
         self.assertEqual(returned_dict, {'jobid': 1, 'log': listoutput,
-                                         'listing': [{'datestamp': 'Mar 12 16:15',
+                                         'listing': [{'datestamp': 1520871300.0,
                                                       'groupid': 'res0',
                                                       'is_directory': True,
                                                       'name': 'bin/',
-                                                      'nlinks': '3',
+                                                      'nlinks': 3,
                                                       'permissions': 'drwx------.',
-                                                      'size': '4.0K',
+                                                      'size': 4020,
                                                       'userid': 'arichard'},
-                                                     {'datestamp': 'Feb 14 10:08',
+                                                     {'datestamp': 1518602880.0,
                                                       'groupid': 'res0',
                                                       'is_directory': True,
                                                       'name': 'test/',
-                                                      'nlinks': '4',
+                                                      'nlinks': 4,
                                                       'permissions': 'drwx------.',
-                                                      'size': '4.0K',
+                                                      'size': 4001,
                                                       'userid': 'arichard'},
-                                                     {'datestamp': 'Mar  7 15:38',
+                                                     {'datestamp': 1520437080.0,
                                                       'groupid': 'res0',
                                                       'is_directory': False,
                                                       'name': 'testdata.txt',
-                                                      'nlinks': '1',
+                                                      'nlinks': 1,
                                                       'permissions': '-rw-------.',
-                                                      'size': '871',
+                                                      'size': 871,
                                                       'userid': 'arichard'},
-                                                     {'datestamp': 'Mar  7 17:09',
+                                                     {'datestamp': 1520442540.0,
                                                       'groupid': 'res0',
                                                       'is_directory': False,
                                                       'name': 'test.py',
-                                                      'nlinks': '1',
+                                                      'nlinks': 1,
                                                       'permissions': '-rw-------.',
-                                                      'size': '604',
+                                                      'size': 604,
                                                       'userid': 'arichard'}]})
 
 ## check jobs in status
