@@ -217,7 +217,7 @@ class UserCommand(object):
         """
         token = self._get_token(args)
         block = args.block
-        job_id = args.job
+        job_id = int(args.job)
         if token:
             client = TransferClientFacade(token)
             self._status(job_id, client, block=block)
