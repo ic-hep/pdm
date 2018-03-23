@@ -199,8 +199,12 @@ class WebPageService(object):
         if not jobid:
             return "No JOBID returned", 400
         user_token = flask.session['token']
-        # tclient = TransferClient(user_token)
-        # tclient.status(jobid) ... hopefully
+        tclient = TransferClient(user_token)
+        res = tclient.status(jobid)
+        if res['status'] in ('DONE','FAILED'):
+            res.update(tclient.output(jobid))
+#        res = tclient.status(jobid)
+        """
         res = {'status' : 'DONE', 'listings' :
                [{'permissions' : '-rw-r--r--',
                  'nlinks' : '1',
@@ -226,5 +230,5 @@ class WebPageService(object):
                  'datestamp' : 'Mar  3 12:15',
                  'name' : 'dir1',
                  'is_directory' : True}]}
-
+        """
         return json.dumps(res)
