@@ -441,7 +441,7 @@ class X509CA(object):
         """
         cert_dn = X509Utils.x509name_to_str(usercert.get_subject())
         proxy_serial = random.randint(1000000000, 9999999999)
-        proxy_dn = "%s, CN = %u" % (cert_dn, proxy_serial)
+        proxy_dn = "%s, CN=%u" % (cert_dn, proxy_serial)
         # Note: While it's unused, evp_key must stay in memory while
         #       rsa_key is valid otherwise it may cause a segfault.
         rsa_key, evp_key, req = X509CA.__gen_csr(proxy_dn)

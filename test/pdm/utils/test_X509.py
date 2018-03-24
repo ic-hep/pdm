@@ -96,7 +96,7 @@ class TestX509Utils(unittest.TestCase):
         """ Test the X509_Name import/export functions. """
         from M2Crypto import X509
         # Convert a DN into an object and back
-        TEST_DN = 'C = UK, L = London, O = Test Corp., OU = Security, CN = DN Tester'
+        TEST_DN = 'C=UK, L=London, O=Test Corp., OU=Security, CN=DN Tester'
         x509_obj = X509Utils.str_to_x509name(TEST_DN)
         self.assertIsInstance(x509_obj, X509.X509_Name)
         self.assertEqual(x509_obj.C, 'UK')
@@ -106,7 +106,7 @@ class TestX509Utils(unittest.TestCase):
         self.assertEqual(x509_obj.CN, 'DN Tester')
         self.assertEqual(X509Utils.x509name_to_str(x509_obj), TEST_DN)
         # Bonus: Convert a DN with two similar segments
-        TEST_DN = 'C = UK, CN = Test User, CN = Proxy'
+        TEST_DN = 'C=UK, CN=Test User, CN=Proxy'
         x509_obj = X509Utils.str_to_x509name(TEST_DN)
         self.assertIsInstance(x509_obj, X509.X509_Name)
         # Interface currently prevents access to multiple fields
@@ -192,7 +192,7 @@ class TestX509CA(unittest.TestCase):
         self.assertTrue(self.__ca.ready())
         # Get DN returns value in RFC format.
         self.assertEquals(self.__ca.get_dn(),
-                          "C = XX, L = YY, CN = Test CA")
+                          "C=XX, L=YY, CN=Test CA")
 
 
     @mock.patch('M2Crypto.X509.Request')
@@ -324,7 +324,7 @@ class TestX509CA(unittest.TestCase):
             re-import it again afterwards. Both with and
             without a passphrase.
         """
-        TEST_DN = "C = ZZ, CN = Yet Another CA"
+        TEST_DN = "C=ZZ, CN=Yet Another CA"
         constr_params = (TEST_DN, 4)
         for passphrase in (None, 'weakpass'):
             print "Test passphrase: %s" % passphrase
@@ -366,8 +366,8 @@ class TestX509CA(unittest.TestCase):
     def test_gen_cert(self):
         """ Check issuing a client certificate. """
         from M2Crypto import X509, RSA
-        TEST_ISSUER = "C = ZZ, L = YY, O = Test CA, CN = Basic Test CA"
-        TEST_SUBJECT = "C = ZZ, L = YY, CN = Test User"
+        TEST_ISSUER = "C=ZZ, L=YY, O=Test CA, CN=Basic Test CA"
+        TEST_SUBJECT = "C=ZZ, L=YY, CN=Test User"
         TEST_EMAIL = "test@test.test"
         TEST_DAYS = 3
         self.__ca.gen_ca(TEST_ISSUER, 5)
@@ -451,8 +451,8 @@ class TestX509CA(unittest.TestCase):
         """ Test generating a user proxy. """
         from M2Crypto import X509, RSA
         TEST_HOURS = 14
-        USER_DN = "C = XX, CN = Test User"
-        self.__ca.gen_ca("C = XX, CN = Test CA", 5)
+        USER_DN = "C=XX, CN=Test User"
+        self.__ca.gen_ca("C=XX, CN=Test CA", 5)
         usercert, userkey = self.__ca.gen_cert(USER_DN, 4)
         proxycert, proxykey = self.__ca.gen_proxy(usercert, userkey,
                                                   TEST_HOURS)
@@ -460,7 +460,7 @@ class TestX509CA(unittest.TestCase):
         proxy_obj = X509.load_cert_string(proxycert)
         proxy_serial = proxy_obj.get_serial_number()
         proxy_subject = X509Utils.x509name_to_str(proxy_obj.get_subject())
-        exp_proxy_subj = "%s, CN = %u" % (USER_DN, proxy_serial)
+        exp_proxy_subj = "%s, CN=%u" % (USER_DN, proxy_serial)
         self.assertEqual(exp_proxy_subj, proxy_subject)
         proxy_issuer = X509Utils.x509name_to_str(proxy_obj.get_issuer())
         self.assertEqual(proxy_issuer, USER_DN)
@@ -494,7 +494,7 @@ class TestX509CA(unittest.TestCase):
         self.assertEqual(user_id.get_value(), test_value)
         # Test generating proxy with passphrase
         USER_PASSPHRASE = "weaktest"
-        usercert, userkey = self.__ca.gen_cert("/C=XX, CN=Test User", 4,
+        usercert, userkey = self.__ca.gen_cert("/C=XX/CN=Test User", 4,
                                                passphrase=USER_PASSPHRASE)
         self.assertRaises(RSA.RSAError, self.__ca.gen_proxy, usercert,
                           userkey, 1)
@@ -526,6 +526,9 @@ class TestX509CA(unittest.TestCase):
         x509_pubkey.as_der.return_value = "ABCD"
         x509_obj = mock.MagicMock()
         x509_obj.get_pubkey.return_value = x509_pubkey
+        dn_obj = mock.MagicMock()
+        dn_obj.as_text.return_value = "OU = Mock DN"
+        x509_obj.get_subject.return_value = dn_obj
         x509_constr.return_value = x509_obj
         not_before.return_value = None
         not_after.return_value = None
