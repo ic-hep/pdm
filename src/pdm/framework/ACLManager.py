@@ -40,12 +40,6 @@ class ACLManager(object):
         """
         pass
 
-    def dump_debug(self):
-        """ Dumps the configuration of the ACLManager to the logger
-            at the debug level. This includes all group and rule configuration.
-        """
-        pass
-
     def check_request(self):
         """ Gets the current flask request object and checks it against the
             configured rule set.

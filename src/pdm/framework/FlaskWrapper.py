@@ -11,6 +11,7 @@ import logging
 import functools
 
 from pdm.framework.Tokens import TokenService
+from pdm.framework.ACLManager import ACLManager
 from pdm.framework.Database import MemSafeSQLAlchemy, JSONTableEncoder
 
 from flask import Flask, Response, current_app, request
@@ -128,41 +129,41 @@ class FlaskServer(Flask):
         configuration & runtime helpers.
     """
 
-    @staticmethod
-    def __check_req(resource, client_dn, client_token):
-        """ Checks the request for resource against the current_app.policy.
-            Returns True if the request should be allowed.
-                    False if the request should be denied.
-        """
-        for policy_path, policy_rules in current_app.policy.iteritems():
-            if fnmatch.fnmatch(resource, policy_path):
-                for rule in policy_rules:
-                    if rule == 'ALL':
-                        return True
-                    if rule == 'ANY' and (client_dn or client_token):
-                        return True
-                    if rule == 'TOKEN' and client_token:
-                        return True
-                    if rule == 'CERT' and client_dn:
-                        return True
-                    if rule.startswith('CERT:'):
-                        _, check_dn = rule.split(':', 1)
-                        if client_dn == check_dn:
-                            return True
-        # No rules matched => Access denied
-        return False
+    #@staticmethod
+    #def __check_req(resource, client_dn, client_token):
+    #    """ Checks the request for resource against the current_app.policy.
+    #        Returns True if the request should be allowed.
+    #                False if the request should be denied.
+    #    """
+    #    for policy_path, policy_rules in current_app.policy.iteritems():
+    #        if fnmatch.fnmatch(resource, policy_path):
+    #            for rule in policy_rules:
+    #                if rule == 'ALL':
+    #                    return True
+    #                if rule == 'ANY' and (client_dn or client_token):
+    #                    return True
+    #                if rule == 'TOKEN' and client_token:
+    #                    return True
+    #                if rule == 'CERT' and client_dn:
+    #                    return True
+    #                if rule.startswith('CERT:'):
+    #                    _, check_dn = rule.split(':', 1)
+    #                    if client_dn == check_dn:
+    #                        return True
+    #    # No rules matched => Access denied
+    #    return False
 
-    @staticmethod
-    def __req_allowed(client_dn, client_token):
-        if request.url_rule:
-            real_path = request.url_rule.rule.split('<')[0]
-        else:
-            real_path = request.path
-        # Strip a trailing slash, as long as it isn't the only char
-        if real_path.endswith('/') and len(real_path) > 1:
-            real_path = real_path[:-1]
-        resource = "%s%%%s" % (real_path, request.method)
-        return FlaskServer.__check_req(resource, client_dn, client_token)
+    #@staticmethod
+    #def __req_allowed(client_dn, client_token):
+    #    if request.url_rule:
+    #        real_path = request.url_rule.rule.split('<')[0]
+    #    else:
+    #        real_path = request.path
+    #    # Strip a trailing slash, as long as it isn't the only char
+    #    if real_path.endswith('/') and len(real_path) > 1:
+    #        real_path = real_path[:-1]
+    #    resource = "%s%%%s" % (real_path, request.method)
+    #    return FlaskServer.__check_req(resource, client_dn, client_token)
 
     @staticmethod
     def __extend_request():
@@ -172,25 +173,6 @@ class FlaskServer(Flask):
         request.token_svc = current_app.token_svc
         request.db = current_app.db
         request.log = current_app.log
-
-    @staticmethod
-    def __test_init_handler():
-        """ Like __init_handler, but fakes authentication data for test mode.
-        """
-        auth_mode, auth_data = current_app.test_auth
-        request.dn = None
-        request.token_ok = False
-        request.token = None
-        if auth_mode == "CERT":
-            request.dn = auth_data
-        elif auth_mode == "TOKEN":
-            request.token_ok = True
-            request.token = auth_data
-        elif auth_mode == "ALL":
-            pass
-        else:
-            raise AssertionError("Unrecognised test auth '%s'!" % auth_mode)
-        FlaskServer.__extend_request()
 
     @staticmethod
     def __init_handler():
@@ -211,42 +193,45 @@ class FlaskServer(Flask):
         # is not found.
         if not request.url_rule:
             return "404 Not Found", 404
-        if current_app.test_auth:
-            # We are in test mode and want fake authentication
-            return FlaskServer.__test_init_handler()
-        client_dn = None
-        client_token = False
-        token_value = None
-        if 'Ssl-Client-Verify' in request.headers \
-            and 'Ssl-Client-S-Dn' in request.headers:
-            # Request has client cert
-            if request.headers['Ssl-Client-Verify'] == 'SUCCESS':
-                client_dn = request.headers['Ssl-Client-S-Dn']
-        if 'X-Token' in request.headers:
-            raw_token = request.headers['X-Token']
-            try:
-                token_value = current_app.token_svc.check(raw_token)
-            except ValueError:
-                # Token decoding failed, it is probably corrupt or has been
-                # tampered with.
-                current_app.log.info("Request %s token validation failed.",
-                                     req_uuid)
-                return "403 Invalid Token", 403
-            client_token = True
-        # Now check request against policy
-        current_app.log.debug("Request %s, cert: %s, token: %s",
-                              req_uuid, bool(client_dn), client_token)
-        if not FlaskServer.__req_allowed(client_dn, client_token):
-            current_app.log.info("Request %s denied by policy.", req_uuid)
-            return "403 Forbidden\n", 403
-        # Finally, update request object
-        request.dn = client_dn
-        request.token_ok = client_token
-        if client_token:
-            request.token = token_value
-        else:
-            request.token = None
+        # Process all other requests with ACL manager
+        current_app.acl_manager.check_request()
         FlaskServer.__extend_request()
+
+        #if current_app.test_auth:
+        #    # We are in test mode and want fake authentication
+        #    return FlaskServer.__test_init_handler()
+        #client_dn = None
+        #client_token = False
+        #token_value = None
+        #if 'Ssl-Client-Verify' in request.headers \
+        #    and 'Ssl-Client-S-Dn' in request.headers:
+        #    # Request has client cert
+        #    if request.headers['Ssl-Client-Verify'] == 'SUCCESS':
+        #        client_dn = request.headers['Ssl-Client-S-Dn']
+        #if 'X-Token' in request.headers:
+        #    raw_token = request.headers['X-Token']
+        #    try:
+        #        token_value = current_app.token_svc.check(raw_token)
+        #    except ValueError:
+        #        # Token decoding failed, it is probably corrupt or has been
+        #        # tampered with.
+        #        current_app.log.info("Request %s token validation failed.",
+        #                             req_uuid)
+        #        return "403 Invalid Token", 403
+        #    client_token = True
+        ## Now check request against policy
+        #current_app.log.debug("Request %s, cert: %s, token: %s",
+        #                      req_uuid, bool(client_dn), client_token)
+        #if not FlaskServer.__req_allowed(client_dn, client_token):
+        #    current_app.log.info("Request %s denied by policy.", req_uuid)
+        #    return "403 Forbidden\n", 403
+        ## Finally, update request object
+        #request.dn = client_dn
+        #request.token_ok = client_token
+        #if client_token:
+        #    request.token = token_value
+        #else:
+        #    request.token = None
 
     @staticmethod
     def __access_log(resp):
@@ -295,21 +280,20 @@ class FlaskServer(Flask):
         self.debug = debug
         self.before_request(self.__init_handler)
         self.after_request(self.__access_log)
+        self.__acl_manager = ACLManager(logger)
         self.__update_dbctx(None)
         self.__db_classes = []
         self.__db_insts = []
         self.__startup_funcs = []
         self.__test_funcs = []
-        self.__test_auth = None
         self.__logger = logger
         self.token_svc = TokenService(token_key, "pdmwebsvc")
         # We override the test client class from Flask with our
         # custom one which is more similar to RESTClient
         self.test_client_class = FlaskClientWrapper
         with self.app_context():
-            current_app.test_auth = self.__test_auth
             current_app.log = logger
-            current_app.policy = {}
+            current_app.acl_manager = self.__acl_manager
             current_app.token_svc = self.token_svc
 
     def enable_db(self, db_uri):
@@ -404,6 +388,16 @@ class FlaskServer(Flask):
             return True
         return False
 
+    def add_auth_groups(self, groups):
+        """ Adds groups to the web server.
+            groups - A dictionary of groups, key is the group
+                     name, value is a list of auth entries.
+            Returns None
+        """
+        for group, entries in groups.iteritems():
+            for entry in entries:
+                self.__acl_manager.add_group_entry(group, entry)
+
     def add_auth_rules(self, auth_rules):
         """ Adds authentication rules to the web server.
             auth_rules - A dictionary of rules, keys are URI paths,
@@ -416,17 +410,9 @@ class FlaskServer(Flask):
             By default no-one can call any function.
             Returns None.
         """
-        real_rules = {}
         for path, rules in auth_rules.iteritems():
             for rule in rules:
-                if not self.__check_rule(rule):
-                    raise ValueError("Rule '%s' for '%s' is invalid." % (rule, path))
-            if not "%" in path:
-                # If a method is not specified on path, assume GET
-                path = "%s%%GET" % path
-            real_rules[path] = rules
-        with self.app_context():
-            current_app.policy.update(real_rules)
+                self.__acl_manager.add_rule(path, rule)
 
     def test_mode(self, main_cls, conf="", with_test=True):
         """ Configures this app instance in test mode.
@@ -475,9 +461,12 @@ class FlaskServer(Flask):
             "TOKEN" - auth_data should be a json encoded token.
             "ALL" - No auth, all request anyway.
         """
-        if auth_mode:
-            self.__test_auth = (auth_mode, auth_data)
+        if not auth_mode:
+            self.__acl_manager(ACLManager.AUTH_MODE_NONE)
+            return
+        if auth_mode == "CERT":
+            self.__acl_manager(ACLManager.AUTH_MODE_X509, auth_data)
+        elif auth_mode == "TOKEN":
+            self.__acl_manager(ACLManager.AUTH_MODE_TOKEN, auth_data)
         else:
-            self.__test_auth = None
-        with self.app_context():
-            current_app.test_auth = self.__test_auth
+            self.__acl_manager(ACLManager.AUTH_MODE_ALLOW_ALL)
