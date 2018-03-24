@@ -85,9 +85,11 @@ class X509Utils(object):
     def x509name_to_str(x509_name):
         """ Converts an X509_Name object to a plain string.
             The output string will be in RFC2253 format with
-            "readable" spacing..
+            "readable" spacing...
         """
-        return x509_name.as_text(flags=m2.XN_FLAG_ONELINE)
+        raw_dn = x509_name.as_text(flags=m2.XN_FLAG_ONELINE)
+        # Renormalise the spacing to remove spaces around the equals.
+        return X509Utils.normalise_dn(raw_dn)
 
     @staticmethod
     def normalise_dn(dn_str):
