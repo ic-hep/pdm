@@ -90,6 +90,20 @@ class X509Utils(object):
         return x509_name.as_text(flags=m2.XN_FLAG_ONELINE)
 
     @staticmethod
+    def normalise_dn(dn_str):
+        """ Converts a DN from any standard format (RFC2253, OpenSSL) with any
+            spacing into plain RFC2253 format with "readable" spacing.
+            Returns a string.
+        """
+        dn_input = dn_str.strip()
+        if dn_input.startswith('/'):
+            # Input is OpenSSL
+            return X509Utils.convert_dn(dn_input, '/', ', ', False)
+        else:
+            # Input is RFC2253 with unknown spacing
+            return X509Utils.convert_dn(dn_input, ',', ', ', False)
+
+    @staticmethod
     def get_cert_expiry(cert_pem):
         """ Gets the expiry date of a given X.509 public certificate
             in PEM format.

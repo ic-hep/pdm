@@ -114,6 +114,27 @@ class TestX509Utils(unittest.TestCase):
         # Just check that all fields appear if object is converted back:
         self.assertEqual(X509Utils.x509name_to_str(x509_obj), TEST_DN)
 
+    def test_dn_normalisation(self):
+        """ Test the X509 DN normalisation function. """
+        # Test DN in expected output format
+        TEST_DN = "C=XX, L=YY, CN=Test CA"
+        # Test both RFC and OpenSSL style DNs with increasing amounts of space
+        # All should match the TEST_DN after normalisation.
+        self.assertEqual(X509Utils.normalise_dn(TEST_DN), TEST_DN)
+        self.assertEqual(X509Utils.normalise_dn("/C=XX/L=YY/CN=Test CA"),
+                         TEST_DN)
+        self.assertEqual(X509Utils.normalise_dn("/C=XX / L =  YY /  CN = Test CA  "),
+                         TEST_DN)
+        # Check that leading space doesn't upset the algorithm
+        self.assertEqual(X509Utils.normalise_dn("   / C =XX / L =  YY /  CN = Test CA  "),
+                         TEST_DN)
+        self.assertEqual(X509Utils.normalise_dn("C = XX, L = YY, CN = Test CA"),
+                         TEST_DN)
+        self.assertEqual(X509Utils.normalise_dn("C  =  XX,   L  =  YY,    CN = Test CA   "),
+                         TEST_DN)
+        self.assertEqual(X509Utils.normalise_dn("     C  =  XX,   L  =  YY,    CN = Test CA"),
+                         TEST_DN)
+
     def test_get_cert_expiry(self):
         """ Test that the get_cert_expiry function works. """
         from M2Crypto import X509
