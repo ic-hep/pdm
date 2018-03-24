@@ -18,18 +18,28 @@ class TestUsercommand(unittest.TestCase):
         subparsers = self._parser.add_subparsers()
         UserCommand(subparsers)
 
+    @mock.patch('pdm.CLI.user_subcommand.sleep')
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
     @mock.patch.object(MockTransferClientFacade, 'copy')
-    def test_copy(self, mock_copy, mocked_facade):
+    def test_copy(self, mock_copy, mocked_facade, mock_sleep):
         """ test if possible extra keys have been removed fromkeywords arguments passed to TransferClientFacade
             Currently: token, func handle and positionals and None dict values
         """
         mocked_facade.return_value = MockTransferClientFacade("anything")
+        mocked_facade.return_value.status = mock.MagicMock()
+        mocked_facade.return_value.status.return_value = {'status':'DONE', 'id': 1}
 
         args = self._parser.parse_args('copy source dest -m 3 -t gfsdgfhsgdfh'.split())
         args.func(args)
 
         mock_copy.assert_called_with('source', 'dest', max_tries=3)
+        assert mocked_facade.return_value.status.call_count == 1
+        # NEW, only once:
+        mocked_facade.return_value.status.reset_mock()
+        status_list = [{'status':'NEW', 'id': 1}]*50
+        mocked_facade.return_value.status.side_effect = status_list
+        args.func(args)
+        assert mocked_facade.return_value.status.call_count == 1
 
     @mock.patch('pdm.CLI.user_subcommand.sleep')
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
@@ -86,19 +96,35 @@ class TestUsercommand(unittest.TestCase):
         assert mocked_facade.return_value.status.call_count == 50
         assert not mock_output.called
 
+    @mock.patch('pdm.CLI.user_subcommand.sleep')
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
     @mock.patch.object(MockTransferClientFacade, 'remove')
-    def test_remove(self, mock_remove, mocked_facade):
+    def test_remove(self, mock_remove, mocked_facade, mock_sleep):
         """ test if possible extra keys have been removed from keywords arguments passed to TransferClientFacade
             Currently: token, func handle and positionals and None dict values
         """
         mocked_facade.return_value = MockTransferClientFacade("anything")
+        mocked_facade.return_value.status = mock.MagicMock()
+        mocked_facade.return_value.status.return_value = {'status':'DONE', 'id': 1}
 
         args = self._parser.parse_args('remove source  -m 3 -t gfsdgfhsgdfh'.split())
         args.func(args)
 
         mock_remove.assert_called_with('source', max_tries=3)
+        assert mocked_facade.return_value.status.call_count == 1
 
+        mocked_facade.return_value.status.reset_mock()
+        status_list = [{'status':'NEW', 'id': 1}]*50
+        mocked_facade.return_value.status.side_effect = status_list
+        args.func(args)
+        assert mocked_facade.return_value.status.call_count == 1
+        #block
+        mocked_facade.return_value.status.reset_mock()
+        status_list = [{'status':'NEW', 'id': 1}]*50
+        mocked_facade.return_value.status.side_effect = status_list
+        args = self._parser.parse_args('remove source  -m 3 -b -t gfsdgfhsgdfh'.split())
+        args.func(args)
+        assert mocked_facade.return_value.status.call_count == 50
 
     def tearDown(self):
         pass
