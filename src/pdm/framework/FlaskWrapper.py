@@ -462,11 +462,11 @@ class FlaskServer(Flask):
             "ALL" - No auth, all request anyway.
         """
         if not auth_mode:
-            self.__acl_manager(ACLManager.AUTH_MODE_NONE)
+            self.__acl_manager.test_mode(ACLManager.AUTH_MODE_NONE)
             return
         if auth_mode == "CERT":
-            self.__acl_manager(ACLManager.AUTH_MODE_X509, auth_data)
+            self.__acl_manager.test_mode(ACLManager.AUTH_MODE_X509, auth_data)
         elif auth_mode == "TOKEN":
-            self.__acl_manager(ACLManager.AUTH_MODE_TOKEN, auth_data)
+            self.__acl_manager.test_mode(ACLManager.AUTH_MODE_TOKEN, auth_data)
         else:
-            self.__acl_manager(ACLManager.AUTH_MODE_ALLOW_ALL)
+            self.__acl_manager.test_mode(ACLManager.AUTH_MODE_ALLOW_ALL)
