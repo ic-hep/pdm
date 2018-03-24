@@ -329,18 +329,16 @@ class FlaskServer(Flask):
     def add_auth_rules(self, auth_rules):
         """ Adds authentication rules to the web server.
             auth_rules - A dictionary of rules, keys are URI paths,
-                         values are lists of rule statements:
+                         values are a rule statement:
                           - "CERT" - Any valid client cert is allowed.
                           - "CERT:/some/dn" - Allow a specific CERT.
                           - "TOKEN" - Any valid token is allowed.
-                          - "ANY" - Any valid credential is allowed.
                           - "ALL" - All requests are allowed.
             By default no-one can call any function.
             Returns None.
         """
-        for path, rules in auth_rules.iteritems():
-            for rule in rules:
-                self.__acl_manager.add_rule(path, rule)
+        for path, rule in auth_rules.iteritems():
+            self.__acl_manager.add_rule(path, rule)
 
     def test_mode(self, main_cls, conf="", with_test=True):
         """ Configures this app instance in test mode.
