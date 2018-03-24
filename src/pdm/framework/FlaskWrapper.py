@@ -197,42 +197,6 @@ class FlaskServer(Flask):
         current_app.acl_manager.check_request()
         FlaskServer.__extend_request()
 
-        #if current_app.test_auth:
-        #    # We are in test mode and want fake authentication
-        #    return FlaskServer.__test_init_handler()
-        #client_dn = None
-        #client_token = False
-        #token_value = None
-        #if 'Ssl-Client-Verify' in request.headers \
-        #    and 'Ssl-Client-S-Dn' in request.headers:
-        #    # Request has client cert
-        #    if request.headers['Ssl-Client-Verify'] == 'SUCCESS':
-        #        client_dn = request.headers['Ssl-Client-S-Dn']
-        #if 'X-Token' in request.headers:
-        #    raw_token = request.headers['X-Token']
-        #    try:
-        #        token_value = current_app.token_svc.check(raw_token)
-        #    except ValueError:
-        #        # Token decoding failed, it is probably corrupt or has been
-        #        # tampered with.
-        #        current_app.log.info("Request %s token validation failed.",
-        #                             req_uuid)
-        #        return "403 Invalid Token", 403
-        #    client_token = True
-        ## Now check request against policy
-        #current_app.log.debug("Request %s, cert: %s, token: %s",
-        #                      req_uuid, bool(client_dn), client_token)
-        #if not FlaskServer.__req_allowed(client_dn, client_token):
-        #    current_app.log.info("Request %s denied by policy.", req_uuid)
-        #    return "403 Forbidden\n", 403
-        ## Finally, update request object
-        #request.dn = client_dn
-        #request.token_ok = client_token
-        #if client_token:
-        #    request.token = token_value
-        #else:
-        #    request.token = None
-
     @staticmethod
     def __access_log(resp):
         """ This function writes to the access log, to log the request details

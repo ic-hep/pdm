@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+from flask import request
+
+
 class ACLManager(object):
     """ Access Control List manager for Flask Wrapper.
         Keeps a list of users who are allowed to access resources
@@ -38,11 +41,46 @@ class ACLManager(object):
         """ Enabled test mode, where the authentication info is pre-set for
             all requests. This should not be used in production.
         """
-        pass
+        self.__test_mode = auth_mode
+        self.__test_data = auth_data
+
+    @staticmethod
+    def __get_real_request_auth():
+        # Cert auth
+        if 'Ssl-Client-Verify' in request.headers \
+            and 'Ssl-Client-S-Dn' in request.headers:
+            # Request has client cert
+            if request.headers['Ssl-Client-Verify'] == 'SUCCESS':
+                request.dn = request.headers['Ssl-Client-S-Dn']
+        # Token Auth
+        if 'X-Token' in request.headers:
+            raw_token = request.headers['X-Token']
+            try:
+                token_value = current_app.token_svc.check(raw_token)
+                request.token = token_value
+                request.token_ok = True
+            except ValueError:
+                # Token decoding failed, it is probably corrupt or has been
+                # tampered with.
+                current_app.log.info("Request %s token validation failed.",
+                                     req_uuid)
+                return "403 Invalid Token", 403
+
+    def __get_fake_request_auth(self):
+        if self.__test_mode == ACLManager.AUTH_MODE_X509:
+            request.dn = self.__test_data
+        elif self.__test_mode == ACLManager.AUTH_MODE_TOKEN:
+            request.token = self.__test_data
+            request.token_ok = True
 
     def check_request(self):
         """ Gets the current flask request object and checks it against the
             configured rule set.
         """
-        pass
-
+        request.dn = None
+        request.token = None
+        request.token_ok = False
+        if self.__test_mode == ACLManager.AUTH_MODE_NONE:
+            self.__get_real_request_auth()
+        else:
+            self.__get_fake_request_auth()
