@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from flask import request
+from flask import current_app, request
 
 
 class ACLManager(object):
@@ -63,7 +63,7 @@ class ACLManager(object):
                 # Token decoding failed, it is probably corrupt or has been
                 # tampered with.
                 current_app.log.info("Request %s token validation failed.",
-                                     req_uuid)
+                                     request.uuid)
                 return "403 Invalid Token", 403
 
     def __get_fake_request_auth(self):
