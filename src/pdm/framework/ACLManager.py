@@ -45,6 +45,8 @@ class ACLManager(object):
             return [(ACLManager.AUTH_MODE_ALLOW_ALL, None)]
         elif entry.startswith("CERT:"):
             raw_dn = entry.split(':', 1)[1]
+            if not "=" in raw_dn:
+                raise ValueError("Bad CERT DN in ACL rule: '%s'" % entry)
             return [(ACLManager.AUTH_MODE_X509,
                      X509Utils.normalise_dn(raw_dn))]
         elif allow_group and entry.startswith("@"):
@@ -130,7 +132,6 @@ class ACLManager(object):
             if rule_mode == ACLManager.AUTH_MODE_TOKEN:
                 if request.token_ok:
                     return True
-                continue
             elif rule_mode == ACLManager.AUTH_MODE_X509:
                 if rule_data is not None:
                     if rule_data == request.dn:
@@ -138,7 +139,6 @@ class ACLManager(object):
                 else:
                     if request.dn:
                         return True
-                continue
             elif rule_mode == ACLManager.AUTH_MODE_ALLOW_ALL:
                 return True
         return False
@@ -163,7 +163,12 @@ class ACLManager(object):
         # If the rule ends in a wildcard, ignore all bits of the
         # request path that match the wildcard
         if rule_parts[-1] == '*':
+            rule_parts = rule_parts[0:-1]
             req_parts = req_parts[0:len(rule_parts)]
+        # If the request is longer than the rule (considering *),
+        # the request can't match
+        if len(req_parts) > len(rule_parts):
+            return False
         # Now check each segment of the path to match either
         # directly or by wildcard
         for part_num in xrange(0, len(rule_parts)):
