@@ -11,7 +11,7 @@ from pdm.framework.FlaskWrapper import (db_model, export_ext, jsonify, \
 from pdm.endpoint.EndpointDB import EndpointDBModel
 from pdm.utils.db import managed_session
 
-EP_URI_RE = re.compile(r'^[a-z0-9]+://[a-zA-Z0-9.]+(:[0-9]+)?/.*$')
+EP_URI_RE = re.compile(r'^[a-z0-9]+://[a-zA-Z0-9.-]+(:[0-9]+)?/.*$')
 
 @export_ext('/endpoint/api/v1.0')
 @db_model(EndpointDBModel)
