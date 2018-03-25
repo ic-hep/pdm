@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """ Site/Endpoint service module. """
 
+import re
 import json
 from flask import current_app, request
 from sqlalchemy.exc import IntegrityError
@@ -9,6 +10,8 @@ from pdm.framework.FlaskWrapper import (db_model, export_ext, jsonify, \
                                         startup_test)
 from pdm.endpoint.EndpointDB import EndpointDBModel
 from pdm.utils.db import managed_session
+
+EP_URI_RE = re.compile(r'^[a-z0-9]+://[a-zA-Z0-9.]+(:[0-9]+)?/.*$')
 
 @export_ext('/endpoint/api/v1.0')
 @db_model(EndpointDBModel)
@@ -155,8 +158,9 @@ class EndpointService(object):
             ep_uri = raw_ep_data["ep_uri"]
         except Exception:
             return "Malformed POST data", 400
+        if not EP_URI_RE.match(ep_uri):
+            return "Bad URI format", 400
         Site.query.filter_by(site_id=site_id).first_or_404()
-        # TODO: Check ep_uri format?
         new_ep = Endpoint(ep_uri=ep_uri, site_id=site_id)
         with managed_session(request,
                              message="Failed to add endpoint to DB",

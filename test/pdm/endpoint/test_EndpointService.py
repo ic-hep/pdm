@@ -170,6 +170,30 @@ class test_EndpointService(unittest.TestCase):
         # Check the endpoints
         self.assertIn(TEST_URI, site_info['endpoints'].itervalues())
 
+    def test_add_bad_endpoint(self):
+        """ Check that bad endpoint URIs are not accepted.
+        """
+        BAD_EPS = [
+            # No host
+            "gsiftp://",
+            # Bad protocol
+            "BADPROTO%://hostname/test",
+            # Corrupt port
+            "gsiftp://hostname:/test",
+            # Non-numeric port (maybe this should be allowed?)
+            "ssh://hostname:ssh/test",
+            # Complete wrong
+            "I like turtles",
+            "sometext",
+            "_",
+            "://",
+            "///////",
+        ]
+        for bad_ep in BAD_EPS:
+            data = {'ep_uri': bad_ep}
+            res = self.__client.post('endpoint/api/v1.0/site/10', data=data)
+            self.assertEqual(res.status_code, 400)
+
     @mock.patch("pdm.endpoint.EndpointService.managed_session")
     def test_add_endpoint_dberror(self, mock_session):
         """ Check that HTTP 500 is returned on DB errors. """
