@@ -156,7 +156,7 @@ class ACLManager(object):
                     if request.dn:
                         return True
             elif rule_mode == ACLManager.AUTH_MODE_SESSION:
-                if reuqest.session_ok:
+                if request.session_ok:
                     return True
             elif rule_mode == ACLManager.AUTH_MODE_ALLOW_ALL:
                 return True

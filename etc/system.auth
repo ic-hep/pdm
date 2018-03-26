@@ -9,6 +9,7 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 # Main entry page
 / = "ALL"
 # Registration
+/web/registration = "ALL"
 /web/registration%POST = "ALL"
 # Login
 /web/datamover = "ALL"
