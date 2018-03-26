@@ -30,7 +30,7 @@ def export_inner(obj, ename, methods=None):
     if not hasattr(obj, 'exportables'):
         obj.exportables = []
     # (name, methods, auth)
-    obj.exportables.append((ename, methods, []))
+    obj.exportables.append((ename, methods))
     return obj
 
 def export(obj):
@@ -279,7 +279,7 @@ class FlaskServer(Flask):
             Returns None.
         """
         if hasattr(obj_inst, 'is_exported'):
-            for ename, methods, auth in obj_inst.exportables:
+            for ename, methods in obj_inst.exportables:
                 obj_path = os.path.join(root_path, ename)
                 if not callable(obj_inst):
                     self.__logger.debug("Class %s at %s", obj_inst, obj_path)
@@ -304,18 +304,6 @@ class FlaskServer(Flask):
         elif hasattr(obj_inst, 'is_test_func'):
             if obj_inst.is_test_func:
                 self.__test_funcs.append(obj_inst)
-
-    @staticmethod
-    def __check_rule(auth_rule):
-        """ Checks that an auth_rule is valid.
-            (See valid rules in add_auth_rules function).
-            Returns True if rule is valid, False otherwise.
-        """
-        if auth_rule in ('CERT', 'TOKEN', 'ALL', 'ANY'):
-            return True
-        if auth_rule.startswith('CERT:') and len(auth_rule) > 5:
-            return True
-        return False
 
     def add_auth_groups(self, groups):
         """ Adds groups to the web server.
