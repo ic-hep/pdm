@@ -8,9 +8,10 @@ function makepage() {
 
 
 
-function timeConverter(UNIX_timestamp){
-  var a = new Date(UNIX_timestamp * 1000);
-  return a.toDateString() + " " + a.toTimeString();
+function time_converter(UNIX_timestamp){
+    var a = new Date(UNIX_timestamp * 1000);
+    var short_time = a.toTimeString().slice(0,-18); 
+    return a.toDateString() + " " + short_time;
 }
 
 
@@ -110,9 +111,9 @@ class Listings {
 		table_body += jobobj.listing[i]['size'];
 		table_body +='</td><td>';
 		// convert back from unix timestamp
-		var prettytime = timeConverter(jobobj.listing[i]['datestamp']);
+		var prettytime = time_converter(jobobj.listing[i]['datestamp']);
 		// table_body += jobobj.listing[i]['datestamp'];
-		table_body += prettytime.slice(0,-15);
+		table_body += prettytime;
 		table_body +='</td><td>';
 		if (jobobj.listing[i]['is_directory'] == true) { 
 		    var dir_name = jobobj.listing[i]['name']; 
