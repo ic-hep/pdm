@@ -54,6 +54,23 @@ class WebPageService(object):
         return flask.redirect("/web/datamover")
 
     @staticmethod
+    @export_ext("about")
+    def aboutpage():
+        """renders the about page"""
+        return flask.render_template("about.html")
+
+    @staticmethod
+    @export_ext("hello")
+    # TODO: clashing filenames
+    # at the moment all functions must have different names
+    # just 'hello' clashes with Janusz' code
+    def hello_web():
+        """ Returns a test string. """
+        return jsonify("Hello World!\n")
+
+
+
+    @staticmethod
     @export_ext("datamover")
     def website():
         """to render the datamover entry/login page"""
@@ -79,7 +96,6 @@ class WebPageService(object):
         resp.set_cookie('name', 'I am cookie')
         return resp
 
-        # return flask.redirect("/web/dashboard")
 
     @staticmethod
     @export_ext("logout")
@@ -88,55 +104,6 @@ class WebPageService(object):
         flask.session.pop("token")
         flash('You have been logged out.')
         return flask.redirect("/web/datamover")
-
-    @staticmethod
-    @export_ext("dashboard")
-    def dashboard():
-        """arrivals: what the user sees after logging in"""
-        # will abort of user is not logged in
-        WebPageService.check_session()
-        sites = flask.current_app.epclient.get_sites()
-        return flask.render_template("dashboard.html", sites=sites)
-
-    @staticmethod
-    @export_ext("listings", methods=["GET"])
-    def listings():
-        """renders the listing page with a list of all sites"""
-        WebPageService.check_session()
-        sites = flask.current_app.epclient.get_sites()
-        return flask.render_template("listings.html", sites=sites)
-
-    @staticmethod
-    @export_ext("listings", methods=["POST"])
-    def listings_post():
-        """processes input to listings form"""
-        WebPageService.check_session()
-        siteid = request.form['Endpoints']
-        # temp hack:
-        site = flask.current_app.epclient.get_site(int(siteid))['site_name']
-        user_token = flask.session['token']
-        tclient = TransferClient(user_token)
-        sitelist = tclient.list(site, "/")
-        return str(sitelist)
-        # return flask.redirect("/web/dashboard", siteid=siteid)
-
-
-
-    @staticmethod
-    @export_ext("about")
-    def aboutpage():
-        """renders the about page"""
-        return flask.render_template("about.html")
-
-    @staticmethod
-    @export_ext("hello")
-    # TODO: clashing filenames
-    # at the moment all functions must have different names
-    # just 'hello' clashes with Janusz' code
-    def hello_web():
-        """ Returns a test string. """
-        return jsonify("Hello World!\n")
-
 
     # *** registration ***
     @staticmethod
@@ -172,6 +139,19 @@ class WebPageService(object):
         return '%s' % request.form
 
 
+    # *** The main page ***
+
+
+    @staticmethod
+    @export_ext("dashboard")
+    def dashboard():
+        """arrivals: what the user sees after logging in"""
+        # will abort of user is not logged in
+        WebPageService.check_session()
+        sites = flask.current_app.epclient.get_sites()
+        return flask.render_template("dashboard.html", sites=sites)
+
+
 
     @staticmethod
     @export_ext("js/list")
@@ -203,32 +183,4 @@ class WebPageService(object):
         res = tclient.status(jobid)
         if res['status'] in ('DONE','FAILED'):
             res.update(tclient.output(jobid))
-#        res = tclient.status(jobid)
-        """
-        res = {'status' : 'DONE', 'listings' :
-               [{'permissions' : '-rw-r--r--',
-                 'nlinks' : '1',
-                 'userid' : '1234',
-                 'groupid' : '5678',
-                 'size' : '12345678',
-                 'datestamp' : 'Mar  2 11:15',
-                 'name' : 'file1',
-                 'is_directory' : False},
-                {'permissions' : '-rw-rw-r--',
-                 'nlinks' : '2',
-                 'userid' : '2234',
-                 'groupid' : '2678',
-                 'size' : '22345678',
-                 'datestamp' : 'Mar  3 11:15',
-                 'name' : 'file2',
-                 'is_directory' : False},
-                {'permissions' : 'drwxr-xr-x',
-                 'nlinks' : '2',
-                 'userid' : '2234',
-                 'groupid' : '2678',
-                 'size' : '4096',
-                 'datestamp' : 'Mar  3 12:15',
-                 'name' : 'dir1',
-                 'is_directory' : True}]}
-        """
         return json.dumps(res)
