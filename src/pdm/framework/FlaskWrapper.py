@@ -26,9 +26,10 @@ def export_inner(obj, ename, methods=None):
     if not methods:
         methods = ["GET"]
     obj.is_exported = True
-    obj.export_name = ename
-    obj.export_methods = methods
-    obj.export_auth = []
+    if not hasattr(obj, 'exportables'):
+        obj.exportables = []
+    # (name, methods, auth)
+    obj.exportables.append((ename, methods, []))
     return obj
 
 def export(obj):
@@ -366,25 +367,25 @@ class FlaskServer(Flask):
             Returns None.
         """
         if hasattr(obj_inst, 'is_exported'):
-            ename = obj_inst.export_name
-            obj_path = os.path.join(root_path, ename)
-            if not callable(obj_inst):
-                self.__logger.debug("Class %s at %s", obj_inst, obj_path)
-                if hasattr(obj_inst, 'db_model'):
-                    self.__logger.debug("Extending DB model: %s",
-                                        obj_inst.db_model)
-                    self.__db_classes.extend(obj_inst.db_model)
-                items = [x for x in dir(obj_inst) if not x.startswith('_')]
-                for obj_item in [getattr(obj_inst, x) for x in items]:
-                    cls_name = type(obj_inst).__name__
-                    self.attach_obj(obj_item, obj_path, cls_name)
-            else:
-                self.__logger.debug("Attaching %s at %s", obj_inst, obj_path)
-                endpoint = obj_inst.__name__
-                if parent_name:
-                    endpoint = "%s.%s" % (parent_name, endpoint)
-                self.add_url_rule(obj_path, endpoint, obj_inst,
-                                  methods=obj_inst.export_methods)
+            for ename, methods, auth in obj_inst.exportables:
+                obj_path = os.path.join(root_path, ename)
+                if not callable(obj_inst):
+                    self.__logger.debug("Class %s at %s", obj_inst, obj_path)
+                    if hasattr(obj_inst, 'db_model'):
+                        self.__logger.debug("Extending DB model: %s",
+                                            obj_inst.db_model)
+                        self.__db_classes.extend(obj_inst.db_model)
+                    items = [x for x in dir(obj_inst) if not x.startswith('_')]
+                    for obj_item in [getattr(obj_inst, x) for x in items]:
+                        cls_name = type(obj_inst).__name__
+                        self.attach_obj(obj_item, obj_path, cls_name)
+                else:
+                    self.__logger.debug("Attaching %s at %s", obj_inst, obj_path)
+                    endpoint = obj_inst.__name__
+                    if parent_name:
+                        endpoint = "%s.%s" % (parent_name, endpoint)
+                    self.add_url_rule(obj_path, endpoint, obj_inst,
+                                      methods=methods)
         elif hasattr(obj_inst, 'is_startup'):
             if obj_inst.is_startup:
                 self.__startup_funcs.append(obj_inst)
