@@ -293,7 +293,9 @@ class TestWorkqueueService(unittest.TestCase):
         request = self.__test.get('/workqueue/api/v1.0/jobs/3/status')
         self.assertEqual(request.status_code, 200)
         returned_dict = json.loads(request.data)
-        self.assertEqual(returned_dict, {'jobid': 3, 'status': 'NEW'})
+        self.assertEqual(returned_dict, {'jobid': 3,
+                                         'status': 'NEW',
+                                         'attempts': 0})
 
     @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
     def test_get_output(self, mock_hrservice):
@@ -321,13 +323,25 @@ class TestWorkqueueService(unittest.TestCase):
         remove_job_dir = os.path.join('/tmp/workers',
                                       remove_job.log_uid[:2],
                                       remove_job.log_uid)
-        list_job_filename = os.path.join(list_job_dir, "attempt%i.log" % list_job.attempts)
-        remove_job_filename = os.path.join(remove_job_dir, "attempt%i.log" % remove_job.attempts)
+        list_job_filename = os.path.join(list_job_dir, "attempt1.log")
+        remove_job_filename = os.path.join(remove_job_dir, "attempt1.log")
         session.merge(list_job).status = JobStatus.DONE
         session.merge(remove_job).status = JobStatus.FAILED
         session.commit()
 
         request = self.__test.get('/workqueue/api/v1.0/jobs/1/output')
+        self.assertEqual(request.status_code, 404)
+        session.merge(list_job).attempts = 1
+        session.merge(remove_job).attempts = 1
+        session.commit()
+
+        request = self.__test.get('/workqueue/api/v1.0/jobs/1/output/13')
+        self.assertEqual(request.status_code, 400)
+
+        request = self.__test.get('/workqueue/api/v1.0/jobs/1/output')
+        self.assertEqual(request.status_code, 500)
+
+        request = self.__test.get('/workqueue/api/v1.0/jobs/1/output/1')
         self.assertEqual(request.status_code, 500)
 
         if not os.path.exists(list_job_dir):
@@ -348,6 +362,11 @@ class TestWorkqueueService(unittest.TestCase):
 
         mock_hrservice.return_value = 2
         request = self.__test.get('/workqueue/api/v1.0/jobs/2/output')
+        self.assertEqual(request.status_code, 200)
+        returned_dict = json.loads(request.data)
+        self.assertEqual(returned_dict, {'jobid': 2, 'log': 'blah blah\n'})
+
+        request = self.__test.get('/workqueue/api/v1.0/jobs/2/output/1')
         self.assertEqual(request.status_code, 200)
         returned_dict = json.loads(request.data)
         self.assertEqual(returned_dict, {'jobid': 2, 'log': 'blah blah\n'})

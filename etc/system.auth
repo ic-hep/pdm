@@ -38,7 +38,7 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 # Get proxy cred
 /cred/api/v1.0/cred/?%GET = "@worker"
 # Delete proxy cred
-/cred/api/v1.0/cred/?%DELETE = "@system"
+/cred/api/v1.0/cred/?%DELETE = "@worker"
 
 [auth/endpoint]
 # Get site list
@@ -67,6 +67,8 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 /workqueue/api/v1.0/jobs/?%GET = "@user"
 # Get output for a specific job
 /workqueue/api/v1.0/jobs/?/output%GET = "@user"
+# Get specific attempt output for a specific job
+/workqueue/api/v1.0/jobs/?/output/?%GET = "@user"
 # Get status of a specific job
 /workqueue/api/v1.0/jobs/?/status%GET = "@user"
 # Add a job to the database
