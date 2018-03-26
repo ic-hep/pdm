@@ -15,6 +15,8 @@ def show_turtles(client):
 
 def main():
 
+    return_code = 0
+
     if len(sys.argv) != 2:
         print "Usage: test_demo.py <conf_file>"
         sys.exit(1)
@@ -53,6 +55,7 @@ def main():
     try:
         res = client.get('verify_token')
         print "Tokenless request accepted!!! %s" % res
+        return_code += 1
     except:
         print "No token request rejected as expected. :-)"
   
@@ -61,6 +64,7 @@ def main():
         client.set_token('WRONGTOKEN')
         res = client.get('verify_token')
         print "Invalid token accepted!!! %s" % res
+        return_code += 1
     except:
         print "Wrong token rejected, as expected. :-)"
 
@@ -68,6 +72,8 @@ def main():
     client.set_token(token)
     res = client.get('verify_token')
     print "Verify real token: %s" % res
+
+    sys.exit(return_code)
 
 
 if __name__ == '__main__':

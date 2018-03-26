@@ -42,12 +42,14 @@ class ExecutableServer(object):
         return os.path.join(self.__conf_base, path)
 
     @staticmethod
-    def __load_auth(app_name, auth_conf):
-        """ Loads the authentication config for a given app.
+    def __load_auth(app_server, app_name, auth_conf):
+        """ Loads the authentication config for a given app and applies it to
+            the app_server.
+            app_server - The app server to configure the auth rules on.
             app_name - The config name of the app to load auth for.
             auth_conf - Path to the auth config file (may be relative to the
                         config dir).
-            Returns a dictionary of paths => list(auth rule strings)
+            Returns None.
         """
         config = ConfigSystem.get_instance()
         config.setup(auth_conf)
@@ -55,25 +57,13 @@ class ExecutableServer(object):
         auth_rules = config.get_section("auth/%s" % app_name)
         if not auth_rules:
             raise RuntimeError("Auth section 'auth/%s' not found." % app_name)
-        auth_policy = {}
-        for uri, conf_rules in auth_rules.iteritems():
-            auth_rules = []
-            if isinstance(conf_rules, str):
-                conf_rules = [conf_rules]
-            for rule in conf_rules:
-                if rule.startswith('@'):
-                    # Rule is a group
-                    auth_rules.extend(auth_groups[rule[1:]])
-                else:
-                    auth_rules.append(rule)
-            auth_policy[uri] = auth_rules
-        return auth_policy
+        app_server.add_auth_groups(auth_groups)
+        app_server.add_auth_rules(auth_rules)
 
     def __init_app(self, app_server, app_name, config):
         """ Creates instances of all WSGI apps defined in the config. """
         auth_conf = self.__fix_path(config.pop("auth"))
-        auth_pol = self.__load_auth(app_name, auth_conf)
-        app_server.add_auth_rules(auth_pol)
+        auth_pol = self.__load_auth(app_server, app_name, auth_conf)
         app_class = config.pop("class")
         try:
             app_inst = pydoc.locate(app_class)()
