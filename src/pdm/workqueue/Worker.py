@@ -26,13 +26,17 @@ from .WorkqueueDB import COMMANDMAP, PROTOCOLMAP, JobType
 @contextmanager
 def TempX509Files(token):
     """Create temporary grid credential files."""
-    cert, key = CredClient().get_cred(token)
+    cred_client = CredClient()
+    cert, key = cred_client.get_cred(token)
     with NamedTemporaryFile() as proxyfile:
         proxyfile.write(key)
         proxyfile.write(cert)
         proxyfile.flush()
         os.fsync(proxyfile.fileno())
-        yield proxyfile
+        try:
+            yield proxyfile
+        finally:
+            cred_client.del_cred(token)
 
 
 class Worker(RESTClient, Daemon):
@@ -105,8 +109,8 @@ class Worker(RESTClient, Daemon):
 #                self._logger.exception("Error decoding JSON job.")
 #                continue
             src_site = endpoint_client.get_site(job['src_siteid'])
-            src_endpoints = [urlsplit(site) for site
-                             in src_site['endpoints'].itervalues()]
+            src_endpoints = (urlsplit(site) for site
+                             in src_site['endpoints'].itervalues())
             src = [urlunsplit(site._replace(path=job['src_filepath'])) for site in src_endpoints
                    if site.scheme == PROTOCOLMAP[job['protocol']]]
             if not src:
@@ -126,8 +130,8 @@ class Worker(RESTClient, Daemon):
                     continue
 
                 dst_site = endpoint_client.get_site(job['dst_siteid'])
-                dst_endpoints = [urlsplit(site) for site
-                                 in dst_site['endpoints'].itervalues()]
+                dst_endpoints = (urlsplit(site) for site
+                                 in dst_site['endpoints'].itervalues())
                 dst = [urlunsplit(site._replace(path=job['dst_filepath'])) for site in dst_endpoints
                        if site.scheme == PROTOCOLMAP[job['protocol']]]
                 if not dst:

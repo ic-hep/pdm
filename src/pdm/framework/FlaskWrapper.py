@@ -27,10 +27,10 @@ def export_inner(obj, ename, methods=None, redir=None):
     if not methods:
         methods = ["GET"]
     obj.is_exported = True
-    obj.export_name = ename
-    obj.export_methods = methods
-    obj.export_redir = redir
-    obj.export_auth = []
+    if not hasattr(obj, 'exportables'):
+        obj.exportables = []
+    # (name, methods, auth)
+    obj.exportables.append((ename, methods, redir))
     return obj
 
 def export(obj):
@@ -287,46 +287,33 @@ class FlaskServer(Flask):
             Returns None.
         """
         if hasattr(obj_inst, 'is_exported'):
-            ename = obj_inst.export_name
-            redir_path = obj_inst.export_redir
-            if not redir_path:
-                redir_path = parent_redir
-            obj_path = os.path.join(root_path, ename)
-            if not callable(obj_inst):
-                self.__logger.debug("Class %s at %s", obj_inst, obj_path)
-                if hasattr(obj_inst, 'db_model'):
-                    self.__logger.debug("Extending DB model: %s",
-                                        obj_inst.db_model)
-                    self.__db_classes.extend(obj_inst.db_model)
-                items = [x for x in dir(obj_inst) if not x.startswith('_')]
-                for obj_item in [getattr(obj_inst, x) for x in items]:
-                    cls_name = type(obj_inst).__name__
-                    self.attach_obj(obj_item, obj_path, cls_name, redir_path)
-            else:
-                self.__logger.debug("Attaching %s at %s", obj_inst, obj_path)
-                endpoint = obj_inst.__name__
-                if parent_name:
-                    endpoint = "%s.%s" % (parent_name, endpoint)
-                self.add_url_rule(obj_path, endpoint, obj_inst,
-                                  methods=obj_inst.export_methods)
+            for ename, methods, redir in obj_inst.exportables:
+                if not redir:
+                    redir = parent_redir
+                obj_path = os.path.join(root_path, ename)
+                if not callable(obj_inst):
+                    self.__logger.debug("Class %s at %s", obj_inst, obj_path)
+                    if hasattr(obj_inst, 'db_model'):
+                        self.__logger.debug("Extending DB model: %s",
+                                            obj_inst.db_model)
+                        self.__db_classes.extend(obj_inst.db_model)
+                    items = [x for x in dir(obj_inst) if not x.startswith('_')]
+                    for obj_item in [getattr(obj_inst, x) for x in items]:
+                        cls_name = type(obj_inst).__name__
+                        self.attach_obj(obj_item, obj_path, cls_name, redir_path)
+                else:
+                    self.__logger.debug("Attaching %s at %s", obj_inst, obj_path)
+                    endpoint = obj_inst.__name__
+                    if parent_name:
+                        endpoint = "%s.%s" % (parent_name, endpoint)
+                    self.add_url_rule(obj_path, endpoint, obj_inst,
+                                      methods=methods)
         elif hasattr(obj_inst, 'is_startup'):
             if obj_inst.is_startup:
                 self.__startup_funcs.append(obj_inst)
         elif hasattr(obj_inst, 'is_test_func'):
             if obj_inst.is_test_func:
                 self.__test_funcs.append(obj_inst)
-
-    @staticmethod
-    def __check_rule(auth_rule):
-        """ Checks that an auth_rule is valid.
-            (See valid rules in add_auth_rules function).
-            Returns True if rule is valid, False otherwise.
-        """
-        if auth_rule in ('CERT', 'TOKEN', 'ALL', 'ANY'):
-            return True
-        if auth_rule.startswith('CERT:') and len(auth_rule) > 5:
-            return True
-        return False
 
     def add_auth_groups(self, groups):
         """ Adds groups to the web server.
