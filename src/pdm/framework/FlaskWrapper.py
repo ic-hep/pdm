@@ -300,7 +300,7 @@ class FlaskServer(Flask):
                     items = [x for x in dir(obj_inst) if not x.startswith('_')]
                     for obj_item in [getattr(obj_inst, x) for x in items]:
                         cls_name = type(obj_inst).__name__
-                        self.attach_obj(obj_item, obj_path, cls_name, redir_path)
+                        self.attach_obj(obj_item, obj_path, cls_name, redir)
                 else:
                     self.__logger.debug("Attaching %s at %s", obj_inst, obj_path)
                     endpoint = obj_inst.__name__
