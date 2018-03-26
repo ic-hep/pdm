@@ -189,8 +189,8 @@ class UserCommand(object):
         if token:
             client = TransferClientFacade(token)
             sites = client.list_sites()
-            print '|{0:40}{1:50}|'.format('site:', 'description:')
-            '|'+90*'-'+'|'
+            print '|{0:40}|{1:50}|'.format('site:', 'description:')
+            print '|'+91*'-'+'|'
             for elem in sites:
                 print '|{site_name:40s}|{site_desc:50s}|'.format(**elem)
 
@@ -206,7 +206,7 @@ class UserCommand(object):
         gid_s = max(len(d['groupid']) for d in listing)
 
         fmt = '{permissions:12s}{nlinks:>%dd} {userid:%ds} {groupid:%ds} ' \
-              '{size:>%dd} {datestamp:14s} {name:s}' % (links_len, uid_s, gid_s, size_len)
+              '{size:%dd} {datestamp:20s} {name:s}' % (links_len, uid_s, gid_s, size_len)
         # print fmt
         for elem in listing:
             print fmt.format(**dict(elem,datestamp=str(datetime.utcfromtimestamp(elem['datestamp']))))
