@@ -3,6 +3,7 @@
     <title>Dashboard</title>
     <link rel="stylesheet" href="/static/dashboard.css">
     <link rel="shortcut icon" href="/static/favicon.ico">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script
          src="https://code.jquery.com/jquery-3.3.1.js"
@@ -12,6 +13,9 @@
  
     <script src="/static/listinghelpers.js"> </script>
     
+    <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js">
+    </script>
+
     <script> $(document).ready(makepage); </script>
 
     <!--- define all interactive components --->
@@ -31,41 +35,44 @@
   </head>
 
   <body>
-      <center><h2>Your Dashboard</h2></center>
-      <br>
-      
-      {% for i in range(2) %}
-      <div id="siteid{{ i }}">
-	  <select id="Endpoints{{ i }}">
-              {% for site in sites %}
-              {% set sitename = site['site_name'] %}
-              <option value="{{ sitename }}">{{ sitename }}</option>
-              {% endfor %}
-	  </select>
-      
-	  <br><br>
-      
-      
-	  <button class="lbutton" id="listbutton{{ i }}">List</button>    
-	  <div visibility="hidden" id="listspinner{{ i }}" class="loader"></div>
-	  <br><br>
-	  
-	  directory: <input type="text" id="pathatsite{{ i }}" value="/"/> <br>
-	  <br>
-	  <button class="lbutton" id="checkbutton{{ i }}">Check</button>
-	  job number  <input type="text" id="jobnumberfield{{ i }}"/> <br>
-	  
-	  Status of the job is: <p id="reqstatus{{ i }}"> Placeholder </p>
-	  
+      <center>
+	  <h2>{{ user_name }}'s Dashboard</h2>
 	  <br>
 	  
-	  <div id="tableDiv{{ i }}" style="margin-top: 20px">
-              Table should go here.
-	  </div>
-	  
-      </div>
-      {% endfor %}
-
-
+	  <div class="outer">
+	      {% for i in range(2) %}
+	      <div id="siteid{{ i }}" class="siteid">
+		  <select id="Endpoints{{ i }}">
+		      {% for site in sites %}
+		      {% set sitename = site['site_name'] %}
+		      <option value="{{ sitename }}">{{ sitename }}</option>
+		      {% endfor %}
+		  </select>
+		  
+		  <br><br>
+      		  directory: <input type="text" id="pathatsite{{ i }}" value="/"/> <br>
+		  <br>
+		  
+		  <button class="lbutton" id="listbutton{{ i }}">List</button>    
+		  <div visibility="hidden" id="listspinner{{ i }}" class="loader"></div>
+		  
+		  <br>
+		  
+		  job number  <input type="text" id="jobnumberfield{{ i }}"/> <br>
+		  
+		  <br>
+		  Status of the job is: <p id="reqstatus{{ i }}"> No job started yet. </p>
+		  
+		  <br>
+		  <!-- the width doesn't do what I want here -->
+		  <div id="tableDiv{{ i }}" style="margin-top: 20px width:40%">
+		      The results will appear here.
+		  </div>
+		  
+	      </div>
+	      {% endfor %}
+	  </div> 
+      </center>
+      
   </body>
 </html>

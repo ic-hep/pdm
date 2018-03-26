@@ -8,7 +8,8 @@ from pdm.framework.FlaskWrapper import export, export_ext, startup, db_model, js
 from pdm.userservicedesk.HRClient import HRClient
 from pdm.endpoint.EndpointClient import EndpointClient
 from pdm.userservicedesk.TransferClient import TransferClient
-
+from pdm.userservicedesk.HRService import HRService # this can't be right
+from pdm.framework.Tokens import TokenService
 
 @export_ext("/web")
 class WebPageService(object):
@@ -93,7 +94,7 @@ class WebPageService(object):
             return flask.render_template("datamover.html", status=status)
 
         resp = flask.make_response(flask.redirect("/web/dashboard"))
-        resp.set_cookie('name', 'I am cookie')
+        resp.set_cookie('name', 'I am a cookie')
         return resp
 
 
@@ -148,8 +149,13 @@ class WebPageService(object):
         """arrivals: what the user sees after logging in"""
         # will abort of user is not logged in
         WebPageService.check_session()
+        user_token = flask.session['token']
+        # unpacked_user_token = TokenService.unpack(user_token)
+        flask.current_app.hrclient.set_token(user_token)
+        user_data = flask.current_app.hrclient.get_user()
+        user_name = user_data['name']
         sites = flask.current_app.epclient.get_sites()
-        return flask.render_template("dashboard.html", sites=sites)
+        return flask.render_template("dashboard.html", sites=sites, user_name=user_name)
 
 
 
@@ -181,6 +187,6 @@ class WebPageService(object):
         user_token = flask.session['token']
         tclient = TransferClient(user_token)
         res = tclient.status(jobid)
-        if res['status'] in ('DONE','FAILED'):
+        if res['status'] in ('DONE', 'FAILED'):
             res.update(tclient.output(jobid))
         return json.dumps(res)

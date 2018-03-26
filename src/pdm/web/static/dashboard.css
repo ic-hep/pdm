@@ -4,13 +4,34 @@ body {
     background-color: snow;
 }
 
+
+/* put sites in different columns */
+.outer {
+    width: 100%;
+    margin: auto 20;
+}
+
+
+/* table is stil too big */
+/* https://datatables.net/examples/basic_init/flexible_width.html */
+/* doesn't quite work yet */
+.siteid
+{
+    float: left;
+    text-align: left;
+    width: 45%;
+    margin-left: 20px;
+}
+
+
+
 /* spinner */
 .loader {
-  border: 16px solid #f3f3f3;
+  border: 4px solid #f3f3f3;
   border-radius: 50%;
-  border-top: 16px solid #3498db;
-  width: 120px;
-  height: 120px;
+  border-top: 4px solid #3498db;
+  width: 30px;
+  height: 30px;
   -webkit-animation: spin 2s linear infinite; /* Safari */
   animation: spin 2s linear infinite;
   display : none;
@@ -28,24 +49,8 @@ body {
 }
 
 
+/* note: for all table related items use datatables */
 
-/* table for file listing */
-/* this is just a dummy for now */
-table {
-    font-family: arial, sans-serif;
-    border-collapse: collapse;
-    width: 100%;
-}
-
-td, th {
-    border: 1px solid #dddddd;
-    text-align: left;
-    padding: 8px;
-}
-
-tr:nth-child(even) {
-    background-color: #dddddd;
-}
 
 
 /* pseudo button (just a link) */
