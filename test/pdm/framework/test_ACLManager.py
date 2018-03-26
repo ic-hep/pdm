@@ -5,9 +5,9 @@ import logging
 import unittest
 
 from flask import Flask, current_app, request
-from werkzeug.exceptions import Forbidden, NotFound
+from werkzeug.exceptions import HTTPException, Forbidden, NotFound
 from pdm.utils.X509 import X509Utils
-from pdm.framework.ACLManager import ACLManager
+from pdm.framework.ACLManager import ACLManager, set_session_state
 
 class FakeTokenSVC(object):
     """ A fake token service class for testing ACL Manager. """
@@ -39,9 +39,11 @@ class TestACLManager(unittest.TestCase):
             have been allowed).
         """
         app = Flask("ACLManagertest")
+        app.secret_key = "TestKey" # Required for session support
         token_svc = FakeTokenSVC(token_ok)
         try:
             headers = {}
+            enable_session = False
             if auth_mode == ACLManager.AUTH_MODE_X509:
                 if cert_ok:
                     headers['Ssl-Client-Verify'] = 'SUCCESS'
@@ -50,8 +52,12 @@ class TestACLManager(unittest.TestCase):
                 headers['Ssl-Client-S-Dn'] = auth_data
             elif auth_mode == ACLManager.AUTH_MODE_TOKEN:
                 headers['X-Token'] = auth_data
+            elif auth_mode == ACLManager.AUTH_MODE_SESSION:
+                enable_session = True
             with app.test_request_context(path=path, method=method,
                                           headers=headers):
+                if enable_session:
+                    set_session_state(True)
                 # Prepare a standard looking request
                 current_app.log = self.__log
                 current_app.token_svc = token_svc
@@ -68,6 +74,8 @@ class TestACLManager(unittest.TestCase):
                         self.assertTrue(request.token_ok)
                     else:
                         self.assertFalse(request.token_ok)
+                elif auth_mode == ACLManager.AUTH_MODE_SESSION:
+                    self.assertTrue(request.session_ok)
             # Access was allowed (no exception raised)
             return True
         except Forbidden:
@@ -103,28 +111,31 @@ class TestACLManager(unittest.TestCase):
         self.__inst.add_rule("/cert_dn1", "CERT:/C=XX/OU=Test/CN=Test User1")
         self.__inst.add_rule("/cert_dn2", "CERT:C = YY, OU = Bah, CN = Test User2")
         self.__inst.add_rule("/token_only", "TOKEN")
+        self.__inst.add_rule("/session_only", "SESSION")
         self.__inst.add_rule("/all", "ALL")
         # Now test that each auth mode only works with the expected endpoint
         # We do this by looping over every endpoint in the TEST_EP list and
         # trying them with certain authentication parameters.
         TEST_EP = ["/cert_only", "/cert_dn1", "/cert_dn2",
-                   "/token_only", "/all", "/none"]
+                   "/token_only", "/session_only", "/all", "/none"]
         # AUTH_TESTs is a list of tuples: (auth_mode, auth_data, res)
         # res is a list of whether each TEST_EP should be expected to work
         # with this endpoint or not (in the order of TEST_EP)
         AUTH_TESTS = [
           (ACLManager.AUTH_MODE_X509, 'C = XX, OU = Test, CN = Test User1',
-           (True, True, False, False, True, False, )),
+           (True, True, False, False, False, True, False, )),
           (ACLManager.AUTH_MODE_X509, 'C = YY, OU = Bah, CN = Test User2',
-           (True, False, True, False, True, False, )),
+           (True, False, True, False, False, True, False, )),
           (ACLManager.AUTH_MODE_X509, 'C = ZZ, OU = Other, CN = Test User3',
-           (True, False, False, False, True, False, )),
+           (True, False, False, False, False, True, False, )),
           (ACLManager.AUTH_MODE_TOKEN, 'TOKENTEXT',
-           (False, False, False, True, True, False, )),
+           (False, False, False, True, False, True, False, )),
           (ACLManager.AUTH_MODE_TOKEN, 'OTHERTOKENTEXT',
-           (False, False, False, True, True, False, )),
+           (False, False, False, True, False, True, False, )),
+          (ACLManager.AUTH_MODE_SESSION, None,
+           (False, False, False, False, True, True, False, )),
           (ACLManager.AUTH_MODE_NONE, None,
-           (False, False, False, False, True, False, )),
+           (False, False, False, False, False, True, False, )),
         ]
         for auth_mode, auth_data, auth_res in AUTH_TESTS:
             for i in xrange(0, len(TEST_EP)):
@@ -244,6 +255,8 @@ class TestACLManager(unittest.TestCase):
             elif auth_mode == ACLManager.AUTH_MODE_TOKEN:
                 self.assertEqual(request.token, auth_data)
                 self.assertTrue(request.token_ok)
+            elif auth_mode == ACLManager.AUTH_MODE_SESSION:
+                self.assertTrue(request.session_ok)
 
     def test_test_mode(self):
         """ Check that test mode works correctly. """
@@ -251,3 +264,36 @@ class TestACLManager(unittest.TestCase):
         self.__check_test_mode(ACLManager.AUTH_MODE_X509, "C=YY,CN=Test2")
         self.__check_test_mode(ACLManager.AUTH_MODE_TOKEN, "TOKENSTR")
         self.__check_test_mode(ACLManager.AUTH_MODE_TOKEN, "TEST2")
+        self.__check_test_mode(ACLManager.AUTH_MODE_SESSION, None)
+
+    @staticmethod
+    def __test_redir_cb():
+        return "Hello World"
+
+    def __run_redir(self, app, path):
+        """ Try to get the given path in app context. """
+        with app.test_request_context(path=path, method="GET"):
+            request.uuid = "Test-Test-Test"
+            self.__inst.check_request()
+
+    def test_redir(self):
+        """ Check that the redirect works correctly on 403.
+            (if set on the end object).
+            This is slightly more complex than all of the other auth
+            checks as it relies on a proper rule existing in flask
+        """
+        app = Flask("ACLManagertest")
+        # Configure the endpoint/rule
+        self.__test_redir_cb.export_redir = '/login?ret=%(return_to)s'
+        app.add_url_rule('/test', "/test", self.__test_redir_cb)
+        # Configure Auth
+        self.__inst.add_rule("/test", "SESSION")
+        self.__inst.add_rule("/test2", "SESSION")
+        # Run test
+        # Check that /test returns a redirect
+        with self.assertRaises(HTTPException) as err:
+            self.__run_redir(app, "/test")
+        self.assertEqual(err.exception.response.status_code, 302)
+        self.assertEqual(err.exception.response.location, "/login?ret=%2Ftest")
+        # Whereas /test2 should return a classic 403
+        self.assertRaises(Forbidden, self.__run_redir, app, "/test2")
