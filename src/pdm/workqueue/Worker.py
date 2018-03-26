@@ -26,13 +26,17 @@ from .WorkqueueDB import COMMANDMAP, PROTOCOLMAP, JobType
 @contextmanager
 def TempX509Files(token):
     """Create temporary grid credential files."""
-    cert, key = CredClient().get_cred(token)
+    cred_client = CredClient()
+    cert, key = cred_client.get_cred(token)
     with NamedTemporaryFile() as proxyfile:
         proxyfile.write(key)
         proxyfile.write(cert)
         proxyfile.flush()
         os.fsync(proxyfile.fileno())
-        yield proxyfile
+        try:
+            yield proxyfile
+        finally:
+            cred_client.del_cred(token)
 
 
 class Worker(RESTClient, Daemon):
