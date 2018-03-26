@@ -156,8 +156,11 @@ class WebPageService(object):
         flask.current_app.hrclient.set_token(user_token)
         user_data = flask.current_app.hrclient.get_user()
         user_name = user_data['name']
+        # returns a list of sites as dictionaries
+        # want to sort on 'site_name'
         sites = flask.current_app.epclient.get_sites()
-        return flask.render_template("dashboard.html", sites=sites, user_name=user_name)
+        sorted_sites = sorted(sites, key=lambda k: k['site_name']) 
+        return flask.render_template("dashboard.html", sites=sorted_sites, user_name=user_name)
 
 
 
