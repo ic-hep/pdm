@@ -1,9 +1,19 @@
 #!/usr/bin/env python
 """ Access Control for Flask Wrapper. """
 
+import urllib
 from copy import deepcopy
-from flask import abort, current_app, request
+import flask
+from flask import abort, current_app, request, session
 from pdm.utils.X509 import X509Utils
+
+
+def set_session_state(logged_in=False):
+    """ A helper function for changing the flask session state.
+        Must be called from a Flask request context.
+        Returns None.
+    """
+    session['logged_in'] = logged_in
 
 
 class ACLManager(object):
@@ -15,7 +25,8 @@ class ACLManager(object):
     AUTH_MODE_NONE = 0
     AUTH_MODE_X509 = 1
     AUTH_MODE_TOKEN = 2
-    AUTH_MODE_ALLOW_ALL = 3
+    AUTH_MODE_SESSION = 3
+    AUTH_MODE_ALLOW_ALL = 4
 
     def __init__(self, logger):
         """ Create an empty instance of ACLManager (no predfined groups or
@@ -41,6 +52,8 @@ class ACLManager(object):
             return [(ACLManager.AUTH_MODE_TOKEN, None)]
         elif entry == "CERT":
             return [(ACLManager.AUTH_MODE_X509, None)]
+        elif entry == "SESSION":
+            return [(ACLManager.AUTH_MODE_SESSION, None)]
         elif entry == "ALL":
             return [(ACLManager.AUTH_MODE_ALLOW_ALL, None)]
         elif entry.startswith("CERT:"):
@@ -110,6 +123,9 @@ class ACLManager(object):
                 current_app.log.info("Request %s token validation failed.",
                                      request.uuid)
                 return "403 Invalid Token", 403
+        if 'logged_in' in session:
+            if session['logged_in']:
+                request.session_ok = True
 
     def __get_fake_request_auth(self):
         """ Fills the request object with te test (fake) authentication
@@ -120,6 +136,8 @@ class ACLManager(object):
         elif self.__test_mode == ACLManager.AUTH_MODE_TOKEN:
             request.token = self.__test_data
             request.token_ok = True
+        elif self.__test_mode == ACLManager.AUTH_MODE_SESSION:
+            request.session_ok = True
 
     @staticmethod
     def __matches_rules(rules):
@@ -139,6 +157,9 @@ class ACLManager(object):
                 else:
                     if request.dn:
                         return True
+            elif rule_mode == ACLManager.AUTH_MODE_SESSION:
+                if request.session_ok:
+                    return True
             elif rule_mode == ACLManager.AUTH_MODE_ALLOW_ALL:
                 return True
         return False
@@ -181,6 +202,24 @@ class ACLManager(object):
         # Everything matched, so the rule matches the request
         return True
 
+    def __do_abort(self):
+        """ Aborts the current request due to access denied.
+            If the export provided a redir value for access denied,
+            the client will be redirected, otherwise a 403 will be
+            returned.
+        """
+        # Check whether this endpoint has a special redirect
+        if request.endpoint:
+            if request.endpoint in current_app.view_functions:
+                ep_func = current_app.view_functions[request.endpoint]
+                if ep_func:
+                    redir_url = getattr(ep_func, 'export_redir', None)
+                    if redir_url:
+                        orig_path = urllib.quote(request.path, safe='')
+                        real_redir = redir_url % {'return_to': orig_path}
+                        abort(flask.redirect(real_redir))
+        abort(403)
+
     def __check_acl(self):
         """ Checks the request object authentication details against the ACL
             list for the requested resource.
@@ -199,7 +238,7 @@ class ACLManager(object):
                 return
             self.__log.info("Request %s denied (Failed to match specific rule).",
                             request.uuid)
-            abort(403)
+            self.__do_abort()
         # No specific rule for this path, try generic rules
         did_match = False
         for rule_path in self.__rules.iterkeys():
@@ -214,7 +253,7 @@ class ACLManager(object):
         # No rule matches => request denied
         self.__log.info("Request %s denied (%s).",
                         request.uuid, reason)
-        abort(403)
+        self.__do_abort()
 
     def check_request(self):
         """ Gets the current flask request object and checks it against the
@@ -228,6 +267,7 @@ class ACLManager(object):
         request.dn = None
         request.token = None
         request.token_ok = False
+        request.session_ok = False
         if self.__test_mode == ACLManager.AUTH_MODE_NONE:
             self.__get_real_request_auth()
             self.__check_acl()

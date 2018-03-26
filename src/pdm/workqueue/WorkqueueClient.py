@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 """Client for Workqueue application."""
-import json
 from pdm.framework.RESTClient import RESTClient
 
 from .WorkqueueDB import JobProtocol
@@ -111,24 +110,29 @@ class WorkqueueClient(RESTClient):
         """
         Get a jobs status.
 
-        This returns the human readable status rather than the integer code.
+        This returns the human readable status rather than the integer code. This
+        function will also retrieve the number of attempts the system has made for the
+        given job.
 
         Args:
             job_id (int): The id number of the job to query.
 
         Returns:
-            dict: Representation of the status with keys (jobid, status)
+            dict: Representation of the status with keys (jobid, status, attempts)
         """
         return self.get('jobs/%s/status' % job_id)
 
-    def output(self, job_id):
+    def output(self, job_id, attempt=None):
         """
         Get job output.
 
-        Gets the output for the given job if it's ready.
+        Gets the output for the given job if it's ready. The optional parameter attempt
+        allows the user to get the output for a given attempt. If this parameter is None
+        (the default) then the latest attempts output is retrieved.
 
         Args:
             job_id (int): The id number of the job to fetch output from.
+            attempt (int): The attempt number to get the output from. (default: None = latest)
 
         Returns:
             dict: Representation of the output with keys (jobid, log).
@@ -137,4 +141,6 @@ class WorkqueueClient(RESTClient):
                   list of files/directories each as a dict containing the following keys:
                   (permissions, nlinks, userid, groupid, size, datestamp, name, is_directory).
         """
-        return self.get('jobs/%s/output' % job_id)
+        if attempt is None:
+            return self.get('jobs/%s/output' % job_id)
+        return self.get('jobs/%s/output/%s' % (job_id, attempt))
