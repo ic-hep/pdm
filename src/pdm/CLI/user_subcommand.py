@@ -4,6 +4,7 @@ Example usage: pdm register -e fred@flintstones.com -n Fred -s Flintstone
 """
 from getpass import getpass
 from time import sleep
+from datetime import datetime
 from pdm.userservicedesk.HRClient import HRClient
 from pdm.userservicedesk.TransferClientFacade import TransferClientFacade
 
@@ -188,9 +189,10 @@ class UserCommand(object):
         if token:
             client = TransferClientFacade(token)
             sites = client.list_sites()
-            print '{0:40}{1:50}'.format('site', 'description')
+            print '|{0:40}{1:50}|'.format('site:', 'description:')
+            '|'+90*'-'+'|'
             for elem in sites:
-                print '{site_name:40s}{site_desc:50s}'.format(**elem)
+                print '|{site_name:40s}|{site_desc:50s}|'.format(**elem)
 
     def _print_formatted_listing(self, listing):  # pylint: disable=no-self-use
         """
@@ -198,16 +200,16 @@ class UserCommand(object):
         :param listing: listing (dictionary) to be pretty-printed a'la ls -l
         :return: None
         """
-        size_len = max(len(d['size']) for d in listing)
-        links_len = max(len(d['nlinks']) for d in listing)
+        size_len = max(d['size'] for d in listing)
+        links_len = max(d['nlinks'] for d in listing)
         uid_s = max(len(d['userid']) for d in listing)
         gid_s = max(len(d['groupid']) for d in listing)
 
-        fmt = '{permissions:12s}{nlinks:>%ds} {userid:%ds} {groupid:%ds} ' \
-              '{size:>%ds} {datestamp:14s} {name:s}' % (links_len, uid_s, gid_s, size_len)
+        fmt = '{permissions:12s}{nlinks:>%dd} {userid:%ds} {groupid:%ds} ' \
+              '{size:>%dd} {datestamp:14s} {name:s}' % (links_len, uid_s, gid_s, size_len)
         # print fmt
         for elem in listing:
-            print fmt.format(**elem)
+            print fmt.format(**dict(elem,datestamp=str(datetime.utcfromtimestamp(elem['datestamp']))))
 
     def status(self, args):
         """
