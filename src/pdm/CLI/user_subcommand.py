@@ -295,7 +295,6 @@ class UserCommand(object):
                 print "Job log - last attempt %d" %(attempts,)
                 log_listing = client.output(job_id)['log']
             else:
-                # TODO fix Workqueuelient to acctep attemp number for output
                 log_listing = client.output(job_id, args.attempt)['log']
             print log_listing
 
