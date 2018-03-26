@@ -189,6 +189,7 @@ class UserCommand(object):
         if token:
             client = TransferClientFacade(token)
             sites = client.list_sites()
+            print '-'+91*'-'+'-'
             print '|{0:40}|{1:50}|'.format('site:', 'description:')
             print '|'+91*'-'+'|'
             for elem in sites:
@@ -200,7 +201,7 @@ class UserCommand(object):
         :param listing: listing (dictionary) to be pretty-printed a'la ls -l
         :return: None
         """
-        size_len = max(d['size'] for d in listing)
+        size_len = len(str(max(d['size'] for d in listing)))
         links_len = max(d['nlinks'] for d in listing)
         uid_s = max(len(d['userid']) for d in listing)
         gid_s = max(len(d['groupid']) for d in listing)
