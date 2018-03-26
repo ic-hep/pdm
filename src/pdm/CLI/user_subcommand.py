@@ -84,7 +84,7 @@ class UserCommand(object):
         user_parser.add_argument('-t', '--token', type=str, required=True)
         user_parser.add_argument('job', type=int, help="job id as obtained"
                                                        " from copy, remove or list")
-        user_parser.add_argument('-a', '--attempt', nargs='?', type=int, const = -1, default = -1)
+        user_parser.add_argument('-a', '--attempt', default = -1)
         user_parser.set_defaults(func=self.log)
 
         # sub-command functions
@@ -246,7 +246,7 @@ class UserCommand(object):
                     break
                 print "(%2d) job id: %d status: %s " % (self.__count, job_id, status['status'])
 
-        print " job id: %d status: %s " % (job_id, status['status'])
+        print "job id: %d status: %s " % (job_id, status['status'])
         return status
 
     def remove(self, args):  # pylint: disable=no-self-use
@@ -288,15 +288,14 @@ class UserCommand(object):
             job_id = int(args.job)
             client = TransferClientFacade(token)
             status = self._status(job_id, client, block=True)
-            #attempts = status['attempts']
+            attempts = status['attempts']
             #
             if args.attempt == -1:
+                print "Job log - last attempt %d" %(attempts,)
                 log_listing = client.output(job_id)['log']
             else:
-                # TODO fix Workqueclient to acctep attemp number for output
-                log_listing = client.output(job_id)['log']
-
-
+                # TODO fix Workqueuelient to acctep attemp number for output
+                log_listing = client.output(job_id, args.attempt)['log']
             print log_listing
 
     def _get_token(self, args):
