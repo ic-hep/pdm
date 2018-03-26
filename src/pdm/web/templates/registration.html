@@ -4,24 +4,63 @@
     <link rel="stylesheet" href="/static/webpage.css">
   </head>
   <body>
-    <center><h1>Register Me</h1></center>
-    {% with messages = get_flashed_messages() %}
-    {% if messages %} 
-    <ul class=flashes>
-      {% for message in messages %}
-      <li>{{ message }}</li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-    {% endwith %}
+    <div class="inner">
+      <div class="fpborder">
+        <font color="red">
+          {% with messages = get_flashed_messages() %}
+          {% if messages %}
+          <ul class=flashes>
+            {% for message in messages %}
+            <li>{{ message }}</li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+          {% endwith %}
+        </font>
 
-    <form method="POST" action="/web/registration">
-      email: <input type="text" name="email"/> <br>
-      first name:  <input type="text" name="firstname"/> <br>
-      last name:   <input type="text" name="lastname"/> <br>
-      password: <input type="password" name="password"/> <br>
-      confirm password: <input type="password" name="cpassword"/> <br>
-      submit <input type="submit" value="Click me"/>
-    </form>
+	<h1><img src="{{url_for('static', filename='pdm.png')}}" alt="Logo"> <br> Register Me</h1>
+	<center>
+
+	<form method="POST" action="/web/registration">
+	  <table>
+            <tr><td>
+		Email: 
+	      </td><td>
+		<input type="text" name="email"/> 
+	      </td>
+	    </tr><tr>
+	      <td>
+		First name:  
+	      </td><td>
+		<input type="text" name="firstname"/>
+	      </td>
+	    </tr><tr>
+	      <td>
+		Last name:
+	      </td><td>
+		<input type="text" name="lastname"/>
+	      </td>
+	    </tr><tr>
+	      <td>
+	      Password: 
+	      </td><td>
+		<input type="password" pattern=".{8,}" name="password"/> 
+	      </td>
+	    </tr><tr>
+	      <td>
+		Confirm password: 
+	      </td><td>
+		<input type="password" name="cpassword"/> 
+	      </td>
+	    </tr><tr>
+	      <td></td><td>
+	      <td align="right"><button class="lbutton" type="submit">Register</button></td>
+	      </td>
+	    </tr>
+	  </table>
+	</form>
+	</center>
+      </div>
+    </div>
   </body>
 </html>

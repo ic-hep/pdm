@@ -13,37 +13,71 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 /web/listings%POST = "ALL"
 
 [auth/users]
-/users/api/v1.0/users%GET = "@user"
-/users/api/v1.0/users%PUT = "@user"
+# Add user
 /users/api/v1.0/users%POST = "ALL"
+# Get user info
 /users/api/v1.0/users/self%GET = "@user"
+# Delete user
 /users/api/v1.0/users/self%DELETE = "@user"
+# Change user password
 /users/api/v1.0/passwd%PUT = "@user"
+# Login as user
 /users/api/v1.0/login%POST = "ALL"
-/users/api/v1.0/verify_token = "@user"
 
 [auth/cred]
+# Get CA cert
 /cred/api/v1.0/ca = "ALL"
-/cred/api/v1.0/user%GET = "@system"
+# Generate user cred
 /cred/api/v1.0/user%POST = "@system"
-/cred/api/v1.0/user%DELETE = "@system"
-/cred/api/v1.0/cred%GET = "@worker"
+# Get user cred info
+/cred/api/v1.0/user/?%GET = "@system"
+# Delete user creds
+/cred/api/v1.0/user/?%DELETE = "@system"
+# Generate proxy cred
 /cred/api/v1.0/cred%POST = "@user"
-/cred/api/v1.0/cred%DELETE = "@system"
+# Get proxy cred
+/cred/api/v1.0/cred/?%GET = "@worker"
+# Delete proxy cred
+/cred/api/v1.0/cred/?%DELETE = "@system"
 
 [auth/endpoint]
+# Get site list
 /endpoint/api/v1.0/site = "ALL"
+# Get site info (endpoints)
+/endpoint/api/v1.0/site/? = "ALL"
+# Add site
 /endpoint/api/v1.0/site%POST = "@system"
-/endpoint/api/v1.0/site%DELETE = "@system"
-/endpoint/api/v1.0/sitemap%GET = "@system"
-/endpoint/api/v1.0/sitemap%POST = "@system"
-/endpoint/api/v1.0/sitemap%DELETE = "@system"
+# Add endpoint
+/endpoint/api/v1.0/site/?%POST = "@system"
+# Delete site
+/endpoint/api/v1.0/site/?%DELETE = "@system"
+# Delete endpoint
+/endpoint/api/v1.0/site/?/?%DELETE = "@system"
+# Get mapping for site
+/endpoint/api/v1.0/sitemap/?%GET = "@system"
+# Add mapping for site
+/endpoint/api/v1.0/sitemap/?%POST = "@system"
+# Delete mappings
+/endpoint/api/v1.0/sitemap/?/?%DELETE = "@system"
 
 [auth/workqueue]
+# Get all jobs for the current user
 /workqueue/api/v1.0/jobs%GET = "@user"
+# Get details of a specific job ID
+/workqueue/api/v1.0/jobs/?%GET = "@user"
+# Get output for a specific job
+/workqueue/api/v1.0/jobs/?/output%GET = "@user"
+# Get status of a specific job
+/workqueue/api/v1.0/jobs/?/status%GET = "@user"
+# Add a job to the database
 /workqueue/api/v1.0/jobs%POST = "@user"
+# Add a list job
 /workqueue/api/v1.0/list%POST = "@user"
+# Add a copy job
 /workqueue/api/v1.0/copy%POST = "@user"
+# Add a remove job
 /workqueue/api/v1.0/remove%POST = "@user"
+# Get the next available job meeting criteria
 /workqueue/api/v1.0/worker%POST = "@worker"
-/workqueue/api/v1.0/worker%PUT = "@worker"
+# Return job status information
+/workqueue/api/v1.0/worker/?%PUT = "@worker"

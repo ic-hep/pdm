@@ -2,6 +2,8 @@
 import os
 import json
 import re
+import time
+from datetime import date
 from functools import wraps
 
 from flask import request, abort, current_app
@@ -167,10 +169,17 @@ class WorkqueueService(object):
 
         return_dict = {'jobid': job.id, 'log': log}
         if job.type == JobType.LIST:
-            return_dict.update(listing=[dict(match.groupdict(),
-                                             is_directory=match.group('permissions')
-                                                               .startswith('d'))
-                                        for match in LISTPARSE_REGEX.finditer(log)])
+            try:
+                return_dict.update(listing=[dict(match.groupdict(),
+                                                 nlinks=int(match.group('nlinks')),
+                                                 size=int(match.group('size')),
+                                                 datestamp=get_datestamp(match.group('datestamp')),
+                                                 is_directory=match.group('permissions')
+                                                                   .startswith('d'))
+                                            for match in LISTPARSE_REGEX.finditer(log)])
+            except (ValueError, TypeError, IndexError) as err:
+                abort(500,
+                      description="Failed to type cast parsed listing output: %s" % err.message)
         return json.dumps(return_dict)
 
     @staticmethod
@@ -182,6 +191,15 @@ class WorkqueueService(object):
                        .first_or_404()
         # pylint: disable=no-member
         return json.dumps({'jobid': job.id, 'status': JobStatus(job.status).name})
+
+
+def get_datestamp(str_time):
+    """Convert linux listing timestamp to POSIX time."""
+    format_str = '%b %d %Y'
+    if ':' in str_time:
+        format_str = '%b %d %H:%M %Y'
+        str_time += ' %s' % date.today().year
+    return time.mktime(time.strptime(str_time, format_str))
 
 
 def subdict(dct, keys):

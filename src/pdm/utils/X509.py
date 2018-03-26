@@ -85,9 +85,25 @@ class X509Utils(object):
     def x509name_to_str(x509_name):
         """ Converts an X509_Name object to a plain string.
             The output string will be in RFC2253 format with
-            "readable" spacing..
+            "readable" spacing...
         """
-        return x509_name.as_text(flags=m2.XN_FLAG_ONELINE)
+        raw_dn = x509_name.as_text(flags=m2.XN_FLAG_ONELINE)
+        # Renormalise the spacing to remove spaces around the equals.
+        return X509Utils.normalise_dn(raw_dn)
+
+    @staticmethod
+    def normalise_dn(dn_str):
+        """ Converts a DN from any standard format (RFC2253, OpenSSL) with any
+            spacing into plain RFC2253 format with "readable" spacing.
+            Returns a string.
+        """
+        dn_input = dn_str.strip()
+        if dn_input.startswith('/'):
+            # Input is OpenSSL
+            return X509Utils.convert_dn(dn_input, '/', ', ', False)
+        else:
+            # Input is RFC2253 with unknown spacing
+            return X509Utils.convert_dn(dn_input, ',', ', ', False)
 
     @staticmethod
     def get_cert_expiry(cert_pem):
@@ -425,7 +441,7 @@ class X509CA(object):
         """
         cert_dn = X509Utils.x509name_to_str(usercert.get_subject())
         proxy_serial = random.randint(1000000000, 9999999999)
-        proxy_dn = "%s, CN = %u" % (cert_dn, proxy_serial)
+        proxy_dn = "%s, CN=%u" % (cert_dn, proxy_serial)
         # Note: While it's unused, evp_key must stay in memory while
         #       rsa_key is valid otherwise it may cause a segfault.
         rsa_key, evp_key, req = X509CA.__gen_csr(proxy_dn)
