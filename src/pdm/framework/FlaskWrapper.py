@@ -18,7 +18,7 @@ from flask import Flask, Response, current_app, request
 from flask.testing import FlaskClient
 
 
-def export_inner(obj, ename, methods=None):
+def export_inner(obj, ename, methods=None, redir=None):
     """ Inner function for export decorators.
         Obj is the object to export,
         See the export_ext function for further more details on the other
@@ -29,6 +29,7 @@ def export_inner(obj, ename, methods=None):
     obj.is_exported = True
     obj.export_name = ename
     obj.export_methods = methods
+    obj.export_redir = redir
     obj.export_auth = []
     return obj
 
@@ -39,7 +40,7 @@ def export(obj):
     """
     return export_inner(obj, obj.__name__)
 
-def export_ext(ename, methods=None):
+def export_ext(ename, methods=None, redir=None):
     """ Class/Function decorator.
         Export a class or function via the web-server with extra options.
         ename - Export name of the item. This may be a relative name to inherit
@@ -48,8 +49,13 @@ def export_ext(ename, methods=None):
         methods - A list of flask-style method names, i.e. ["GET", "POST"]
                   to allow access to this object. Defaults to GET only if set
                   to None.
+        redir - An optional URL to redirect the user to on auth failure.
+                Generally used for redirecting users back to the login page.
+                The URL encoded resource string will be substituted into the
+                %(return_to)s template if present.
     """
-    return functools.partial(export_inner, ename=ename, methods=methods)
+    return functools.partial(export_inner, ename=ename,
+                             methods=methods, redir=redir)
 
 def startup(obj):
     """ Funciton decorator.
@@ -267,7 +273,8 @@ class FlaskServer(Flask):
                 for func in self.__test_funcs:
                     func()
 
-    def attach_obj(self, obj_inst, root_path='/', parent_name=None):
+    def attach_obj(self, obj_inst, root_path='/',
+                   parent_name=None, parent_redir=None):
         """ Attaches an object tree to this web service.
             For each exported object, it is attached to the path tree and
             then all of its children are checked for the exported flag.
@@ -275,10 +282,15 @@ class FlaskServer(Flask):
             root_path - The base path to start attaching relative paths from.
             parent_name - Optinal prefix to give registered endpoints.
                           (Used to prevent duplicate entries between classes).
+            parent_redir - Optional URL to use for 403 redirects (auth denied)
+                           to inherit from parent.
             Returns None.
         """
         if hasattr(obj_inst, 'is_exported'):
             ename = obj_inst.export_name
+            redir_path = obj_inst.export_redir
+            if not redir_path:
+                redir_path = parent_redir
             obj_path = os.path.join(root_path, ename)
             if not callable(obj_inst):
                 self.__logger.debug("Class %s at %s", obj_inst, obj_path)
@@ -289,7 +301,7 @@ class FlaskServer(Flask):
                 items = [x for x in dir(obj_inst) if not x.startswith('_')]
                 for obj_item in [getattr(obj_inst, x) for x in items]:
                     cls_name = type(obj_inst).__name__
-                    self.attach_obj(obj_item, obj_path, cls_name)
+                    self.attach_obj(obj_item, obj_path, cls_name, redir_path)
             else:
                 self.__logger.debug("Attaching %s at %s", obj_inst, obj_path)
                 endpoint = obj_inst.__name__
