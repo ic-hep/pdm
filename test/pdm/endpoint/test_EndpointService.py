@@ -154,7 +154,7 @@ class test_EndpointService(unittest.TestCase):
         """ Test adding endpoints to a site and getting them with the
             main site info.
         """
-        TEST_URI = "gsiftp://test_host/test"
+        TEST_URI = "gsiftp://testhost/test"
         data = {'ep_uri': TEST_URI}
         # Try adding another endpoint to site 10.
         res = self.__client.post('endpoint/api/v1.0/site/10', data=data)
@@ -170,11 +170,35 @@ class test_EndpointService(unittest.TestCase):
         # Check the endpoints
         self.assertIn(TEST_URI, site_info['endpoints'].itervalues())
 
+    def test_add_bad_endpoint(self):
+        """ Check that bad endpoint URIs are not accepted.
+        """
+        BAD_EPS = [
+            # No host
+            "gsiftp://",
+            # Bad protocol
+            "BADPROTO%://hostname/test",
+            # Corrupt port
+            "gsiftp://hostname:/test",
+            # Non-numeric port (maybe this should be allowed?)
+            "ssh://hostname:ssh/test",
+            # Complete wrong
+            "I like turtles",
+            "sometext",
+            "_",
+            "://",
+            "///////",
+        ]
+        for bad_ep in BAD_EPS:
+            data = {'ep_uri': bad_ep}
+            res = self.__client.post('endpoint/api/v1.0/site/10', data=data)
+            self.assertEqual(res.status_code, 400)
+
     @mock.patch("pdm.endpoint.EndpointService.managed_session")
     def test_add_endpoint_dberror(self, mock_session):
         """ Check that HTTP 500 is returned on DB errors. """
         self.__db_error(mock_session)
-        TEST_URI = "gsiftp://test_host/test"
+        TEST_URI = "gsiftp://testhost/test"
         data = {'ep_uri': TEST_URI}
         res = self.__client.post('endpoint/api/v1.0/site/1', data=data)
         self.assertEqual(res.status_code, 500)
