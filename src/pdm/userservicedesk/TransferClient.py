@@ -61,15 +61,15 @@ class TransferClient(object):
             return response
         else:
             return None
-            #return {'status':'No such site {}'.format(src_site)}
+            # return {'status':'No such site {}'.format(src_site)}
 
-    def output(self, job_id):
+    def output(self, job_id, attempt=None):
         """
         Get job output
         :param job_id: job id
         :return: output as specified by workqueue client
         """
-        response = self.__wq_client.output(job_id)
+        response = self.__wq_client.output(job_id, attempt)
         return response
 
     def status(self, job_id):
@@ -87,7 +87,8 @@ class TransferClient(object):
         :return: list of dictionaries with all key:value pair but site_id key and value
         """
         unwanted_keys = ['site_id']
-        filtered_sites = [dict(filter(lambda i:i[0] not in unwanted_keys, elem.iteritems())) for elem in self.__sitelist]
+        filtered_sites = [dict(filter(lambda i: i[0] not in unwanted_keys, elem.iteritems())) for elem in
+                          self.__sitelist]
         return filtered_sites
 
     def copy(self, src_site, src_filepath, dst_site,  # pylint: disable=too-many-arguments
