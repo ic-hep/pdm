@@ -84,7 +84,8 @@ class UserCommand(object):
         user_parser.add_argument('-t', '--token', type=str, required=True)
         user_parser.add_argument('job', type=int, help="job id as obtained"
                                                        " from copy, remove or list")
-        user_parser.add_argument('-a', '--attempt', default = -1)
+        user_parser.add_argument('-a', '--attempt', default = -1,
+                                 help="Attempt number, leave out for the last attempt")
         user_parser.set_defaults(func=self.log)
 
         # sub-command functions
