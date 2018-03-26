@@ -152,16 +152,25 @@ class WorkqueueService(object):
 
     @staticmethod
     @export_ext('jobs/<int:job_id>/output', ['GET'])
-    def get_output(job_id):
+    @export_ext('jobs/<int:job_id>/output/<int:attempt>', ['GET'])
+    def get_output(job_id, attempt=None):
         """Get job output."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
         job = Job.query.filter_by(id=job_id, user_id=HRService.check_token())\
                        .filter(Job.status.in_((JobStatus.DONE, JobStatus.FAILED)))\
                        .first_or_404()
+
+        if attempt is None:
+            if job.attempts == 0:
+                abort(404, description="No attempts have yet been recorded. Please try later.")
+            attempt = job.attempts
+        if attempt not in xrange(1, job.attempts + 1):
+            abort(400, description="Invalid attempt '%s', job has been tried %s time(s)"
+                  % (attempt, job.attempts))
         logfilename = os.path.join(current_app.workqueueservice_workerlogs,
                                    job.log_uid[:2],
                                    job.log_uid,
-                                   "attempt%i.log" % job.attempts)
+                                   "attempt%i.log" % attempt)
         if not os.path.exists(logfilename):
             abort(500, description="log directory/file not found.")
         with open(logfilename, 'rb') as logfile:
@@ -190,7 +199,9 @@ class WorkqueueService(object):
         job = Job.query.filter_by(id=job_id, user_id=HRService.check_token())\
                        .first_or_404()
         # pylint: disable=no-member
-        return json.dumps({'jobid': job.id, 'status': JobStatus(job.status).name})
+        return json.dumps({'jobid': job.id,
+                           'status': JobStatus(job.status).name,
+                           'attempts': job.attempts})
 
 
 def get_datestamp(str_time):

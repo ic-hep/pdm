@@ -50,11 +50,11 @@ class TestUsercommand(unittest.TestCase):
             Currently: token, func handle and positionals and None dict values
         """
         list_dicts = \
-            [{u'is_directory': True, u'name': u'bin\t', u'userid': u'0', u'nlinks': u'1', u'datestamp': u'Feb 28 11:01', u'size': u'24576', u'groupid': u'0', u'permissions': u'dr-xr-xr-x'},
-             {u'is_directory': True, u'name': u'etc\t', u'userid': u'0', u'nlinks': u'1', u'datestamp': u'Nov  5  2016', u'size': u'6', u'groupid': u'0', u'permissions': u'drwxr-xr-x'},
-             {u'is_directory': True, u'name': u'games\t', u'userid': u'0', u'nlinks': u'1', u'datestamp': u'Nov 5 2016', u'size': u'6', u'groupid': u'0', u'permissions': u'drwxr-xr-x'},
-             {u'is_directory': True, u'name': u'include\t', u'userid': u'0', u'nlinks': u'1', u'datestamp': u'Mar  1  2017', u'size': u'23', u'groupid': u'0', u'permissions': u'drwxr-xr-x'},
-             {u'is_directory': True, u'name': u'lib\t', u'userid': u'0', u'nlinks': u'1', u'datestamp': u'Feb 27 12:07', u'size': u'8192', u'groupid': u'0', u'permissions': u'dr-xr-xr-x'}]
+            [{u'is_directory': True, u'name': u'bin\t', u'userid': u'0', u'nlinks': 1, u'datestamp': 1356236545, u'size': 24576, u'groupid': u'0', u'permissions': u'dr-xr-xr-x'},
+             {u'is_directory': True, u'name': u'etc\t', u'userid': u'0', u'nlinks': 1, u'datestamp': 1456236545, u'size': 6, u'groupid': u'0', u'permissions': u'drwxr-xr-x'},
+             {u'is_directory': True, u'name': u'games\t', u'userid': u'0', u'nlinks': 1, u'datestamp': 1356236545, u'size': 6, u'groupid': u'0', u'permissions': u'drwxr-xr-x'},
+             {u'is_directory': True, u'name': u'include\t', u'userid': u'0', u'nlinks': 1, u'datestamp': 1556236545, u'size': 23, u'groupid': u'0', u'permissions': u'drwxr-xr-x'},
+             {u'is_directory': True, u'name': u'lib\t', u'userid': u'0', u'nlinks': 1, u'datestamp': 1576236545, u'size': 8192, u'groupid': u'0', u'permissions': u'dr-xr-xr-x'}]
 
         mocked_facade.return_value = MockTransferClientFacade("anything")
         mocked_facade.return_value.status = mock.MagicMock()
