@@ -105,8 +105,8 @@ class Worker(RESTClient, Daemon):
 #                self._logger.exception("Error decoding JSON job.")
 #                continue
             src_site = endpoint_client.get_site(job['src_siteid'])
-            src_endpoints = [urlsplit(site) for site
-                             in src_site['endpoints'].itervalues()]
+            src_endpoints = (urlsplit(site) for site
+                             in src_site['endpoints'].itervalues())
             src = [urlunsplit(site._replace(path=job['src_filepath'])) for site in src_endpoints
                    if site.scheme == PROTOCOLMAP[job['protocol']]]
             if not src:
@@ -126,8 +126,8 @@ class Worker(RESTClient, Daemon):
                     continue
 
                 dst_site = endpoint_client.get_site(job['dst_siteid'])
-                dst_endpoints = [urlsplit(site) for site
-                                 in dst_site['endpoints'].itervalues()]
+                dst_endpoints = (urlsplit(site) for site
+                                 in dst_site['endpoints'].itervalues())
                 dst = [urlunsplit(site._replace(path=job['dst_filepath'])) for site in dst_endpoints
                        if site.scheme == PROTOCOLMAP[job['protocol']]]
                 if not dst:
