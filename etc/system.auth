@@ -67,6 +67,8 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 /workqueue/api/v1.0/jobs/?%GET = "@user"
 # Get output for a specific job
 /workqueue/api/v1.0/jobs/?/output%GET = "@user"
+# Get specific attempt output for a specific job
+/workqueue/api/v1.0/jobs/?/output/?%GET = "@user"
 # Get status of a specific job
 /workqueue/api/v1.0/jobs/?/status%GET = "@user"
 # Add a job to the database
