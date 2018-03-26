@@ -246,7 +246,7 @@ class UserCommand(object):
                     break
                 print "(%2d) job id: %d status: %s " % (self.__count, job_id, status['status'])
 
-        print "job id: %d status: %s " % (job_id, status['status'])
+        print "Job id: %d status: %s " % (job_id, status['status'])
         return status
 
     def remove(self, args):  # pylint: disable=no-self-use
