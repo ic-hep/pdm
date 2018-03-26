@@ -332,6 +332,7 @@ class FlaskServer(Flask):
                           - "CERT" - Any valid client cert is allowed.
                           - "CERT:/some/dn" - Allow a specific CERT.
                           - "TOKEN" - Any valid token is allowed.
+                          - "SESSION" - Requests a logged_in web session.
                           - "ALL" - All requests are allowed.
             By default no-one can call any function.
             Returns None.
@@ -384,6 +385,7 @@ class FlaskServer(Flask):
             None - No auth data (auth_data must = None)
             "CERT" - auth_data should be a DN.
             "TOKEN" - auth_data should be a json encoded token.
+            "SESSION" - auth_data should be none.
             "ALL" - No auth, all request anyway.
         """
         if not auth_mode:
@@ -393,5 +395,7 @@ class FlaskServer(Flask):
             self.__acl_manager.test_mode(ACLManager.AUTH_MODE_X509, auth_data)
         elif auth_mode == "TOKEN":
             self.__acl_manager.test_mode(ACLManager.AUTH_MODE_TOKEN, auth_data)
+        elif auth_mode == "SESSION":
+            self.__acl_manager.test_mode(ACLManager.AUTH_MODE_SESSION, None)
         else:
             self.__acl_manager.test_mode(ACLManager.AUTH_MODE_ALLOW_ALL)
