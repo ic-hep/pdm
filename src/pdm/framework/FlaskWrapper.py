@@ -53,6 +53,10 @@ def export_ext(ename, methods=None, redir=None):
                 Generally used for redirecting users back to the login page.
                 The URL encoded resource string will be substituted into the
                 %(return_to)s template if present.
+        Note: If export_ext is used multiple times on the same function, the
+              redir parameter is used from the first one (you should set it
+              the same on all export_ext for a given function to avoid
+              problems).
     """
     return functools.partial(export_inner, ename=ename,
                              methods=methods, redir=redir)
