@@ -16,9 +16,14 @@
 
     <!--- define all interactive components --->
     <script>
+     let list0 = new Listings(0);
+     let list1 = new Listings(1);
+
      $(document).ready(function(){
-         $("#listbutton").click(get_query_result);
-         $("#checkbutton").click(get_query_status);
+         $("#listbutton0").click($.proxy(list0.get_query_result, list0));
+	 $("#listbutton1").click($.proxy(list1.get_query_result, list1));
+         $("#checkbutton0").click($.proxy(list0.get_query_status, list0));
+	 $("#checkbutton1").click($.proxy(list1.get_query_status, list1));
      });
      
     </script>
@@ -29,33 +34,39 @@
       <center><h2>Your Dashboard</h2></center>
       <br>
       
-      <select id="Endpoints">
-          {% for site in sites %}
-          {% set sitename = site['site_name'] %}
-          <option value="{{ sitename }}">{{ sitename }}</option>
-          {% endfor %}
-      </select>
+      {% for i in range(2) %}
+      <div id="siteid{{ i }}">
+	  <select id="Endpoints{{ i }}">
+              {% for site in sites %}
+              {% set sitename = site['site_name'] %}
+              <option value="{{ sitename }}">{{ sitename }}</option>
+              {% endfor %}
+	  </select>
       
-      <br><br>
+	  <br><br>
       
       
-      <button class="lbutton" id="listbutton">List</button>    
-      
-      <br><br>
-      
-      directory: <input type="text" id="pathatsite" value="/"/> <br>
-      
-      <br>
-      <button class="lbutton" id="checkbutton">Check</button>
-      job number  <input type="text" id="jobnumberfield"/> <br>
-      
-      Status of the job is: <p id="reqstatus"> Placeholder </p>
-      
-      <br>
-      
-      <div id="tableDiv" style="margin-top: 20px">
-          Table should go here.
+	  <button class="lbutton" id="listbutton{{ i }}">List</button>    
+	  <div visibility="hidden" id="listspinner{{ i }}" class="loader"></div>
+	  <br><br>
+	  
+	  directory: <input type="text" id="pathatsite{{ i }}" value="/"/> <br>
+	  <br>
+	  <button class="lbutton" id="checkbutton{{ i }}">Check</button>
+	  job number  <input type="text" id="jobnumberfield{{ i }}"/> <br>
+	  
+	  Status of the job is: <p id="reqstatus{{ i }}"> Placeholder </p>
+	  
+	  <br>
+	  
+	  <div id="tableDiv{{ i }}" style="margin-top: 20px">
+              Table should go here.
+	  </div>
+	  
       </div>
+      {% endfor %}
+
+
 
       <br><br>
       <a href="listings" class="pseudobutton">Listings Test Page</a>
