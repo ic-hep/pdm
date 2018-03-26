@@ -11,6 +11,7 @@ from pdm.utils.config import ConfigSystem
 from pdm.framework.WSGIServer import WSGIServer
 from pdm.framework.FlaskWrapper import FlaskServer
 
+DEF_LOG_FORMAT = "'%(asctime)s %(name)s %(levelname)s %(message)s"
 
 #pylint: disable=too-few-public-methods
 class ExecutableServer(object):
@@ -42,12 +43,14 @@ class ExecutableServer(object):
         return os.path.join(self.__conf_base, path)
 
     @staticmethod
-    def __load_auth(app_name, auth_conf):
-        """ Loads the authentication config for a given app.
+    def __load_auth(app_server, app_name, auth_conf):
+        """ Loads the authentication config for a given app and applies it to
+            the app_server.
+            app_server - The app server to configure the auth rules on.
             app_name - The config name of the app to load auth for.
             auth_conf - Path to the auth config file (may be relative to the
                         config dir).
-            Returns a dictionary of paths => list(auth rule strings)
+            Returns None.
         """
         config = ConfigSystem.get_instance()
         config.setup(auth_conf)
@@ -55,25 +58,13 @@ class ExecutableServer(object):
         auth_rules = config.get_section("auth/%s" % app_name)
         if not auth_rules:
             raise RuntimeError("Auth section 'auth/%s' not found." % app_name)
-        auth_policy = {}
-        for uri, conf_rules in auth_rules.iteritems():
-            auth_rules = []
-            if isinstance(conf_rules, str):
-                conf_rules = [conf_rules]
-            for rule in conf_rules:
-                if rule.startswith('@'):
-                    # Rule is a group
-                    auth_rules.extend(auth_groups[rule[1:]])
-                else:
-                    auth_rules.append(rule)
-            auth_policy[uri] = auth_rules
-        return auth_policy
+        app_server.add_auth_groups(auth_groups)
+        app_server.add_auth_rules(auth_rules)
 
     def __init_app(self, app_server, app_name, config):
         """ Creates instances of all WSGI apps defined in the config. """
         auth_conf = self.__fix_path(config.pop("auth"))
-        auth_pol = self.__load_auth(app_name, auth_conf)
-        app_server.add_auth_rules(auth_pol)
+        auth_pol = self.__load_auth(app_server, app_name, auth_conf)
         app_class = config.pop("class")
         try:
             app_inst = pydoc.locate(app_class)()
@@ -105,9 +96,14 @@ class ExecutableServer(object):
         key = self.__fix_path(wsgi_config.pop("key"))
         secret = wsgi_config.pop("secret")
         # Create Flask server & config basics
-        logger = logging.getLogger()
+        logger = logging.getLogger("%s" % wsgi_name)
+        logger.setLevel(self.__log_level)
+        # Write log to log_file
         log_file = wsgi_config.pop("log")
-        # TODO: Write log to log_file in non-debug mode
+        log_hdlr = logging.FileHandler(log_file)
+        log_fmt = logging.Formatter(DEF_LOG_FORMAT)
+        log_hdlr.setFormatter(log_fmt)
+        logger.addHandler(log_hdlr)
         server_name = wsgi_config.pop("static", wsgi_name)
         app_server = FlaskServer(server_name, logger, self.__debug, secret)
         db_uri = wsgi_config.pop("db", None)
@@ -129,10 +125,11 @@ class ExecutableServer(object):
         self.__test = args.test
         self.__conf_base = os.path.dirname(args.conf)
         # Enabling logging
+        self.__log_level = logging.INFO
         if self.__debug:
-            logging.basicConfig(level=logging.DEBUG)
-        else:
-            logging.basicConfig(level=logging.INFO)
+            self.__log_level = logging.DEBUG
+            logging.basicConfig(level=self.__log_level,
+                                format=DEF_LOG_FORMAT)
         # Load config file
         config = ConfigSystem.get_instance()
         config.setup(args.conf)
