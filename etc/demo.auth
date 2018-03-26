@@ -6,11 +6,10 @@
 /web/* = "ALL"
 # Matches GET method as no method specified
 /demo/api/v1.0/hello = "ALL"
-# Note that this rule also matches the ones ending with turtles/<int:tid>
-/demo/api/v1.0/turtles%GET = "ANY"
+/demo/api/v1.0/turtles%GET = "CERT"
 /demo/api/v1.0/turtles%POST = "CERT"
-/demo/api/v1.0/turtles%DELETE = "CERT"
-/demo/api/v1.0/turtles%PUT = "CERT"
+/demo/api/v1.0/turtles/?%DELETE = "CERT"
+/demo/api/v1.0/turtles/?%PUT = "CERT"
 
 /demo/api/v1.0/get_token = "ALL"
 /demo/api/v1.0/verify_token = "TOKEN"

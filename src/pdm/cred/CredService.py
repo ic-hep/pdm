@@ -51,7 +51,10 @@ class CredService(object):
                 raise RuntimeError("%s parameter missing from config file." \
                                        % conf_key)
             current_app.ca_config[conf_key] = config.pop(conf_key)
-        # TODO: Normalise DNs into RFC format here!
+        # Normalise DNs into RFC format
+        for conf_key in ('ca_dn', 'user_dn_base'):
+            raw_dn = current_app.ca_config[conf_key]
+            current_app.ca_config[conf_key] = X509Utils.normalise_dn(raw_dn)
         # Then do optional parameters with defaults
         current_app.ca_config['ca_days'] = config.pop('ca_days', 3650)
         current_app.ca_config['user_max_days'] = \

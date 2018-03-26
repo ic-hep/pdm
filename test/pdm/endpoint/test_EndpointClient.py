@@ -30,7 +30,7 @@ class test_EndpointClient(unittest.TestCase):
         """
         SITE_NAME = "Test Site"
         SITE_DESC = "Lovely Test Site"
-        SITE_EPS = ("https://localhost", "gsiftp://localhost")
+        SITE_EPS = ("https://localhost/", "gsiftp://localhost/")
         SITE_MAPPINGS = ((1234, "USER1"), (4321, "OTHER_USER"))
         site_id = self._inst.add_site(SITE_NAME, SITE_DESC)
         self.assertIsInstance(site_id, int)
