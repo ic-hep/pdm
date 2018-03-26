@@ -38,7 +38,7 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 # Get proxy cred
 /cred/api/v1.0/cred/?%GET = "@worker"
 # Delete proxy cred
-/cred/api/v1.0/cred/?%DELETE = "@system"
+/cred/api/v1.0/cred/?%DELETE = "@worker"
 
 [auth/endpoint]
 # Get site list
