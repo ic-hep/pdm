@@ -6,11 +6,16 @@ system = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=loca
 worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=worker"]
 
 [auth/web]
+# Main entry page
 / = "ALL"
-/web/* = "ALL"
+# Registration
+/web/registration = "ALL"
 /web/registration%POST = "ALL"
+# Login
+/web/datamover = "ALL"
 /web/datamover%POST = "ALL"
-/web/listings%POST = "ALL"
+# All other pages
+/web/* = "SESSION"
 
 [auth/users]
 # Add user

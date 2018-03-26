@@ -5,12 +5,13 @@ import json
 import flask
 from flask import request, flash
 from pdm.framework.FlaskWrapper import export, export_ext, startup, db_model, jsonify
+from pdm.framework.ACLManager import set_session_state
 from pdm.userservicedesk.HRClient import HRClient
 from pdm.endpoint.EndpointClient import EndpointClient
 from pdm.userservicedesk.TransferClient import TransferClient
 
 
-@export_ext("/web")
+@export_ext("/web", redir="/web/datamover?return_to=%(return_to)s")
 class WebPageService(object):
     """ The main endpoint container class for DemoService. """
 
@@ -69,6 +70,7 @@ class WebPageService(object):
         password = request.form['pswd']
         try:
             token = flask.current_app.hrclient.login(username, password)
+            set_session_state(True)
             flask.session["token"] = token
         except Exception as err:
             flash('Could not login user (%s)' % err)
@@ -86,6 +88,7 @@ class WebPageService(object):
     def logout():
         """logs the user out by removing the token"""
         flask.session.pop("token")
+        set_session_state(False)
         flash('You have been logged out.')
         return flask.redirect("/web/datamover")
 
@@ -94,7 +97,6 @@ class WebPageService(object):
     def dashboard():
         """arrivals: what the user sees after logging in"""
         # will abort of user is not logged in
-        WebPageService.check_session()
         sites = flask.current_app.epclient.get_sites()
         return flask.render_template("dashboard.html", sites=sites)
 
@@ -102,7 +104,6 @@ class WebPageService(object):
     @export_ext("listings", methods=["GET"])
     def listings():
         """renders the listing page with a list of all sites"""
-        WebPageService.check_session()
         sites = flask.current_app.epclient.get_sites()
         return flask.render_template("listings.html", sites=sites)
 
