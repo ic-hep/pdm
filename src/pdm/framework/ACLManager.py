@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 """ Access Control for Flask Wrapper. """
 
+import urllib
 from copy import deepcopy
+import flask
 from flask import abort, current_app, request, session
 from pdm.utils.X509 import X509Utils
 
@@ -206,7 +208,16 @@ class ACLManager(object):
             the client will be redirected, otherwise a 403 will be
             returned.
         """
-        # TODO: Implement this
+        # Check whether this endpoint has a special redirect
+        if request.endpoint:
+            if request.endpoint in current_app.view_functions:
+                ep_func = current_app.view_functions[request.endpoint]
+                if ep_func:
+                    redir_url = getattr(ep_func, 'export_redir', None)
+                    if redir_url:
+                        orig_path = urllib.quote(request.path, safe='')
+                        real_redir = redir_url % {'return_to': orig_path}
+                        abort(flask.redirect(real_redir))
         abort(403)
 
     def __check_acl(self):

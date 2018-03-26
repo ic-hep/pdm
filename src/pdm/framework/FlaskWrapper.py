@@ -310,6 +310,7 @@ class FlaskServer(Flask):
                     endpoint = obj_inst.__name__
                     if parent_name:
                         endpoint = "%s.%s" % (parent_name, endpoint)
+                    obj_inst.export_redir = redir
                     self.add_url_rule(obj_path, endpoint, obj_inst,
                                       methods=methods)
         elif hasattr(obj_inst, 'is_startup'):
