@@ -46,7 +46,7 @@ class ConfigSystem(object):
             try:
                 with open(filename, 'rb') as config_file:
                     config_parser.readfp(config_file)
-                self._logger.info("Read config file: %s", filename)
+                self._logger.debug("Read config file: %s", filename)
             except Exception:
                 self._logger.warning("Failed to read config file: %s", filename)
                 if not ignore_errors:
