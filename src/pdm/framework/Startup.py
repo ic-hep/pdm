@@ -11,6 +11,7 @@ from pdm.utils.config import ConfigSystem
 from pdm.framework.WSGIServer import WSGIServer
 from pdm.framework.FlaskWrapper import FlaskServer
 
+DEF_LOG_FORMAT = "'%(asctime)s %(name)s %(levelname)s %(message)s"
 
 #pylint: disable=too-few-public-methods
 class ExecutableServer(object):
@@ -105,9 +106,14 @@ class ExecutableServer(object):
         key = self.__fix_path(wsgi_config.pop("key"))
         secret = wsgi_config.pop("secret")
         # Create Flask server & config basics
-        logger = logging.getLogger()
+        logger = logging.getLogger("%s" % wsgi_name)
+        logger.setLevel(self.__log_level)
+        # Write log to log_file
         log_file = wsgi_config.pop("log")
-        # TODO: Write log to log_file in non-debug mode
+        log_hdlr = logging.FileHandler(log_file)
+        log_fmt = logging.Formatter(DEF_LOG_FORMAT)
+        log_hdlr.setFormatter(log_fmt)
+        logger.addHandler(log_hdlr)
         server_name = wsgi_config.pop("static", wsgi_name)
         app_server = FlaskServer(server_name, logger, self.__debug, secret)
         db_uri = wsgi_config.pop("db", None)
@@ -129,10 +135,11 @@ class ExecutableServer(object):
         self.__test = args.test
         self.__conf_base = os.path.dirname(args.conf)
         # Enabling logging
+        self.__log_level = logging.INFO
         if self.__debug:
-            logging.basicConfig(level=logging.DEBUG)
-        else:
-            logging.basicConfig(level=logging.INFO)
+            self.__log_level = logging.DEBUG
+            logging.basicConfig(level=self.__log_level,
+                                format=DEF_LOG_FORMAT)
         # Load config file
         config = ConfigSystem.get_instance()
         config.setup(args.conf)
