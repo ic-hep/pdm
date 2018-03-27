@@ -152,11 +152,17 @@ class Worker(RESTClient, Daemon):
                                                          env=script_env)
                 log, _ = self._current_process.communicate()
 
-            self._logger.info("Job complete, uploading output log to WorkqueueService.")
+            output_logger = self._logger.info
+            returncode = self._current_process.returncode
+            if returncode:
+                output_logger = self._logger.warning
+            output_logger("Job completed with exit code %d", returncode)
+
+            self._logger.info("Uploading output log to WorkqueueService.")
             try:
                 self.put('worker/%s' % job['id'],
                          data={'log': log,
-                               'returncode': self._current_process.returncode,
+                               'returncode': returncode,
                                'host': socket.gethostbyaddr(socket.getfqdn())})
             except RESTException:
                 self._logger.exception("Error trying to PUT back output from subcommand.")
