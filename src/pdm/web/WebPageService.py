@@ -4,7 +4,8 @@
 import json
 import flask
 from flask import request, flash
-from pdm.framework.FlaskWrapper import export, export_ext, startup, db_model, jsonify
+from pdm.framework.FlaskWrapper import jsonify
+from pdm.framework.Decorators import export, export_ext, startup, db_model
 from pdm.framework.ACLManager import set_session_state
 from pdm.userservicedesk.HRClient import HRClient
 from pdm.endpoint.EndpointClient import EndpointClient

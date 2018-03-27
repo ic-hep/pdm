@@ -3,8 +3,9 @@
 
 import flask
 from flask import request, current_app
-from pdm.framework.FlaskWrapper import (export, export_ext, startup,
-                                        startup_test, db_model, jsonify)
+from pdm.framework.FlaskWrapper import jsonify
+from pdm.framework.Decorators import (export, export_ext, startup,
+                                        startup_test, db_model)
 
 import pdm.demo.DemoDB
 
