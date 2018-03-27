@@ -225,6 +225,8 @@ class FlaskServer(Flask):
         self.__startup_funcs = []
         self.__test_funcs = []
         self.__logger = logger
+        if not token_key:
+            token_key = os.urandom(16)
         self.secret_key = token_key + "flask"
         self.token_svc = TokenService(token_key, "pdmwebsvc")
         # We override the test client class from Flask with our
