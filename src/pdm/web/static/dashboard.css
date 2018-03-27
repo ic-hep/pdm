@@ -32,11 +32,6 @@ body {
 }
 
 
-.listingstable {
-
-tr:nth-child(even){background-color: #f2f2f2;}
-
-}
 
 /* spinner */
 .loader {
@@ -62,12 +57,58 @@ tr:nth-child(even){background-color: #f2f2f2;}
 }
 
 
-/* note: for all table related items use datatables */
+/* customize datatables */
+/* removes black lines under header (and about footer -- not used) */
+table.dataTable thead th {
+  border-bottom: 0;
+}
+table.dataTable tfoot th {
+  border-top: 0;
+}
+
+
+
+/* all rows to have the same background color */
+table.dataTable.display tbody tr.odd {
+    background-color: white;
+}
+
+table.dataTable.display tbody tr.even {
+    background-color: white;
+}
+
+
+/* leave the sorted column alone */
+table.dataTable.display tbody tr.odd .sorting_1 {
+    background-color: white;
+}
+
+/* this doesn't work */
+table.dataTable.cell-border tbody tr {
+ border-top: hidden
+ border-bottom: hidden
+ border-right: hidden
+}
+
+#table0 {
+    border : solid;
+    border-color : purple;
+    border-radius: 10px;
+
+
+}
+
+#table1 {
+    border : solid;
+    border-color : blue;
+    border-radius: 10px;
+     
+}
 
 
 
 /* pseudo button (just a link) */
-a.pseudobutton {
+.pseudobutton {
     -webkit-appearance: button;
     -moz-appearance : button;
     appearance: button;
@@ -84,7 +125,7 @@ a.pseudobutton {
 
 /* this needs fixing */
 .lbutton {
-    background-color: lightblue;
+    background-color: #e8c4ff;
     border : hidden;
     border-radius: 10px;
     text-align: center;

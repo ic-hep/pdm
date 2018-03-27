@@ -42,6 +42,9 @@ class Listings {
 	var fullpath = "/web/js/list?siteid="+sitename+"&sitepath="+sitepath;
 	// make spinner visible
 	$("#listspinner"+sitenumber).show();
+	// TODO: maybe put spinner in here or something else clever 
+	$('#tableDiv'+this.sitenumber).html("");
+
 	$.ajax({url: fullpath, 
 		success: $.proxy(this.job_submission_complete, this), 
 		error: $.proxy(this.job_submission_failed, this)
@@ -54,6 +57,7 @@ class Listings {
         // $("#listspinner"+this.sitenumber).hide();
         $("#jobnumberfield"+this.sitenumber).val(result);
 	this.jobid = result;
+	this.jobattempts = 10; 
 	console.log("Listing jobid: "+this.jobid);
 	setTimeout($.proxy(this.get_query_status, this), 3000);
     }
@@ -131,7 +135,7 @@ class Listings {
 	    $('#table'+this.sitenumber).DataTable({
 		paging : false,
 		searching: false,
-		
+		"order": [[ 5, "asc" ]]
 	    });
         } // DONE
 	else if (jobobj.status == "FAILED") {
@@ -139,7 +143,15 @@ class Listings {
 	}
 	else {
 	    console.log("rescheduling");
-	    setTimeout($.proxy(this.get_query_status, this), 3000);
+	    if (this.jobattempts > 0) {
+		this.jobattempts--;
+		setTimeout($.proxy(this.get_query_status, this), 3000);
+	    }
+	    else {
+		$("#listspinner"+this.sitenumber).hide();
+		$("#reqstatus"+this.sitenumber).html("STUCK");
+		return;
+	    }
 	}
 	$("#reqstatus"+this.sitenumber).html(jobobj.status);
     

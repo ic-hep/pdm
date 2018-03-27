@@ -10,8 +10,6 @@ from pdm.framework.ACLManager import set_session_state
 from pdm.userservicedesk.HRClient import HRClient
 from pdm.endpoint.EndpointClient import EndpointClient
 from pdm.userservicedesk.TransferClient import TransferClient
-from pdm.userservicedesk.HRService import HRService # this can't be right
-from pdm.framework.Tokens import TokenService
 
 @export_ext("/web", redir="/web/datamover?return_to=%(return_to)s")
 class WebPageService(object):
@@ -138,7 +136,7 @@ class WebPageService(object):
         # returns a list of sites as dictionaries
         # want to sort on 'site_name'
         sites = flask.current_app.epclient.get_sites()
-        sorted_sites = sorted(sites, key=lambda k: k['site_name']) 
+        sorted_sites = sorted(sites, key=lambda k: k['site_name'])
         return flask.render_template("dashboard.html", sites=sorted_sites, user_name=user_name)
 
 
