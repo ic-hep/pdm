@@ -84,7 +84,7 @@ class UserCommand(object):
         user_parser.add_argument('-t', '--token', type=str, required=True)
         user_parser.add_argument('job', type=int, help="job id as obtained"
                                                        " from copy, remove or list")
-        user_parser.add_argument('-a', '--attempt', default = -1,
+        user_parser.add_argument('-a', '--attempt', default=-1,
                                  help="Attempt number, leave out for the last attempt")
         user_parser.set_defaults(func=self.log)
 
@@ -102,6 +102,11 @@ class UserCommand(object):
             args.surname = raw_input("Please enter your surname: ")
 
         password = getpass()
+        conf_pass = getpass(prompt='Confirm password')
+        if password != conf_pass:
+            print "Passwords don't match. Aborted"
+            return
+
         client = HRClient()
         userdict = {'surname': args.surname, 'name': args.name,
                     'email': args.email, 'password': password}
@@ -185,6 +190,8 @@ class UserCommand(object):
                           (status['status'], resp['id'])
             else:
                 print " No such site: %s ?" % (args.site,)
+        else:
+            print "No token. Please login first"
 
     def sitelist(self, args):
         """
@@ -196,11 +203,13 @@ class UserCommand(object):
         if token:
             client = TransferClientFacade(token)
             sites = client.list_sites()
-            print '-'+91*'-'+'-'
+            print '-' + 91 * '-' + '-'
             print '|{0:40}|{1:50}|'.format('site:', 'description:')
-            print '|'+91*'-'+'|'
+            print '|' + 91 * '-' + '|'
             for elem in sites:
                 print '|{site_name:40s}|{site_desc:50s}|'.format(**elem)
+        else:
+            print "No token. Please login first"
 
     def _print_formatted_listing(self, listing):  # pylint: disable=no-self-use
         """
@@ -217,7 +226,8 @@ class UserCommand(object):
               '{size:%dd} {datestamp:20s} {name:s}' % (links_len, uid_s, gid_s, size_len)
         # print fmt
         for elem in listing:
-            print fmt.format(**dict(elem,datestamp=str(datetime.utcfromtimestamp(elem['datestamp']))))
+            print fmt.format(**dict(elem,
+                                    datestamp=str(datetime.utcfromtimestamp(elem['datestamp']))))
 
     def status(self, args):
         """
@@ -231,6 +241,8 @@ class UserCommand(object):
         if token:
             client = TransferClientFacade(token)
             self._status(job_id, client, block=block)
+        else:
+            print "No token. Please login first"
 
     def _status(self, job_id, client, block=False):
 
@@ -264,6 +276,8 @@ class UserCommand(object):
                              value is not None and key not in ('func', 'site', 'token', 'block')}
             response = client.remove(args.site, **accepted_args)  # max_tries, priority)
             self._status(response['id'], client, block=args.block)
+        else:
+            print "No token. Please login first"
 
     def copy(self, args):  # pylint: disable=no-self-use
         """
@@ -282,8 +296,15 @@ class UserCommand(object):
                              and key not in ('func', 'src_site', 'dst_site', 'token', 'block')}
             response = client.copy(src_site, dst_site, **accepted_args)
             self._status(response['id'], client, block=args.block)
+        else:
+            print "No token. Please login first"
 
     def log(self, args):
+        """
+        Get job log
+        :param args:
+        :return:
+        """
         token = self._get_token(args)
         if token:
             job_id = int(args.job)
@@ -292,11 +313,13 @@ class UserCommand(object):
             attempts = status['attempts']
             #
             if args.attempt == -1:
-                print "Job log - last attempt %d" %(attempts,)
+                print "Job log - last attempt %d" % (attempts,)
                 log_listing = client.output(job_id)['log']
             else:
                 log_listing = client.output(job_id, args.attempt)['log']
             print log_listing
+        else:
+            print "No token. Please login first"
 
     def _get_token(self, args):
         # TODO poosible token from a file
