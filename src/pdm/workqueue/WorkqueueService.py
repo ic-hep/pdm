@@ -16,7 +16,7 @@ from pdm.userservicedesk.HRService import HRService
 from .WorkqueueDB import WorkqueueModels, WorkqueueJobEncoder, JobStatus, JobType, JobProtocol
 
 
-SHELLPATH_REGEX = re.compile(r'^/[a-zA-Z0-9/_.*~-]*$')
+SHELLPATH_REGEX = re.compile(r'^[/~][a-zA-Z0-9/_.*~-]*$')
 LISTPARSE_REGEX = re.compile(r'^(?=[-dlpscbD])(?P<permissions>\S+)\s+'
                              r'(?P<nlinks>\S+)\s+'
                              r'(?P<userid>\S+)\s+'
