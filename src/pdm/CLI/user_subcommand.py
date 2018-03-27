@@ -185,6 +185,8 @@ class UserCommand(object):
                           (status['status'], resp['id'])
             else:
                 print " No such site: %s ?" % (args.site,)
+        else:
+            print "No token. Please login first"
 
     def sitelist(self, args):
         """
@@ -202,7 +204,7 @@ class UserCommand(object):
             for elem in sites:
                 print '|{site_name:40s}|{site_desc:50s}|'.format(**elem)
         else:
-            print " no token. Please login first"
+            print "No token. Please login first"
 
     def _print_formatted_listing(self, listing):  # pylint: disable=no-self-use
         """
@@ -233,6 +235,8 @@ class UserCommand(object):
         if token:
             client = TransferClientFacade(token)
             self._status(job_id, client, block=block)
+        else:
+            print "No token. Please login first"
 
     def _status(self, job_id, client, block=False):
 
@@ -266,6 +270,8 @@ class UserCommand(object):
                              value is not None and key not in ('func', 'site', 'token', 'block')}
             response = client.remove(args.site, **accepted_args)  # max_tries, priority)
             self._status(response['id'], client, block=args.block)
+        else:
+            print "No token. Please login first"
 
     def copy(self, args):  # pylint: disable=no-self-use
         """
@@ -284,6 +290,8 @@ class UserCommand(object):
                              and key not in ('func', 'src_site', 'dst_site', 'token', 'block')}
             response = client.copy(src_site, dst_site, **accepted_args)
             self._status(response['id'], client, block=args.block)
+        else:
+            print "No token. Please login first"
 
     def log(self, args):
         token = self._get_token(args)
@@ -299,6 +307,8 @@ class UserCommand(object):
             else:
                 log_listing = client.output(job_id, args.attempt)['log']
             print log_listing
+        else:
+            print "No token. Please login first"
 
     def _get_token(self, args):
         # TODO poosible token from a file
