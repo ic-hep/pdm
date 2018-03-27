@@ -8,7 +8,8 @@ import logging
 import json
 from sqlalchemy import func
 from flask import request, abort, current_app
-from pdm.framework.FlaskWrapper import export, export_ext, db_model, jsonify, startup
+from pdm.framework.FlaskWrapper import jsonify
+from pdm.framework.Decorators import export, export_ext, db_model, startup
 from pdm.utils.hashing import hash_pass, check_hash
 from pdm.framework.Tokens import TokenService
 import pdm.userservicedesk.models

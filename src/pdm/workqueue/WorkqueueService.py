@@ -8,7 +8,9 @@ from functools import wraps
 
 from flask import request, abort, current_app
 
-from pdm.framework.FlaskWrapper import export_ext, db_model, jsonify, startup
+from pdm.framework.FlaskWrapper import jsonify
+from pdm.framework.Decorators import (export_ext, db_model, startup,
+                                      decode_json_data)
 from pdm.userservicedesk.HRService import HRService
 
 from .WorkqueueDB import WorkqueueModels, WorkqueueJobEncoder, JobStatus, JobType, JobProtocol
@@ -22,16 +24,6 @@ LISTPARSE_REGEX = re.compile(r'^(?=[-dlpscbD])(?P<permissions>\S+)\s+'
                              r'(?P<size>\S+)\s+'
                              r'(?P<datestamp>\S+\s+\S+\s+\S+)\s+'
                              r'(?P<name>[^\t\n\r\f\v]*)\s*$', re.MULTILINE)
-
-
-def decode_json_data(func):
-    """Decorator to automatically decode json data."""
-    @wraps(func)
-    def wrapper(*args, **kwargs):  # pylint: disable=missing-docstring
-        if not isinstance(request.data, dict):
-            request.data = json.loads(request.data)
-        return func(*args, **kwargs)
-    return wrapper
 
 
 @export_ext("/workqueue/api/v1.0")
