@@ -98,9 +98,9 @@ class Worker(RESTClient, Daemon):
             except RESTException as err:
                 if err.code == 404:
                     self._logger.debug("No work to pick up.")
-                    time.sleep(self._interpoll_sleep_time)
                 else:
                     self._logger.exception("Error trying to get job from WorkqueueService.")
+                time.sleep(self._interpoll_sleep_time)
                 continue
             job, token = response
 #            try:
