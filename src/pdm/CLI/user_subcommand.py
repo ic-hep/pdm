@@ -201,6 +201,8 @@ class UserCommand(object):
             print '|'+91*'-'+'|'
             for elem in sites:
                 print '|{site_name:40s}|{site_desc:50s}|'.format(**elem)
+        else:
+            print " no token. Please login first"
 
     def _print_formatted_listing(self, listing):  # pylint: disable=no-self-use
         """
