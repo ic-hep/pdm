@@ -37,7 +37,7 @@ class HRService(object):
             raise ValueError(" CS secret was not provided in the config file . Aborting.")
         current_app.cs_client = CredClient()
 
-        current_app.pwd_len = config.pop("CS_secret", 8)
+        current_app.pwd_len = config.pop("pwd_length", 8)
 
     @staticmethod
     @export
