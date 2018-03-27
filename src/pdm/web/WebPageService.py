@@ -19,15 +19,13 @@ class WebPageService(object):
     @staticmethod
     @startup
     #pylint: disable=unused-argument
-    def preload_turtles(config):
+    def startup_web(config):
         """ Configure the turtles application.
             Creates an example database if DB is entry.
             Prints valud of "test_param" from the config.
         """
-        # TODO: this should come from the framework
-        flask.current_app.secret_key = 'muhahaha'
         log = flask.current_app.log
-        log.info("Hello Real Turtles")
+        log.info("Web interface starting")
         flask.current_app.hrclient = HRClient()
         flask.current_app.epclient = EndpointClient()
 
