@@ -37,6 +37,8 @@ class HRService(object):
             raise ValueError(" CS secret was not provided in the config file . Aborting.")
         current_app.cs_client = CredClient()
 
+        current_app.pwd_len = config.pop("pswd_length", 8)
+
     @staticmethod
     @export
     def hello():
@@ -90,14 +92,19 @@ class HRService(object):
             abort(400)
 
         if not HRService.check_passwd(data['password']):
-            abort(400)
+            return "Password supplied is too short (lower character limit is %d)" \
+                   % current_app.pwd_len, 400
 
         data['password'] = hash_pass(data['password'])
         cs_hashed_key = hash_pass(data['password'], current_app.cs_key)
 
         User = request.db.tables.User
-        user = User.from_json(json.dumps(data))
-
+        data.pop('last_login', None)
+        data.pop('date_created', None)
+        data.pop('date_modified', None)
+        data.pop('state', 0)
+        #user = User.from_json(json.dumps(data))
+        user = User(**data)
         db = request.db
 
         try:
@@ -156,7 +163,9 @@ class HRService(object):
                 HRService._logger.error("passwd change request:" \
                                         "null password and/or new password, supplied: %s  ",
                                         request.json)
-                abort(400)
+                return "Null password and/or new password " \
+                       "or password supplied is too short (lower character limit is %d)" \
+                       % current_app.pwd_len, 400
 
                 # user by id from the token
             user = User.query.filter_by(id=user_id).first()
@@ -292,8 +301,8 @@ class HRService(object):
         :param passwd:
         :return: True of False
         """
-        # TODO: Password requirements should be use configurable
-        if len(passwd) < 8:
+        if len(passwd) < current_app.pwd_len:
+            HRService._logger.error("Password too short %d (lower limit = %d)", len(passwd), current_app.pwd_len)
             return False
 
         return True

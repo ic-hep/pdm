@@ -20,7 +20,7 @@ class UserModel(object):
             # username = Column(String(80), unique=True, nullable=False)
             name = Column(String(80), unique=False, nullable=False)
             surname = Column(String(80), unique=False, nullable=False)
-            state = Column(Integer)
+            state = Column(Integer, default=0)
             # dn = db.Column(db.String(200), unique=True, nullable=False)
             password = Column(String(80), unique=False, nullable=False)
             email = Column(String(120), unique=True, nullable=False)
