@@ -142,7 +142,7 @@ class Worker(RESTClient, Daemon):
                                                          stdout=subprocess.PIPE,
                                                          stderr=subprocess.STDOUT,
                                                          env=script_env)
-            log, _ = self._current_process.communicate()
+                log, _ = self._current_process.communicate()
             try:
                 self.put('worker/%s' % job['id'],
                          data={'log': log,
@@ -154,7 +154,7 @@ class Worker(RESTClient, Daemon):
             finally:
                 self.set_token(None)
 
-            if job.attempts >= job.max_tries - 1:
+            if job['attempts'] >= job['max_tries'] - 1:
                 try:
                     cred_client.del_cred(job['credentials'])
                 except RESTException:
