@@ -102,7 +102,7 @@ class UserCommand(object):
             args.surname = raw_input("Please enter your surname: ")
 
         password = getpass()
-        conf_pass = getpass(prompt='Confirm password')
+        conf_pass = getpass(prompt='Confirm password: ')
         if password != conf_pass:
             print "Passwords don't match. Aborted"
             return
@@ -128,9 +128,9 @@ class UserCommand(object):
 
         token = args.token
 
-        password = getpass(prompt='Old Password')
-        newpassword = getpass(prompt='New Password')
-        newpassword1 = getpass(prompt='New Password')
+        password = getpass(prompt='Old Password: ')
+        newpassword = getpass(prompt='New Password: ')
+        newpassword1 = getpass(prompt='Confirm New Password: ')
 
         if newpassword != newpassword1:
             print "Passwords don't match. Aborted"
