@@ -45,7 +45,7 @@ class WorkqueueService(object):
         Job = request.db.tables.Job  # pylint: disable=invalid-name
         job = Job.query.filter(Job.status.in_((JobStatus.NEW, JobStatus.FAILED)),
                                Job.type.in_(request.data['types']),
-                               Job.attempts <= Job.max_tries)\
+                               Job.attempts < Job.max_tries)\
                        .order_by(Job.priority)\
                        .first_or_404()
         job.status = JobStatus.SUBMITTED
