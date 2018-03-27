@@ -30,6 +30,8 @@ class TestWorkqueueService(unittest.TestCase):
 
     def test_get_next_job(self):
         """test worker get next job."""
+        request = self.__test.post('/workqueue/api/v1.0/worker', data={'test': 12})
+        self.assertEqual(request.status_code, 400, "Expected job with incorrect attrs to fail.")
         request = self.__test.post('/workqueue/api/v1.0/worker', data={'types': [JobType.LIST]})
         self.assertEqual(request.status_code, 200, "Request to get worker job failed.")
         job, token = json.loads(request.data)
@@ -67,6 +69,11 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(request.status_code, 403)
 
         self.__service.fake_auth("TOKEN", "100")
+        request = self.__test.put('/workqueue/api/v1.0/worker/100',
+                                   data={'returncode': 0,
+                                         'host': 'somehost.domain'})
+        self.assertEqual(request.status_code, 400)
+
         request = self.__test.put('/workqueue/api/v1.0/worker/100',
                                    data={'log': 'blah blah',
                                          'returncode': 0,
