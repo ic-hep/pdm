@@ -5,7 +5,8 @@
 import json
 import random
 from flask import current_app, request
-from pdm.framework.FlaskWrapper import db_model, export_ext, startup, jsonify
+from pdm.framework.FlaskWrapper import jsonify
+from pdm.framework.Decorators import db_model, export_ext, startup
 from pdm.framework.Tokens import TokenService
 from pdm.cred.CredDB import CredDBModel
 from pdm.utils.db import managed_session

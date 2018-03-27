@@ -6,8 +6,8 @@ import json
 from flask import current_app, request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import FlushError
-from pdm.framework.FlaskWrapper import (db_model, export_ext, jsonify, \
-                                        startup_test)
+from pdm.framework.FlaskWrapper import jsonify
+from pdm.framework.Decorators import db_model, export_ext, startup_test
 from pdm.endpoint.EndpointDB import EndpointDBModel
 from pdm.utils.db import managed_session
 

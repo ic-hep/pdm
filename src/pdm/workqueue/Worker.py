@@ -10,7 +10,6 @@ import socket
 import subprocess
 from urlparse import urlsplit, urlunsplit
 from tempfile import NamedTemporaryFile
-from contextlib import contextmanager
 
 from requests.exceptions import Timeout
 
@@ -21,22 +20,6 @@ from pdm.utils.daemon import Daemon
 from pdm.utils.config import getConfig
 
 from .WorkqueueDB import COMMANDMAP, PROTOCOLMAP, JobType
-
-
-@contextmanager
-def TempX509Files(token):
-    """Create temporary grid credential files."""
-    cred_client = CredClient()
-    cert, key = cred_client.get_cred(token)
-    with NamedTemporaryFile() as proxyfile:
-        proxyfile.write(key)
-        proxyfile.write(cert)
-        proxyfile.flush()
-        os.fsync(proxyfile.fileno())
-        try:
-            yield proxyfile
-        finally:
-            cred_client.del_cred(token)
 
 
 class Worker(RESTClient, Daemon):
@@ -82,32 +65,36 @@ class Worker(RESTClient, Daemon):
                            'host': socket.gethostbyaddr(socket.getfqdn())})
         except RESTException:
             self._logger.exception("Error trying to PUT back abort message")
+        finally:
+            self.set_token(None)
 
     def run(self):
         """Daemon main method."""
+        cred_client = CredClient()
         endpoint_client = EndpointClient()
         run = True
         while run:
             if self._one_shot:
                 run = False
+            self._logger.info("Getting job from WorkqueueService.")
             try:
-                response = self.post('worker', data={'types': self._types})
+                job, token = self.post('worker', data={'types': self._types})
             except Timeout:
                 self._logger.warning("Timed out contacting the WorkqueueService.")
                 continue
             except RESTException as err:
                 if err.code == 404:
-                    self._logger.debug("No work to pick up.")
-                    time.sleep(self._interpoll_sleep_time)
+                    self._logger.info("WorkqueueService reports no jobs to be done.")
                 else:
                     self._logger.exception("Error trying to get job from WorkqueueService.")
+                time.sleep(self._interpoll_sleep_time)
                 continue
-            job, token = response
-#            try:
-#                job, token = json.loads(response.data())
-#            except ValueError:
-#                self._logger.exception("Error decoding JSON job.")
-#                continue
+
+            self._logger.info("%s job id=%d acquired from WorkqueueService.",
+                              JobType(job['type']).name,  # pylint: disable=no-member
+                              job['id'])
+            self.set_token(token)
+
             src_site = endpoint_client.get_site(job['src_siteid'])
             src_endpoints = (urlsplit(site) for site
                              in src_site['endpoints'].itervalues())
@@ -120,6 +107,7 @@ class Worker(RESTClient, Daemon):
             script_env = dict(os.environ,
                               PATH=self._script_path,
                               SRC_PATH=random.choice(src))
+            self._logger.info("Random SRC_PATH: '%s' chosen.", script_env['SRC_PATH'])
 
             if job['type'] == JobType.COPY:
                 if job['dst_siteid'] is None:
@@ -139,24 +127,52 @@ class Worker(RESTClient, Daemon):
                                 % (job['protocol'], job['dst_siteid']))
                     continue
                 script_env['DST_PATH'] = random.choice(dst)
+                self._logger.info("Random DST_PATH: '%s' chosen.", script_env['DST_PATH'])
+
+            self._logger.info("Getting user's credentials.")
+            try:
+                cert, key = cred_client.get_cred(job['credentials'])
+            except RESTException:
+                self._abort(job['id'], "Error getting user's credentials.")
+                continue
 
             command = COMMANDMAP[job['type']][job['protocol']]
-            with TempX509Files(job['credentials']) as proxyfile:
+            with NamedTemporaryFile() as proxyfile:
+                proxyfile.write(key)
+                proxyfile.write(cert)
+                proxyfile.flush()
+                os.fsync(proxyfile.fileno())
                 script_env['X509_USER_PROXY'] = proxyfile.name
+
+                self._logger.info("Running job in subprocess.")
                 self._current_process = subprocess.Popen('(set -x && %s)' % command,
                                                          shell=True,
                                                          stdout=subprocess.PIPE,
                                                          stderr=subprocess.STDOUT,
                                                          env=script_env)
                 log, _ = self._current_process.communicate()
-                self.set_token(token)
-                try:
-                    self.put('worker/%s' % job['id'],
-                             data={'log': log,
-                                   'returncode': self._current_process.returncode,
-                                   'host': socket.gethostbyaddr(socket.getfqdn())})
-                except RESTException:
-                    self._logger.exception("Error trying to PUT back output from subcommand.")
-                finally:
-                    self.set_token(None)
 
+            output_logger = self._logger.info
+            returncode = self._current_process.returncode
+            if returncode:
+                output_logger = self._logger.warning
+            output_logger("Job completed with exit code %d", returncode)
+
+            self._logger.info("Uploading output log to WorkqueueService.")
+            try:
+                self.put('worker/%s' % job['id'],
+                         data={'log': log,
+                               'returncode': returncode,
+                               'host': socket.gethostbyaddr(socket.getfqdn())})
+            except RESTException:
+                self._logger.exception("Error trying to PUT back output from subcommand.")
+                continue
+            finally:
+                self.set_token(None)
+
+            if job['attempts'] >= job['max_tries'] - 1:
+                self._logger.info("Final attempt complete, deleting users credentials.")
+                try:
+                    cred_client.del_cred(job['credentials'])
+                except RESTException:
+                    self._logger.exception("Error trying to delete user credentials.")

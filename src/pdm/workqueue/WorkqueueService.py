@@ -8,13 +8,15 @@ from functools import wraps
 
 from flask import request, abort, current_app
 
-from pdm.framework.FlaskWrapper import export_ext, db_model, jsonify, startup
+from pdm.framework.FlaskWrapper import jsonify
+from pdm.framework.Decorators import (export_ext, db_model, startup,
+                                      decode_json_data)
 from pdm.userservicedesk.HRService import HRService
 
 from .WorkqueueDB import WorkqueueModels, WorkqueueJobEncoder, JobStatus, JobType, JobProtocol
 
 
-SHELLPATH_REGEX = re.compile(r'^/[a-zA-Z0-9/_.*~-]*$')
+SHELLPATH_REGEX = re.compile(r'^[/~][a-zA-Z0-9/_.*~-]*$')
 LISTPARSE_REGEX = re.compile(r'^(?=[-dlpscbD])(?P<permissions>\S+)\s+'
                              r'(?P<nlinks>\S+)\s+'
                              r'(?P<userid>\S+)\s+'
@@ -22,16 +24,6 @@ LISTPARSE_REGEX = re.compile(r'^(?=[-dlpscbD])(?P<permissions>\S+)\s+'
                              r'(?P<size>\S+)\s+'
                              r'(?P<datestamp>\S+\s+\S+\s+\S+)\s+'
                              r'(?P<name>[^\t\n\r\f\v]*)\s*$', re.MULTILINE)
-
-
-def decode_json_data(func):
-    """Decorator to automatically decode json data."""
-    @wraps(func)
-    def wrapper(*args, **kwargs):  # pylint: disable=missing-docstring
-        if not isinstance(request.data, dict):
-            request.data = json.loads(request.data)
-        return func(*args, **kwargs)
-    return wrapper
 
 
 @export_ext("/workqueue/api/v1.0")
@@ -50,10 +42,11 @@ class WorkqueueService(object):
     @decode_json_data
     def get_next_job():
         """Get the next job."""
+        require_attrs('types')
         Job = request.db.tables.Job  # pylint: disable=invalid-name
         job = Job.query.filter(Job.status.in_((JobStatus.NEW, JobStatus.FAILED)),
                                Job.type.in_(request.data['types']),
-                               Job.attempts <= Job.max_tries)\
+                               Job.attempts < Job.max_tries)\
                        .order_by(Job.priority)\
                        .first_or_404()
         job.status = JobStatus.SUBMITTED
@@ -69,6 +62,7 @@ class WorkqueueService(object):
             abort(403, description="Invalid token")
         if int(request.token) != job_id:
             abort(403, description="Token not valid for job %d" % job_id)
+        require_attrs('returncode', 'host', 'log')
 
         # Update job status.
         Job = request.db.tables.Job  # pylint: disable=invalid-name
