@@ -102,6 +102,11 @@ class UserCommand(object):
             args.surname = raw_input("Please enter your surname: ")
 
         password = getpass()
+        conf_pass = getpass(prompt='Confirm password')
+        if password != conf_pass:
+            print "Passwords don't match. Aborted"
+            return
+
         client = HRClient()
         userdict = {'surname': args.surname, 'name': args.name,
                     'email': args.email, 'password': password}
