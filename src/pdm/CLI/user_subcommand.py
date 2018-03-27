@@ -84,7 +84,7 @@ class UserCommand(object):
         user_parser.add_argument('-t', '--token', type=str, required=True)
         user_parser.add_argument('job', type=int, help="job id as obtained"
                                                        " from copy, remove or list")
-        user_parser.add_argument('-a', '--attempt', default = -1,
+        user_parser.add_argument('-a', '--attempt', default=-1,
                                  help="Attempt number, leave out for the last attempt")
         user_parser.set_defaults(func=self.log)
 
@@ -203,9 +203,9 @@ class UserCommand(object):
         if token:
             client = TransferClientFacade(token)
             sites = client.list_sites()
-            print '-'+91*'-'+'-'
+            print '-' + 91 * '-' + '-'
             print '|{0:40}|{1:50}|'.format('site:', 'description:')
-            print '|'+91*'-'+'|'
+            print '|' + 91 * '-' + '|'
             for elem in sites:
                 print '|{site_name:40s}|{site_desc:50s}|'.format(**elem)
         else:
@@ -226,7 +226,8 @@ class UserCommand(object):
               '{size:%dd} {datestamp:20s} {name:s}' % (links_len, uid_s, gid_s, size_len)
         # print fmt
         for elem in listing:
-            print fmt.format(**dict(elem,datestamp=str(datetime.utcfromtimestamp(elem['datestamp']))))
+            print fmt.format(**dict(elem,
+                                    datestamp=str(datetime.utcfromtimestamp(elem['datestamp']))))
 
     def status(self, args):
         """
@@ -299,6 +300,11 @@ class UserCommand(object):
             print "No token. Please login first"
 
     def log(self, args):
+        """
+        Get job log
+        :param args:
+        :return:
+        """
         token = self._get_token(args)
         if token:
             job_id = int(args.job)
@@ -307,7 +313,7 @@ class UserCommand(object):
             attempts = status['attempts']
             #
             if args.attempt == -1:
-                print "Job log - last attempt %d" %(attempts,)
+                print "Job log - last attempt %d" % (attempts,)
                 log_listing = client.output(job_id)['log']
             else:
                 log_listing = client.output(job_id, args.attempt)['log']
