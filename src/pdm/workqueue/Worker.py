@@ -10,7 +10,6 @@ import socket
 import subprocess
 from urlparse import urlsplit, urlunsplit
 from tempfile import NamedTemporaryFile
-from contextlib import contextmanager
 
 from requests.exceptions import Timeout
 
@@ -55,7 +54,6 @@ class Worker(RESTClient, Daemon):
         Daemon.terminate(self, *_)
         if self._current_process is not None:
             self._current_process.terminate()
-
 
     def _abort(self, job_id, message):
         """Abort job cycle."""
