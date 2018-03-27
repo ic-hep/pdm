@@ -92,7 +92,7 @@ def db_model(db_obj):
 def decode_json_data(func):
     """Decorator to automatically decode json data."""
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):  # pylint: disable=missing-docstring
+    def wrapper(*args, **kwargs):
         """ Decode request.data """
         if not isinstance(request.data, dict):
             request.data = json.loads(request.data)
