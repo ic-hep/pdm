@@ -37,16 +37,6 @@ class WebPageService(object):
         status = "In development"
         return status
 
-    @staticmethod
-    def check_session():
-        """check if user is logged in"""
-        if "token" in flask.session:
-            # TODO: check if token is still valid
-            return
-        # TODO: Flash message about not being logged in
-        flask.abort(flask.redirect("/web/datamover"))
-
-
 
     @staticmethod
     @export_ext("/")
@@ -59,16 +49,6 @@ class WebPageService(object):
     def aboutpage():
         """renders the about page"""
         return flask.render_template("about.html")
-
-    @staticmethod
-    @export_ext("hello")
-    # TODO: clashing filenames
-    # at the moment all functions must have different names
-    # just 'hello' clashes with Janusz' code
-    def hello_web():
-        """ Returns a test string. """
-        return jsonify("Hello World!\n")
-
 
 
     @staticmethod

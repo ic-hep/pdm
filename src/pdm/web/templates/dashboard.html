@@ -41,7 +41,7 @@
 	  
 	  <div class="outer">
 	      {% for i in range(2) %}
-	      <div id="siteid{{ i }}" class="siteid">
+	      <div id="siteid{{ i }}" class="siteid{{ i }}">
 		  <select id="Endpoints{{ i }}">
 		      {% for site in sites %}
 		      {% set sitename = site['site_name'] %}
@@ -65,7 +65,7 @@
 		  
 		  <br>
 		  <!-- the width doesn't do what I want here -->
-		  <div id="tableDiv{{ i }}" style="margin-top: 20px width:40%">
+		  <div id="tableDiv{{ i }}" style="margin-top: 20px">
 		      The results will appear here.
 		  </div>
 		  
