@@ -1,7 +1,7 @@
 """
 Client API for the file transfer management
 """
-
+from copy import deepcopy
 from pdm.endpoint.EndpointClient import EndpointClient
 from pdm.cred.CredClient import CredClient
 from pdm.cred.CredService import CredService
@@ -59,9 +59,8 @@ class TransferClient(object):
             response = self.__wq_client.list(src_siteid[0], src_filepath, credentials, **kwargs)
             # max_tries, priority, protocol=JobProtocol.GRIDFTP)
             return response
-        else:
-            return None
-            # return {'status':'No such site {}'.format(src_site)}
+
+        return None
 
     def output(self, job_id, attempt=None):
         """
@@ -84,11 +83,11 @@ class TransferClient(object):
     def list_sites(self):
         """
         Get list of lites
-        :return: list of dictionaries with all key:value pair but site_id key and value
+        :return: list of dictionaries with all keys but 'site_id'.
         """
-        unwanted_keys = ['site_id']
-        filtered_sites = [dict(filter(lambda i: i[0] not in unwanted_keys, elem.iteritems())) for elem in
-                          self.__sitelist]
+        filtered_sites = deepcopy(self.__sitelist)
+        for elem in filtered_sites:
+            elem.pop('site_id', None)
         return filtered_sites
 
     def copy(self, src_site, src_filepath, dst_site,  # pylint: disable=too-many-arguments

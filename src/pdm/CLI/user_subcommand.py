@@ -14,7 +14,7 @@ class UserCommand(object):
     Define user sub-commands and assign actions fro them.
     """
 
-    def __init__(self, subparsers):
+    def __init__(self, subparsers):  # pylint: disable=too-many-statements
 
         # some constants:
         self.__max_iter = 50
@@ -170,7 +170,8 @@ class UserCommand(object):
             client = TransferClientFacade(token)
             # remove None values, position args, func and toke from the kwargs:
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
-                             value is not None and key not in ('func', 'site', 'token')}
+                             value is not None and key not in ('func', 'site', 'token',
+                                                               'config', 'verbosity')}
             resp = client.list(args.site, **accepted_args)  # max_tries, priority)
             # resp and status both carry job id:
             if resp:
@@ -274,9 +275,10 @@ class UserCommand(object):
         token = self._get_token(args)
         if token:
             client = TransferClientFacade(token)
-            # remove None values, position args, func and toke from the kwargs:
+            # remove None values, position args, func and token from the kwargs:
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
-                             value is not None and key not in ('func', 'site', 'token', 'block')}
+                             value is not None and key not in ('func', 'site', 'token', 'block',
+                                                               'config', 'verbosity')}
             response = client.remove(args.site, **accepted_args)  # max_tries, priority)
             self._status(response['id'], client, block=args.block)
         else:
@@ -293,10 +295,11 @@ class UserCommand(object):
             client = TransferClientFacade(token)
             src_site = args.src_site
             dst_site = args.dst_site
-            # remove None values, position args, func and toke from the kwargs:
+            # remove None values, position args, func and token from the kwargs:
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
                              value is not None
-                             and key not in ('func', 'src_site', 'dst_site', 'token', 'block')}
+                             and key not in ('func', 'src_site', 'dst_site', 'token', 'block',
+                                             'config', 'verbosity')}
             response = client.copy(src_site, dst_site, **accepted_args)
             self._status(response['id'], client, block=args.block)
         else:
@@ -324,6 +327,6 @@ class UserCommand(object):
         else:
             print "No token. Please login first"
 
-    def _get_token(self, args):
+    def _get_token(self, args): # pylint: disable=no-self-use
         # TODO poosible token from a file
         return args.token
