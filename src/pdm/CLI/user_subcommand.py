@@ -14,7 +14,7 @@ class UserCommand(object):
     Define user sub-commands and assign actions fro them.
     """
 
-    def __init__(self, subparsers):
+    def __init__(self, subparsers):  # pylint: disable=too-many-statements
 
         # some constants:
         self.__max_iter = 50
@@ -324,6 +324,6 @@ class UserCommand(object):
         else:
             print "No token. Please login first"
 
-    def _get_token(self, args):
+    def _get_token(self, args): # pylint: disable=no-self-use
         # TODO poosible token from a file
         return args.token
