@@ -22,7 +22,7 @@ LISTPARSE_REGEX = re.compile(r'^(?=[-dlpscbD])(?P<permissions>\S+)\s+'
                              r'(?P<groupid>\S+)\s+'
                              r'(?P<size>\S+)\s+'
                              r'(?P<datestamp>\S+\s+\S+\s+\S+)\s+'
-                             r'(?P<name>[^\t\n\r\f\v]*)\s*$', re.MULTILINE)
+                             r'(?!\.{1,2}/?\s*$)(?P<name>[^\t\n\r\f\v]*)\s*$', re.MULTILINE)
 
 
 @export_ext("/workqueue/api/v1.0")
