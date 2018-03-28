@@ -11,8 +11,8 @@ HASH_ALGO = 'sha256'
 HASH_ITER = 10000
 
 def get_salt():
-   """ Returns a new salt. """
-   return os.urandom(HASH_SALT_LEN)
+    """ Returns a new salt. """
+    return os.urandom(HASH_SALT_LEN)
 
 def hash_pass(password, salt=None):
     """ A helper function to convert a password to a hash.
