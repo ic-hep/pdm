@@ -21,5 +21,5 @@ else
     exit 1
 fi
 
-sleep 5
+/bin/sleep 5
 exit 0
