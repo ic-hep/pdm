@@ -302,7 +302,8 @@ class HRService(object):
         :return: True of False
         """
         if len(passwd) < current_app.pwd_len:
-            HRService._logger.error("Password too short %d (lower limit = %d)", len(passwd), current_app.pwd_len)
+            HRService._logger.error("Password too short %d (lower limit = %d)",
+                                    len(passwd), current_app.pwd_len)
             return False
 
         return True
