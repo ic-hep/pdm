@@ -4,7 +4,6 @@ import json
 import re
 import time
 from datetime import date
-from functools import wraps
 
 from flask import request, abort, current_app
 
@@ -90,8 +89,8 @@ class WorkqueueService(object):
     def post_job():
         """Add a job."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
-        allowed_attrs = require_attrs('type', 'src_siteid', 'src_filepath') +\
-                        ('credentials', 'max_tries', 'priority', 'protocol', 'extra_opts')
+        allowed_attrs = require_attrs('type', 'src_siteid', 'src_filepath') + \
+            ('credentials', 'max_tries', 'priority', 'protocol', 'extra_opts')
         request.data['type'] = to_enum(request.data['type'], JobType)
         request.data['src_filepath'] = shellpath_sanitise(request.data['src_filepath'])
         if 'protocol' in request.data:
@@ -173,6 +172,7 @@ class WorkqueueService(object):
         return_dict = {'jobid': job.id, 'log': log}
         if job.type == JobType.LIST:
             try:
+                # pylint: disable=bad-continuation
                 return_dict.update(listing=[dict(match.groupdict(),
                                                  nlinks=int(match.group('nlinks')),
                                                  size=int(match.group('size')),
@@ -229,21 +229,21 @@ def require_attrs(*attrs):
 
 def to_enum(obj, enum_type):
     """Convert arg to enum."""
-    if isinstance(obj, enum_type):
-        return obj
     if isinstance(obj, int):
         try:
-            return enum_type(obj)
+            obj = enum_type(obj)
         except ValueError as err:
             abort(400, description=err.message)
     if isinstance(obj, basestring):
         if obj.isdigit():
             try:
-                return enum_type(int(obj))
+                obj = enum_type(int(obj))
             except ValueError as err:
                 abort(400, description=err.message)
         try:
-            return enum_type[obj.upper()]
+            obj = enum_type[obj.upper()]
         except KeyError as err:
             abort(400, description="%s is not a valid %s" % (err.message, enum_type.__name__))
-    abort(400, description="Failed to convert '%s' to enum type '%s'" % (obj, enum_type))
+    if not isinstance(obj, enum_type):
+        abort(400, description="Failed to convert '%s' to enum type '%s'" % (obj, enum_type))
+    return obj
