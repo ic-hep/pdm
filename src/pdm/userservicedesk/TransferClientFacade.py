@@ -99,13 +99,13 @@ class MockTransferClientFacade(object):
         return str(site)
 
     @staticmethod
-    def output(id):
+    def output(jobid):
         """
-        Duumy to be mocked away
+        Dummy to be mocked away
         :param id:
         :return:
         """
-        return "job id %s listnig: whatever", id
+        return "job id %s listnig: whatever", jobid
 
     @staticmethod
     def remove(site, **kwargs):
