@@ -68,6 +68,7 @@ class Worker(RESTClient, Daemon):
         finally:
             self.set_token(None)
 
+    # pylint: disable=too-many-locals, too-many-branches, too-many-statements
     def run(self):
         """Daemon main method."""
         cred_client = CredClient()
