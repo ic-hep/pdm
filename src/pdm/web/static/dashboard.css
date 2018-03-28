@@ -4,52 +4,160 @@ body {
     background-color: snow;
 }
 
+
+/* put sites in different columns */
+.outer {
+    width: 100%;
+    margin: auto 20;
+}
+
+/* table is still too big */
+/* https://datatables.net/examples/basic_init/flexible_width.html */
+
+.siteid0                                                               
+{
+    float: left;
+    text-align: left;
+    width: 45%;
+    margin-left: 20px;
+}
+
+.siteid1
+{
+    float: right;
+    text-align: left;
+    width: 45%;
+    margin-left: 20px;
+}
+
+
+
 /* spinner */
 .loader {
-  border: 16px solid #f3f3f3;
-  border-radius: 50%;
-  border-top: 16px solid #3498db;
-  width: 120px;
-  height: 120px;
-  -webkit-animation: spin 2s linear infinite; /* Safari */
-  animation: spin 2s linear infinite;
-  display : none;
+    border: 4px solid #f3f3f3;
+    border-radius: 50%;
+    /* border-top: 4px solid #e8c4ff; */
+    border-top: 4px solid #b5b5b5;
+    width: 24px;
+    height: 24px;
+    -webkit-animation: spin 3s linear infinite; /* Safari */
+    animation: spin 3s linear infinite;
+    display : none;
 }
 
 /* spinner Safari */
 @-webkit-keyframes spin {
-  0% { -webkit-transform: rotate(0deg); }
-  100% { -webkit-transform: rotate(360deg); }
+    0% { -webkit-transform: rotate(0deg); }
+    100% { -webkit-transform: rotate(360deg); }
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+
+/* customize datatables */
+/* removes black lines under header (and about footer -- not used) */
+table.dataTable thead th {
+    background-color : white;
+    border-bottom: 0;
+}
+table.dataTable tfoot th {
+    border-top: 0;
+}
+
+/* remove all internal lines */
+table.dataTable.row-border tbody th, 
+table.dataTable.row-border tbody td, 
+table.dataTable.display tbody th, 
+table.dataTable.display tbody td {
+    border-top : 0;
+}
+
+/* all rows to have the same background color */
+table.dataTable.display tbody tr.odd {
+    background-color: white;
+
+}
+
+table.dataTable.display tbody tr.even {
+    background-color: white;
+}
+
+
+/* leave the sorted column alone */
+table.dataTable.display tbody tr.odd .sorting_1 {
+    background-color: white;
+}
+
+/* address table by id, not sure if different colours is a good idea here */ 
+/* left (source) is purple, right (target) is blue */
+
+#table0 {
+    border : solid;
+    border-color : #bca1ce;
+    border-radius: 10px;
+
+
+}
+
+#table1 {
+    border : solid;
+    border-color : #afcae4;
+    border-radius: 10px;
+     
+}
+
+
+.lbutton0 {
+    background-color: #bca1ce;
+    border : hidden;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 1em;
+    color: black; /* text colour */
+    padding: 8px 18px;
+    margin: 8px 0;
+    cursor: pointer;
+}
+
+.lbutton1 {
+    background-color: #afcae4;
+    border : hidden;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 1em;
+    color: black; /* text colour */
+    padding: 8px 18px;
+    margin: 8px 0;
+    cursor: pointer;
+}
+
+
+.dropdownColour0 {
+    background-color: #bca1ce;
+    color: black;
+    padding: 4px;
+    font-size: 1em;
+    border: 1px;
+    cursor: pointer;
+}
+
+.dropdownColour1 {
+    background-color: #afcae4;
+    color: black;
+    padding: 4px;
+    font-size: 1em;
+    border: 1px;
+    cursor: pointer;
 }
 
 
 
-/* table for file listing */
-/* this is just a dummy for now */
-table {
-    font-family: arial, sans-serif;
-    border-collapse: collapse;
-    width: 100%;
-}
 
-td, th {
-    border: 1px solid #dddddd;
-    text-align: left;
-    padding: 8px;
-}
-
-tr:nth-child(even) {
-    background-color: #dddddd;
-}
-
-
-/* pseudo button (just a link) */
-a.pseudobutton {
+/* pseudo button (just a link) */                                                                                                 
+.pseudobutton {
     -webkit-appearance: button;
     -moz-appearance : button;
     appearance: button;
@@ -64,16 +172,4 @@ a.pseudobutton {
 }
 
 
-/* this needs fixing */
-.lbutton {
-    background-color: lightblue;
-    border : hidden;
-    border-radius: 10px;
-    text-align: center;
-    font-size: 1em;
-    color: black; /* text colour */
-    padding: 18px 18px;
-    margin: 8px 0;
-    cursor: pointer;
-}
 

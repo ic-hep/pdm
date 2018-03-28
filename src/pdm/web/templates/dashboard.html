@@ -1,8 +1,11 @@
 <html>
   <head>
     <title>Dashboard</title>
+    <!--- The order matters --->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="/static/dashboard.css">
     <link rel="shortcut icon" href="/static/favicon.ico">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script
          src="https://code.jquery.com/jquery-3.3.1.js"
@@ -12,7 +15,10 @@
  
     <script src="/static/listinghelpers.js"> </script>
     
-    <script> $(document).ready(makepage); </script>
+    <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js">
+    </script>
+
+    <script> $(document).ready(); </script>
 
     <!--- define all interactive components --->
     <script>
@@ -22,8 +28,6 @@
      $(document).ready(function(){
          $("#listbutton0").click($.proxy(list0.get_query_result, list0));
 	 $("#listbutton1").click($.proxy(list1.get_query_result, list1));
-         $("#checkbutton0").click($.proxy(list0.get_query_status, list0));
-	 $("#checkbutton1").click($.proxy(list1.get_query_status, list1));
      });
      
     </script>
@@ -31,44 +35,50 @@
   </head>
 
   <body>
-      <center><h2>Your Dashboard</h2></center>
-      <br>
-      
-      {% for i in range(2) %}
-      <div id="siteid{{ i }}">
-	  <select id="Endpoints{{ i }}">
-              {% for site in sites %}
-              {% set sitename = site['site_name'] %}
-              <option value="{{ sitename }}">{{ sitename }}</option>
-              {% endfor %}
-	  </select>
-      
-	  <br><br>
-      
-      
-	  <button class="lbutton" id="listbutton{{ i }}">List</button>    
-	  <div visibility="hidden" id="listspinner{{ i }}" class="loader"></div>
-	  <br><br>
-	  
-	  directory: <input type="text" id="pathatsite{{ i }}" value="/"/> <br>
-	  <br>
-	  <button class="lbutton" id="checkbutton{{ i }}">Check</button>
-	  job number  <input type="text" id="jobnumberfield{{ i }}"/> <br>
-	  
-	  Status of the job is: <p id="reqstatus{{ i }}"> Placeholder </p>
-	  
+      <center>
+	  <h2>{{ user_name }}'s Dashboard</h2>
 	  <br>
 	  
-	  <div id="tableDiv{{ i }}" style="margin-top: 20px">
-              Table should go here.
-	  </div>
-	  
-      </div>
-      {% endfor %}
-
-
-
-      <br><br>
-      <a href="listings" class="pseudobutton">Listings Test Page</a>
+	  <div class="outer">
+	      {% for i in range(2) %}
+	      <div id="siteid{{ i }}" class="siteid{{ i }}">
+		  <select id="Endpoints{{ i }}" class="dropdownColour{{ i }}">
+		      {% if i == 0 %}
+		      <option value="droptitle">Source Site</option>
+		      {% else %}
+		      <option value="droptitle">Target Site</option>
+		      {% endif %}
+		      {% for site in sites %}
+		      {% set sitename = site['site_name'] %}
+		      <option value="{{ sitename }}">{{ sitename }}</option>
+		      {% endfor %}
+		  </select>
+		  
+		  <br><br>
+      		  directory: <input type="text" id="pathatsite{{ i }}" value="/"/> <br>
+		  <br>
+		  
+		  
+		  <button class="lbutton{{ i }}" id="listbutton{{ i }}">List</button>
+		  <div visibility="hidden" id="listspinner{{ i }}" class="loader"></div>
+		  
+		  <br>
+		  
+		  job number  <input type="text" id="jobnumberfield{{ i }}"/> <br>
+		  
+		  <br>
+		  Status of the job is: <p id="reqstatus{{ i }}"> No job started yet. </p>
+		  
+		  <br>
+		  <!-- the width doesn't do what I want here -->
+		  <div id="tableDiv{{ i }}" style="margin-top: 20px">
+		      The results will appear here.
+		  </div>
+		  
+	      </div>
+	      {% endfor %}
+	  </div> 
+      </center>
+      
   </body>
 </html>
