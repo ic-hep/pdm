@@ -18,7 +18,7 @@
     <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js">
     </script>
 
-    <script> $(document).ready(makepage); </script>
+    <script> $(document).ready(); </script>
 
     <!--- define all interactive components --->
     <script>
@@ -28,8 +28,6 @@
      $(document).ready(function(){
          $("#listbutton0").click($.proxy(list0.get_query_result, list0));
 	 $("#listbutton1").click($.proxy(list1.get_query_result, list1));
-         $("#checkbutton0").click($.proxy(list0.get_query_status, list0));
-	 $("#checkbutton1").click($.proxy(list1.get_query_status, list1));
      });
      
     </script>
@@ -44,7 +42,12 @@
 	  <div class="outer">
 	      {% for i in range(2) %}
 	      <div id="siteid{{ i }}" class="siteid{{ i }}">
-		  <select id="Endpoints{{ i }}">
+		  <select id="Endpoints{{ i }}" class="dropdownColour{{ i }}">
+		      {% if i == 0 %}
+		      <option value="droptitle">Source Site</option>
+		      {% else %}
+		      <option value="droptitle">Target Site</option>
+		      {% endif %}
 		      {% for site in sites %}
 		      {% set sitename = site['site_name'] %}
 		      <option value="{{ sitename }}">{{ sitename }}</option>
@@ -55,7 +58,8 @@
       		  directory: <input type="text" id="pathatsite{{ i }}" value="/"/> <br>
 		  <br>
 		  
-		  <button class="lbutton" id="listbutton{{ i }}">List</button>    
+		  
+		  <button class="lbutton{{ i }}" id="listbutton{{ i }}">List</button>
 		  <div visibility="hidden" id="listspinner{{ i }}" class="loader"></div>
 		  
 		  <br>

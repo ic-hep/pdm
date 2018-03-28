@@ -1,25 +1,20 @@
 // All javascript functions related to listing files and directories
+/*jshint sub:true*/
+/*jshint esversion: 6*/
 
-
-// displays page content once page is ready
-function makepage() {
-    // this is currently a dummy
-} // makepage
-
-
-
-function time_converter(UNIX_timestamp){
+function time_converter(UNIX_timestamp) {
+    "use strict";
     var a = new Date(UNIX_timestamp * 1000);
-    var short_time = a.toTimeString().slice(0,-18); 
+    var short_time = a.toTimeString().slice(0, -18);
     return a.toDateString() + " " + short_time;
 }
 
 
 function update_dir(sitenumber, dir_name) {
-    var base_path = $("#pathatsite"+sitenumber).val();
-    var new_path = base_path+"/"+dir_name;
-    $("#pathatsite"+sitenumber).val(new_path);
-    
+    "use strict";
+    var base_path = $("#pathatsite" + sitenumber).val();
+    var new_path = base_path + "/" + dir_name;
+    $("#pathatsite" + sitenumber).val(new_path);
 }
 
 
@@ -32,13 +27,18 @@ class Listings {
 	this.jobid = undefined;
     }
 
+
+    // this is called by the 'List' button
     get_query_result(){
 	var sitenumber = this.sitenumber; // to stop it disappering during call back
 	
-	var sitename = encodeURIComponent($("#Endpoints"+sitenumber).val());
-	var sitepath = encodeURIComponent($("#pathatsite"+sitenumber).val());
+	var sitename = encodeURIComponent($("#Endpoints" + sitenumber).val());
+	var sitepath = encodeURIComponent($("#pathatsite" + sitenumber).val());
+	if (sitename == "droptitle") {
+	    return $('#tableDiv'+this.sitenumber).html("<b>Please choose a site !</b>");
+	}
 	console.log("Starting listing for site "+sitenumber+" and path: "+sitepath);
-	
+	console.log("Chose site name: "+sitename);
 	var fullpath = "/web/js/list?siteid="+sitename+"&sitepath="+sitepath;
 	// make spinner visible
 	$("#listspinner"+sitenumber).show();
@@ -102,11 +102,16 @@ class Listings {
 	    // make a table
 	    var n_of_rows = jobobj.listing.length;
 	    // TODO: apparently html5 doesn't do borders and needs a css instead
-	    var table_body = '<table id="table'+this.sitenumber+'" class="display"><thead><tr><th> permissions </th> <th> uid </th> <th> gid </th> <th> size </th> <th> date </th> <th> file name </th></thead><tbody>';
+	    var table_body = '<table id="table'+this.sitenumber+'" class="display"><thead><tr><th>type </th> <th> uid </th> <th> gid </th> <th> size </th> <th> date </th> <th> file name </th></thead><tbody>';
 	    for (var i =0; i < n_of_rows; i++) {
 		table_body += '<tr>';
 		table_body += '<td>';
-		table_body += jobobj.listing[i]['permissions'];
+		if (jobobj.listing[i]['is_directory'] == true) {
+		    table_body += '<img src = "/static/folder'+this.sitenumber+'.png">'; 
+		}
+		else {
+		    table_body += '<img src = "/static/file'+this.sitenumber+'.png">';
+		}
 		table_body +='</td><td>';
 		table_body += jobobj.listing[i]['userid'];
 		table_body +='</td><td>';
@@ -135,6 +140,7 @@ class Listings {
 	    $('#table'+this.sitenumber).DataTable({
 		paging : false,
 		searching: false,
+		info: false,
 		"order": [[ 5, "asc" ]]
 	    });
         } // DONE
@@ -156,5 +162,4 @@ class Listings {
 	$("#reqstatus"+this.sitenumber).html(jobobj.status);
     
     } // get_status
-
-};
+}

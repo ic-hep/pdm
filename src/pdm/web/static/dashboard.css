@@ -11,7 +11,6 @@ body {
     margin: auto 20;
 }
 
-
 /* table is still too big */
 /* https://datatables.net/examples/basic_init/flexible_width.html */
 
@@ -35,42 +34,51 @@ body {
 
 /* spinner */
 .loader {
-  border: 4px solid #f3f3f3;
-  border-radius: 50%;
-  border-top: 4px solid #e8c4ff;
-  width: 24px;
-  height: 24px;
-  -webkit-animation: spin 2s linear infinite; /* Safari */
-  animation: spin 2s linear infinite;
-  display : none;
+    border: 4px solid #f3f3f3;
+    border-radius: 50%;
+    /* border-top: 4px solid #e8c4ff; */
+    border-top: 4px solid #b5b5b5;
+    width: 24px;
+    height: 24px;
+    -webkit-animation: spin 3s linear infinite; /* Safari */
+    animation: spin 3s linear infinite;
+    display : none;
 }
 
 /* spinner Safari */
 @-webkit-keyframes spin {
-  0% { -webkit-transform: rotate(0deg); }
-  100% { -webkit-transform: rotate(360deg); }
+    0% { -webkit-transform: rotate(0deg); }
+    100% { -webkit-transform: rotate(360deg); }
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 
 /* customize datatables */
 /* removes black lines under header (and about footer -- not used) */
 table.dataTable thead th {
-  border-bottom: 0;
+    background-color : white;
+    border-bottom: 0;
 }
 table.dataTable tfoot th {
-  border-top: 0;
+    border-top: 0;
 }
 
-
+/* remove all internal lines */
+table.dataTable.row-border tbody th, 
+table.dataTable.row-border tbody td, 
+table.dataTable.display tbody th, 
+table.dataTable.display tbody td {
+    border-top : 0;
+}
 
 /* all rows to have the same background color */
 table.dataTable.display tbody tr.odd {
     background-color: white;
+
 }
 
 table.dataTable.display tbody tr.even {
@@ -83,16 +91,12 @@ table.dataTable.display tbody tr.odd .sorting_1 {
     background-color: white;
 }
 
-/* this doesn't work */
-table.dataTable.cell-border tbody tr {
- border-top: hidden
- border-bottom: hidden
- border-right: hidden
-}
+/* address table by id, not sure if different colours is a good idea here */ 
+/* left (source) is purple, right (target) is blue */
 
 #table0 {
     border : solid;
-    border-color : purple;
+    border-color : #bca1ce;
     border-radius: 10px;
 
 
@@ -100,14 +104,59 @@ table.dataTable.cell-border tbody tr {
 
 #table1 {
     border : solid;
-    border-color : blue;
+    border-color : #afcae4;
     border-radius: 10px;
      
 }
 
 
+.lbutton0 {
+    background-color: #bca1ce;
+    border : hidden;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 1em;
+    color: black; /* text colour */
+    padding: 8px 18px;
+    margin: 8px 0;
+    cursor: pointer;
+}
 
-/* pseudo button (just a link) */
+.lbutton1 {
+    background-color: #afcae4;
+    border : hidden;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 1em;
+    color: black; /* text colour */
+    padding: 8px 18px;
+    margin: 8px 0;
+    cursor: pointer;
+}
+
+
+.dropdownColour0 {
+    background-color: #bca1ce;
+    color: black;
+    padding: 4px;
+    font-size: 1em;
+    border: 1px;
+    cursor: pointer;
+}
+
+.dropdownColour1 {
+    background-color: #afcae4;
+    color: black;
+    padding: 4px;
+    font-size: 1em;
+    border: 1px;
+    cursor: pointer;
+}
+
+
+
+
+/* pseudo button (just a link) */                                                                                                 
 .pseudobutton {
     -webkit-appearance: button;
     -moz-appearance : button;
@@ -123,16 +172,4 @@ table.dataTable.cell-border tbody tr {
 }
 
 
-/* this needs fixing */
-.lbutton {
-    background-color: #e8c4ff;
-    border : hidden;
-    border-radius: 10px;
-    text-align: center;
-    font-size: 1em;
-    color: black; /* text colour */
-    padding: 18px 18px;
-    margin: 8px 0;
-    cursor: pointer;
-}
 
