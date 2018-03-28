@@ -25,6 +25,7 @@ class ExecutableServer(object):
         """ Prepares the argument parser. """
         self.__wsgi_server = None
         self.__conf_base = ""
+        self.__log_level = logging.INFO
         self.__debug = False
         self.__test = False
         self.__parser = ArgumentParser()
@@ -64,7 +65,7 @@ class ExecutableServer(object):
     def __init_app(self, app_server, app_name, config):
         """ Creates instances of all WSGI apps defined in the config. """
         auth_conf = self.__fix_path(config.pop("auth"))
-        auth_pol = self.__load_auth(app_server, app_name, auth_conf)
+        self.__load_auth(app_server, app_name, auth_conf)
         app_class = config.pop("class")
         try:
             app_inst = pydoc.locate(app_class)()
@@ -81,6 +82,20 @@ class ExecutableServer(object):
             keys = ', '.join(config.keys())
             raise ValueError("Unused config params: '%s'" % keys)
 
+    def __init_log(self, wsgi_name, wsgi_config):
+        """ Set-up a logger for a given service.
+            Returns a logger object.
+        """
+        logger = logging.getLogger("%s" % wsgi_name)
+        logger.setLevel(self.__log_level)
+        # Write log to log_file
+        log_file = wsgi_config.pop("log")
+        log_hdlr = logging.FileHandler(log_file)
+        log_fmt = logging.Formatter(DEF_LOG_FORMAT)
+        log_hdlr.setFormatter(log_fmt)
+        logger.addHandler(log_hdlr)
+        return logger
+
     def __init_wsgi(self, wsgi_name, config):
         """ Creates an instance of FlaskServer, opens a port and configures
             the base server to run requests on the FlaskServer using WSGI.
@@ -96,14 +111,7 @@ class ExecutableServer(object):
         key = self.__fix_path(wsgi_config.pop("key"))
         secret = wsgi_config.pop("secret")
         # Create Flask server & config basics
-        logger = logging.getLogger("%s" % wsgi_name)
-        logger.setLevel(self.__log_level)
-        # Write log to log_file
-        log_file = wsgi_config.pop("log")
-        log_hdlr = logging.FileHandler(log_file)
-        log_fmt = logging.Formatter(DEF_LOG_FORMAT)
-        log_hdlr.setFormatter(log_fmt)
-        logger.addHandler(log_hdlr)
+        logger = self.__init_log(wsgi_name, wsgi_config)
         server_name = wsgi_config.pop("static", wsgi_name)
         app_server = FlaskServer(server_name, logger, self.__debug, secret)
         db_uri = wsgi_config.pop("db", None)
@@ -125,7 +133,6 @@ class ExecutableServer(object):
         self.__test = args.test
         self.__conf_base = os.path.dirname(args.conf)
         # Enabling logging
-        self.__log_level = logging.INFO
         if self.__debug:
             self.__log_level = logging.DEBUG
             logging.basicConfig(level=self.__log_level,

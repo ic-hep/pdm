@@ -14,7 +14,7 @@ class UserCommand(object):
     Define user sub-commands and assign actions fro them.
     """
 
-    def __init__(self, subparsers):
+    def __init__(self, subparsers):  # pylint: disable=too-many-statements
 
         # some constants:
         self.__max_iter = 50
@@ -44,7 +44,8 @@ class UserCommand(object):
         user_parser.add_argument('-t', '--token', type=str, required=True)
         user_parser.add_argument('site', type=str)
         user_parser.add_argument('-m', '--max_tries', type=int, help='max tries')
-        user_parser.add_argument('-p', type=int, help='priority')
+        user_parser.add_argument('-p', '--priority', type=int, help='priority')
+        user_parser.add_argument('-s', '--protocol', type=str, help='protocol')
         user_parser.set_defaults(func=self.list)
         # remove
         user_parser = subparsers.add_parser('remove', help="remove files from remote site.")
@@ -53,6 +54,7 @@ class UserCommand(object):
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
         user_parser.add_argument('-b', '--block', action='store_true')
+        user_parser.add_argument('-s', '--protocol', type=str, help='protocol')
         user_parser.set_defaults(func=self.remove)
         # copy
         user_parser = subparsers.add_parser('copy',
@@ -63,6 +65,7 @@ class UserCommand(object):
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
         user_parser.add_argument('-b', '--block', action='store_true')
+        user_parser.add_argument('-s', '--protocol', type=str, help='protocol')
         user_parser.set_defaults(func=self.copy)
         # site list
         user_parser = subparsers.add_parser('sites',
@@ -321,6 +324,6 @@ class UserCommand(object):
         else:
             print "No token. Please login first"
 
-    def _get_token(self, args):
+    def _get_token(self, args): # pylint: disable=no-self-use
         # TODO poosible token from a file
         return args.token

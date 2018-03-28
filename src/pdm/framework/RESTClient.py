@@ -53,7 +53,8 @@ class RESTClient(object):
             raise KeyError("Failed to find endpoint for service '%s'" % service)
         return endpoints[service]
 
-    def __get_ssl_opts(self, ssl_opts, client_conf):
+    @staticmethod
+    def __get_ssl_opts(ssl_opts, client_conf):
         """ Gets config file ssl_opts from client_conf.
         """
         cafile = client_conf.pop("cafile", None)
@@ -100,7 +101,6 @@ class RESTClient(object):
         """ Run a request on te server
             Returns object from the server.
         """
-        # TODO: Better way to join URLs?
         full_url = "%s/%s" % (self.__url, uri)
         cafile, cert, key = self.__ssl_opts
         client_cert = None

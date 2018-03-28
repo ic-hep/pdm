@@ -19,7 +19,7 @@ from pdm.endpoint.EndpointClient import EndpointClient
 from pdm.utils.daemon import Daemon
 from pdm.utils.config import getConfig
 
-from .WorkqueueDB import COMMANDMAP, PROTOCOLMAP, JobType
+from .WorkqueueDB import COMMANDMAP, PROTOCOLMAP, JobType, JobProtocol
 
 
 class Worker(RESTClient, Daemon):
@@ -68,6 +68,7 @@ class Worker(RESTClient, Daemon):
         finally:
             self.set_token(None)
 
+    # pylint: disable=too-many-locals, too-many-branches, too-many-statements
     def run(self):
         """Daemon main method."""
         cred_client = CredClient()
@@ -101,8 +102,10 @@ class Worker(RESTClient, Daemon):
             src = [urlunsplit(site._replace(path=job['src_filepath'])) for site in src_endpoints
                    if site.scheme == PROTOCOLMAP[job['protocol']]]
             if not src:
-                self._abort(job['id'], "Protocol '%s' not supported at src site with id %d"
-                            % (job['protocol'], job['src_siteid']))
+                self._abort(job['id'], "Protocol '%s' not supported at src site '%s' with id %d"
+                            % (JobProtocol(job['protocol']).name,  # pylint: disable=no-member
+                               src_site['site_name'],
+                               job['src_siteid']))
                 continue
             script_env = dict(os.environ,
                               PATH=self._script_path,
@@ -123,8 +126,10 @@ class Worker(RESTClient, Daemon):
                 dst = [urlunsplit(site._replace(path=job['dst_filepath'])) for site in dst_endpoints
                        if site.scheme == PROTOCOLMAP[job['protocol']]]
                 if not dst:
-                    self._abort(job['id'], "Protocol '%s' not supported at dst site with id %d"
-                                % (job['protocol'], job['dst_siteid']))
+                    self._abort(job['id'], "Protocol '%s' not supported at dst site '%s' with id %d"
+                                % (JobProtocol(job['protocol']).name,  # pylint: disable=no-member
+                                   dst_site['site_name'],
+                                   job['dst_siteid']))
                     continue
                 script_env['DST_PATH'] = random.choice(dst)
                 self._logger.info("Random DST_PATH: '%s' chosen.", script_env['DST_PATH'])

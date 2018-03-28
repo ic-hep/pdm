@@ -50,6 +50,7 @@ class JobProtocol(EnumBase):
 
     GRIDFTP = 0
     SSH = 1
+    DUMMY = 2
 
 
 class WorkqueueJobEncoder(JSONTableEncoder):
@@ -71,14 +72,18 @@ class WorkqueueJobEncoder(JSONTableEncoder):
 
 
 PROTOCOLMAP = {JobProtocol.GRIDFTP: 'gsiftp',
-               JobProtocol.SSH: 'ssh'}
+               JobProtocol.SSH: 'ssh',
+               JobProtocol.DUMMY: 'dummy'}
 
 COMMANDMAP = {JobType.LIST: {JobProtocol.GRIDFTP: 'list.sh',
-                             JobProtocol.SSH: 'sftp'},
+                             JobProtocol.SSH: 'sftp',
+                             JobProtocol.DUMMY: 'dummy.sh list'},
               JobType.REMOVE: {JobProtocol.GRIDFTP: 'remove.sh',
-                               JobProtocol.SSH: 'sftp'},
+                               JobProtocol.SSH: 'sftp',
+                               JobProtocol.DUMMY: 'dummy.sh remove'},
               JobType.COPY: {JobProtocol.GRIDFTP: 'copy.sh',
-                             JobProtocol.SSH: 'scp'}}
+                             JobProtocol.SSH: 'scp',
+                             JobProtocol.DUMMY: 'dummy.sh copy'}}
 
 
 class WorkqueueModels(object):  # pylint: disable=too-few-public-methods

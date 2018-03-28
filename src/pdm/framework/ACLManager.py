@@ -202,7 +202,8 @@ class ACLManager(object):
         # Everything matched, so the rule matches the request
         return True
 
-    def __do_abort(self):
+    @staticmethod
+    def __do_abort():
         """ Aborts the current request due to access denied.
             If the export provided a redir value for access denied,
             the client will be redirected, otherwise a 403 will be
