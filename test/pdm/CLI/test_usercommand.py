@@ -106,11 +106,11 @@ class TestUsercommand(unittest.TestCase):
         mocked_facade.return_value = MockTransferClientFacade("anything")
         mocked_facade.return_value.status = mock.MagicMock()
         mocked_facade.return_value.status.return_value = {'status':'DONE', 'id': 1}
-
-        args = self._parser.parse_args('remove source  -m 3 -t gfsdgfhsgdfh'.split())
+        # protocol swittch is -s !!!
+        args = self._parser.parse_args('remove source -s gsiftp -m 3 -t gfsdgfhsgdfh'.split())
         args.func(args)
 
-        mock_remove.assert_called_with('source', max_tries=3)
+        mock_remove.assert_called_with('source', max_tries=3, protocol='gsiftp')
         assert mocked_facade.return_value.status.call_count == 1
 
         mocked_facade.return_value.status.reset_mock()
