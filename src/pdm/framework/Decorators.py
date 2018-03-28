@@ -3,7 +3,7 @@
 
 import json
 import functools
-from flask import Response, request
+from flask import request
 
 def export_inner(obj, ename, methods=None, redir=None):
     """ Inner function for export decorators.

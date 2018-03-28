@@ -37,8 +37,8 @@ class FlaskClientWrapper(FlaskClient):
         data input in the same manner as RESTClient for consistency across tests.
     """
     def __init__(self, *args, **kwargs):
-        super(FlaskClient, self).__init__(*args, **kwargs)
-    
+        super(FlaskClientWrapper, self).__init__(*args, **kwargs)
+
     def open(self, *args, **kwargs):
         """ Call open on the super class but pre-encode the data arg (if
             present) into json.
