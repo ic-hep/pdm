@@ -67,7 +67,7 @@ def main(opt_conf_file=None):
 
     if conf_file is None and opt_conf_file is not None:
         conf_file = opt_conf_file
-        _logger.debug("Will use the config file defined programatically by pdm: %s", conf_file)
+        _logger.debug("Will try to use the config file defined programatically by pdm: %s", conf_file)
 
     if conf_file is None:
         _logger.debug("Will use a built-in config file now...")
