@@ -9,7 +9,7 @@ import pdm.CLI.user_subcommand as user_subcommand
 from pdm.utils.config import ConfigSystem
 
 
-def main(opt_conf_file=None):
+def main(opt_conf_file=None):  #pylint: disable=too-many-branches
     """
     Main CLI function. Read configuration and add subparsers.
     The order configuration file is search for:
@@ -74,7 +74,8 @@ def main(opt_conf_file=None):
 
     if conf_file is None and opt_conf_file is not None:
         conf_file = opt_conf_file
-        _logger.debug("Will try to use the config file defined programatically by pdm: %s", conf_file)
+        _logger.debug("Will try to use the config file defined programatically by pdm: %s",
+                      conf_file)
 
     if conf_file is None:
         _logger.debug("Will use a built-in config file now...")
