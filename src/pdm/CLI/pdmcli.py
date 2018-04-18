@@ -11,8 +11,15 @@ from pdm.utils.config import ConfigSystem
 
 def main(opt_conf_file=None):
     """
-    Main CLI function. Read configuration and add subparsers
-    :return:
+    Main CLI function. Read configuration and add subparsers.
+    The order configuration file is search for:
+    -c/--config command line switch
+    PDM_CLIENT_CONF environment variable
+    ~/.pdm/client.conf and /etc/pdm/client.conf
+    a file pointed to by the argument passed in
+
+    :param opt_conf_file: an optional config file location
+    :return: None
     """
 
     _logger = logging.getLogger(__name__)
