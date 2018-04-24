@@ -9,12 +9,14 @@ function time_converter(UNIX_timestamp) {
     return a.toDateString() + " " + short_time;
 }
 
-
+// updates the directory entry in the list field
 function update_dir(sitenumber, dir_name) {
     "use strict";
     var base_path = $("#pathatsite" + sitenumber).val();
     var new_path = base_path + "/" + dir_name;
-    $("#pathatsite" + sitenumber).val(new_path);
+    // replace any double slashes
+    var clean_new_path = new_path.replace(/\/\//g, "/");
+    $("#pathatsite" + sitenumber).val(clean_new_path);
 }
 
 
@@ -107,10 +109,10 @@ class Listings {
 		table_body += '<tr>';
 		table_body += '<td>';
 		if (jobobj.listing[i]['is_directory'] == true) {
-		    table_body += '<img src = "/static/folder'+this.sitenumber+'.png">'; 
+		    table_body += '<img src = "/static/images/folder'+this.sitenumber+'.png">'; 
 		}
 		else {
-		    table_body += '<img src = "/static/file'+this.sitenumber+'.png">';
+		    table_body += '<img src = "/static/images/file'+this.sitenumber+'.png">';
 		}
 		table_body +='</td><td>';
 		table_body += jobobj.listing[i]['userid'];
