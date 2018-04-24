@@ -1,3 +1,4 @@
+// My first javascript
 // All javascript functions related to listing files and directories
 /*jshint sub:true*/
 /*jshint esversion: 6*/
@@ -6,17 +7,8 @@ function time_converter(UNIX_timestamp) {
     "use strict";
     var a = new Date(UNIX_timestamp * 1000);
     var short_time = a.toTimeString().slice(0, -18);
-    return a.toDateString() + " " + short_time;
-}
-
-// updates the directory entry in the list field
-function update_dir(sitenumber, dir_name) {
-    "use strict";
-    var base_path = $("#pathatsite" + sitenumber).val();
-    var new_path = base_path + "/" + dir_name;
-    // replace any double slashes
-    var clean_new_path = new_path.replace(/\/\//g, "/");
-    $("#pathatsite" + sitenumber).val(clean_new_path);
+    var short_date = a.toDateString().slice(3)
+    return short_date + " " + short_time;
 }
 
 
@@ -28,6 +20,28 @@ class Listings {
 	// console.log(this.sitenumber);
 	this.jobid = undefined;
     }
+
+    // updates the directory entry in the list field
+    update_dir(dir_name) {
+	"use strict";
+	var base_path = $("#pathatsite" + this.sitenumber).val();
+	var new_path = base_path + "/" + dir_name;
+	// replace any double slashes
+	var clean_new_path = new_path.replace(/\/\//g, "/");
+	$("#pathatsite" + this.sitenumber).val(clean_new_path);
+    }
+
+
+
+    // and actually lists the new directory
+    update_and_list_dir(dir_name) {
+	"use strict";
+	this.update_dir(dir_name);
+	console.log('update_and_list_dir');
+	this.get_query_result();
+    }
+
+
 
 
     // this is called by the 'List' button
@@ -94,7 +108,6 @@ class Listings {
     // TODO: Deal with 'FAILED' and all other states beyong 'DONE' correctly.
     // TODO: convert day stamp
     // TODO: make sortable by date
-    // TODO: start new query when clicking on dir
     job_status_success(result) {
         var jobobj = JSON.parse(result);
 	console.log("Got status: "+jobobj.status);
@@ -103,7 +116,10 @@ class Listings {
 	    $("#listspinner"+this.sitenumber).hide();
 	    // make a table
 	    var n_of_rows = jobobj.listing.length;
-	    // TODO: apparently html5 doesn't do borders and needs a css instead
+	    // if this is a subdirectory, put an extra line for the '..' in
+	    var sitepath = encodeURIComponent($("#pathatsite" + this.sitenumber).val());
+	    console.log(sitepath);
+	   
 	    var table_body = '<table id="table'+this.sitenumber+'" class="display"><thead><tr><th>type </th> <th> uid </th> <th> gid </th> <th> size </th> <th> date </th> <th> file name </th></thead><tbody>';
 	    for (var i =0; i < n_of_rows; i++) {
 		table_body += '<tr>';
@@ -128,7 +144,7 @@ class Listings {
 		table_body +='</td><td>';
 		if (jobobj.listing[i]['is_directory'] == true) { 
 		    var dir_name = jobobj.listing[i]['name']; 
-		    table_body += '<a href="javascript:update_dir('+this.sitenumber+',\''+dir_name+'\');">' ;
+		    table_body += '<a href="javascript:list'+this.sitenumber+'.update_and_list_dir(\''+dir_name+'\');">' ;
 		    table_body += dir_name;
 		    table_body += '</a>';
 		}
