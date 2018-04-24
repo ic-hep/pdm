@@ -30,16 +30,12 @@ def main(opt_conf_file=None):  #pylint: disable=too-many-branches
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config", help="config file location")
-    parser.add_argument("-v", "--verbosity", type=int, default=0, help="verbosity level")
+    parser.add_argument("-v", "--verbosity", action='store_const', const=logging.DEBUG, default=logging.INFO, help="verbosity level")
     subparsers = parser.add_subparsers()
     user_subcommand.UserCommand(subparsers)
     args = parser.parse_args()
 
-    verbosity = args.verbosity
-    if verbosity > 0:
-        _logger.setLevel(logging.DEBUG)
-    else:
-        _logger.setLevel(logging.INFO)
+    _logger.setLevel(args.verbosity)
 
     conf_file = None
     # config: user given location first
