@@ -20,6 +20,7 @@ INSTALLER_CONF = """\
 
 [myproxy]
 #port = 49998
+#cert_hours = 72
 
 [gridftp]
 #port = 49999
@@ -35,6 +36,7 @@ certificate_issuer_key %(CA_DIR)s/user/ca_key.pem
 certificate_serialfile %(CA_DIR)s/user/serial
 certificate_out_dir %(CA_DIR)s/user/certs
 certificate_mapapp %(CA_DIR)s/user/mapper
+max_cert_lifetime %(CERT_HOURS)u
 cert_dir %(CA_DIR)s/certificates
 disable_usage_stats 1
 """
