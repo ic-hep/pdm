@@ -94,24 +94,42 @@ table.dataTable.display tbody tr.odd .sorting_1 {
 /* address table by id, not sure if different colours is a good idea here */ 
 /* left (source) is purple, right (target) is blue */
 
+
 #table0 {
     border : solid;
     border-color : #bca1ce;
     border-radius: 10px;
     font-size: 0.9em;
-
-
 }
+
 
 #table1 {
     border : solid;
     border-color : #afcae4;
     border-radius: 10px;
     font-size: 0.9em;
-
 }
 
 /* end of table */
+
+/* these are just placeholders */
+#navbar0 {
+    border : solid;
+    border-color : #bca1ce;
+    border-radius: 10px;
+    font-size: 0.9em;
+    background-color: green;
+}
+
+#navbar1 {
+    border : solid;
+    border-color : #bca1ce;
+    border-radius: 10px;
+    font-size: 0.9em;
+    background-color: pink;
+}
+
+
 
 .lbutton0 {
     background-color: #bca1ce;

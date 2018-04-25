@@ -7,10 +7,19 @@ function time_converter(UNIX_timestamp) {
     "use strict";
     var a = new Date(UNIX_timestamp * 1000);
     var short_time = a.toTimeString().slice(0, -18);
-    var short_date = a.toDateString().slice(3)
+    var short_date = a.toDateString().slice(3);
     return short_date + " " + short_time;
 }
 
+// might not need its own function
+function is_subdir(dir_name) {
+    if (dir_name == '/') { return false; }
+    else { return true;} 
+    // if in ~ or ~/ '..' will go to '/'
+    // remove trailing slash(es) if present, thank you stackoverflow
+    // dir_name = dir_name.replace(/\/+$/, "");
+    
+}
 
 // DATATABLES
 class Listings {
@@ -103,6 +112,36 @@ class Listings {
         this.jobid = undefined;
         console.log("Listing job status failed: "+err);
     } // error           
+
+
+    which_way_is_up(path_uri) {
+	console.log('which_way_is_up');
+	var one_dir_up = '/';
+	console.log(path_uri)
+	// make this fit unix style again
+	var path = decodeURIComponent(path_uri);
+	console.log(path);
+	// remove trailing slash(es) if present, thank you stackoverflow
+	var clean_path = path.replace(/\/+$/, "");
+	// remove any double slashes, thank you Simon
+	clean_path = clean_path.replace(/\/\/+/g,"/");
+	// deal with '/'
+	if (clean_path == '') { clean_path = '/';}
+	console.log(clean_path);
+	// all the special cases
+	if ( (clean_path == '/') || (clean_path == '/~') || (clean_path == '~')) { 
+	    console.log('the short way');
+	    return one_dir_up; 
+	}
+	else {
+	    console.log('the long way around');
+	    // remove everything until the next slash, but leave / (i.e. /bin -> /, /bin/blah -> /bin/)
+	    var dir_name_bits = clean_path.split("/");
+	    one_dir_up = dir_name_bits.slice(0, dir_name_bits.length - 1).join("/");
+	}
+	console.log(one_dir_up);
+	return one_dir_up;
+    } // which_way_is_up
     
 
     // TODO: Deal with 'FAILED' and all other states beyong 'DONE' correctly.
@@ -116,11 +155,30 @@ class Listings {
 	    $("#listspinner"+this.sitenumber).hide();
 	    // make a table
 	    var n_of_rows = jobobj.listing.length;
-	    // if this is a subdirectory, put an extra line for the '..' in
-	    var sitepath = encodeURIComponent($("#pathatsite" + this.sitenumber).val());
-	    console.log(sitepath);
-	   
 	    var table_body = '<table id="table'+this.sitenumber+'" class="display"><thead><tr><th>type </th> <th> uid </th> <th> gid </th> <th> size </th> <th> date </th> <th> file name </th></thead><tbody>';
+	    // is this a subdirectory ?
+	    var sitepath = encodeURIComponent($("#pathatsite" + this.sitenumber).val());
+	    // can this have its own function ? 
+	    if (sitepath != '/') {
+		var one_dir_up = this.which_way_is_up(sitepath);
+		// if this is a subdirectory, provide an up arrow to move up a directory
+		console.log(sitepath);
+		table_body += '<tr>';
+		table_body += '<td>';
+		table_body += one_dir_up;
+		table_body +='</td><td>';
+		table_body += '';
+		table_body +='</td><td>';
+		table_body += '';
+		table_body +='</td><td>';
+		table_body += '';
+		table_body +='</td><td>';
+		table_body += '';
+		table_body +='</td><td>';
+		table_body += '<img src = "/static/images/arrow-up'+this.sitenumber+'.png"> up';
+		table_body +='</td></tr>';
+	    }
+
 	    for (var i =0; i < n_of_rows; i++) {
 		table_body += '<tr>';
 		table_body += '<td>';
@@ -154,6 +212,9 @@ class Listings {
 		table_body +='</td></tr>';
 	    }
 	    table_body+='</tbody></table>';
+	    // fake table - can I wrote one after the other
+	    var nav_bar = '<table id="navbar'+this.sitenumber+'" class="display"><tbody> <tr><td>blah</td><td>blah</td></tr></tbody></table> <br>';
+	    $('#navbarDiv'+this.sitenumber).html(nav_bar);
 	    $('#tableDiv'+this.sitenumber).html(table_body);
 	    $('#table'+this.sitenumber).DataTable({
 		paging : false,
