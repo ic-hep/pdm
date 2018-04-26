@@ -1,3 +1,8 @@
+/* CSS basics
+.something : class
+#anotherthing : id
+*/
+
 /* html */
 
 body {
@@ -96,7 +101,7 @@ table.dataTable.display tbody tr.odd .sorting_1 {
 
 
 #table0 {
-    border : solid;
+    border-style : solid;
     border-color : #bca1ce;
     border-radius: 10px;
     font-size: 0.9em;
@@ -104,7 +109,7 @@ table.dataTable.display tbody tr.odd .sorting_1 {
 
 
 #table1 {
-    border : solid;
+    border-style : solid;
     border-color : #afcae4;
     border-radius: 10px;
     font-size: 0.9em;
@@ -112,21 +117,31 @@ table.dataTable.display tbody tr.odd .sorting_1 {
 
 /* end of table */
 
-/* these are just placeholders */
+/* navidation bars at top of tables */
 #navbar0 {
-    border : solid;
     border-color : #bca1ce;
+     
+    display: none;
+    border-style : solid;
     border-radius: 10px;
     font-size: 0.9em;
-    background-color: green;
+    background-color: white;
+    text-align : center;
+    table-layout: fixed;
+    /* still doesn't quite match the table, will do for now*/
+    width: 100%;
 }
 
 #navbar1 {
-    border : solid;
-    border-color : #bca1ce;
+    border-color : #afcae4;
+    border-style : solid;
     border-radius: 10px;
     font-size: 0.9em;
     background-color: pink;
+    text-align : center;
+    table-layout: fixed;
+    width: 100%;
+      
 }
 
 

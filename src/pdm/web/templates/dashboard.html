@@ -76,7 +76,7 @@
 		  
 		  
 		  <button class="lbutton{{ i }}" id="listbutton{{ i }}">List</button>
-		  <div visibility="hidden" id="listspinner{{ i }}" class="loader"></div>
+		  <div id="listspinner{{ i }}" class="loader"></div>
 		  
 		  <br>
 		  
@@ -86,12 +86,19 @@
 		  Status of the job is: <p id="reqstatus{{ i }}"> No job started yet. </p>
 		  
 		  <br>
-		  <div id="navbarDiv{{ i }}" style="margin-top: 20px">
-		      To be replaced by a navigation bar.
-		  </div>
-
+		  <table id="navbar{{ i }}">
+		      <tr><td></td>                                                                    
+			  <td onclick="javascript:list{{ i }}.go_up_one();" style="cursor:pointer;">
+			      Up one directory &nbsp;
+			      <img src="/static/images/arrow-up{{ i }}.png" alt="Arrow">
+			  </td>
+			  <td></td></tr>
+                  </table>
+		  <br>   
+		  		  
+		  
 		  <!-- the width doesn't do what I want here -->
-		  <div id="tableDiv{{ i }}" style="margin-top: 20px">
+		  <div id="tableDiv{{ i }}" style="margin-top: 10px">
 		      The results will appear here.
 		  </div>
 		  

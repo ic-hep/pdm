@@ -11,15 +11,6 @@ function time_converter(UNIX_timestamp) {
     return short_date + " " + short_time;
 }
 
-// might not need its own function
-function is_subdir(dir_name) {
-    if (dir_name == '/') { return false; }
-    else { return true;} 
-    // if in ~ or ~/ '..' will go to '/'
-    // remove trailing slash(es) if present, thank you stackoverflow
-    // dir_name = dir_name.replace(/\/+$/, "");
-    
-}
 
 // DATATABLES
 class Listings {
@@ -114,10 +105,18 @@ class Listings {
     } // error           
 
 
+    go_up_one() {
+	var sitepath = encodeURIComponent($("#pathatsite" + this.sitenumber).val());
+	var up_path = this.which_way_is_up(sitepath);
+	$("#pathatsite" + this.sitenumber).val(up_path);
+	console.log('go_up_one');
+        this.get_query_result();
+    }	
+
     which_way_is_up(path_uri) {
 	console.log('which_way_is_up');
 	var one_dir_up = '/';
-	console.log(path_uri)
+	console.log(path_uri);
 	// make this fit unix style again
 	var path = decodeURIComponent(path_uri);
 	console.log(path);
@@ -138,6 +137,7 @@ class Listings {
 	    // remove everything until the next slash, but leave / (i.e. /bin -> /, /bin/blah -> /bin/)
 	    var dir_name_bits = clean_path.split("/");
 	    one_dir_up = dir_name_bits.slice(0, dir_name_bits.length - 1).join("/");
+	    if (one_dir_up == "") { one_dir_up = '/'; } 
 	}
 	console.log(one_dir_up);
 	return one_dir_up;
@@ -156,28 +156,7 @@ class Listings {
 	    // make a table
 	    var n_of_rows = jobobj.listing.length;
 	    var table_body = '<table id="table'+this.sitenumber+'" class="display"><thead><tr><th>type </th> <th> uid </th> <th> gid </th> <th> size </th> <th> date </th> <th> file name </th></thead><tbody>';
-	    // is this a subdirectory ?
 	    var sitepath = encodeURIComponent($("#pathatsite" + this.sitenumber).val());
-	    // can this have its own function ? 
-	    if (sitepath != '/') {
-		var one_dir_up = this.which_way_is_up(sitepath);
-		// if this is a subdirectory, provide an up arrow to move up a directory
-		console.log(sitepath);
-		table_body += '<tr>';
-		table_body += '<td>';
-		table_body += one_dir_up;
-		table_body +='</td><td>';
-		table_body += '';
-		table_body +='</td><td>';
-		table_body += '';
-		table_body +='</td><td>';
-		table_body += '';
-		table_body +='</td><td>';
-		table_body += '';
-		table_body +='</td><td>';
-		table_body += '<img src = "/static/images/arrow-up'+this.sitenumber+'.png"> up';
-		table_body +='</td></tr>';
-	    }
 
 	    for (var i =0; i < n_of_rows; i++) {
 		table_body += '<tr>';
@@ -212,9 +191,6 @@ class Listings {
 		table_body +='</td></tr>';
 	    }
 	    table_body+='</tbody></table>';
-	    // fake table - can I wrote one after the other
-	    var nav_bar = '<table id="navbar'+this.sitenumber+'" class="display"><tbody> <tr><td>blah</td><td>blah</td></tr></tbody></table> <br>';
-	    $('#navbarDiv'+this.sitenumber).html(nav_bar);
 	    $('#tableDiv'+this.sitenumber).html(table_body);
 	    $('#table'+this.sitenumber).DataTable({
 		paging : false,
