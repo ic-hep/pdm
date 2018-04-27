@@ -1,3 +1,8 @@
+/* CSS basics
+.something : class
+#anotherthing : id
+*/
+
 /* html */
 
 body {
@@ -94,20 +99,53 @@ table.dataTable.display tbody tr.odd .sorting_1 {
 /* address table by id, not sure if different colours is a good idea here */ 
 /* left (source) is purple, right (target) is blue */
 
+
 #table0 {
-    border : solid;
+    border-style : solid;
     border-color : #bca1ce;
     border-radius: 10px;
-
-
+    font-size: 0.9em;
 }
+
 
 #table1 {
-    border : solid;
+    border-style : solid;
     border-color : #afcae4;
     border-radius: 10px;
-     
+    font-size: 0.9em;
 }
+
+/* end of table */
+
+/* navigation bars at top of tables */
+#navbar0 {
+    border-color : #bca1ce;
+     
+    display: none;
+    border-style : solid;
+    border-radius: 10px;
+    font-size: 0.9em;
+    background-color: white;
+    text-align : center;
+    table-layout: fixed;
+    /* still doesn't quite match the table, will do for now*/
+    width: 100%;
+}
+
+#navbar1 {
+    border-color : #afcae4;
+    
+    display: none;
+    border-style : solid;
+    border-radius: 10px;
+    font-size: 0.9em;
+    background-color: white;
+    text-align : center;
+    table-layout: fixed;
+    width: 100%;
+      
+}
+
 
 
 .lbutton0 {
