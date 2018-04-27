@@ -142,46 +142,13 @@ class Listings {
 	    $("#listspinner"+this.sitenumber).hide();
 	    // make the navigation bar visible
 	    $("#navbar"+this.sitenumber).show();
-	    // make a table
-	    var n_of_rows = jobobj.listing.length;
-	    var table_body = '<table id="table'+this.sitenumber+'" class="display"><thead><tr><th>type </th> <th> uid </th> <th> gid </th> <th> size </th> <th> date </th> <th> file name </th></thead><tbody>';
-	    var sitepath = encodeURIComponent($("#pathatsite" + this.sitenumber).val());
-
-	    for (var i =0; i < n_of_rows; i++) {
-		table_body += '<tr>';
-		table_body += '<td>';
-		if (jobobj.listing[i]['is_directory'] == true) {
-		    table_body += '<img src = "/static/images/folder'+this.sitenumber+'.png">'; 
-		}
-		else {
-		    table_body += '<img src = "/static/images/file'+this.sitenumber+'.png">';
-		}
-		table_body +='</td><td>';
-		table_body += jobobj.listing[i]['userid'];
-		table_body +='</td><td>';
-		table_body += jobobj.listing[i]['groupid'];
-		table_body +='</td><td>';
-		table_body += jobobj.listing[i]['size'];
-		table_body +='</td><td>';
-		// convert back from unix timestamp
-		var prettytime = time_converter(jobobj.listing[i]['datestamp']);
-		// table_body += jobobj.listing[i]['datestamp'];
-		table_body += prettytime;
-		table_body +='</td><td>';
-		if (jobobj.listing[i]['is_directory'] == true) { 
-		    var dir_name = jobobj.listing[i]['name']; 
-		    table_body += '<a href="javascript:list'+this.sitenumber+'.update_and_list_dir(\''+dir_name+'\');">' ;
-		    table_body += dir_name;
-		    table_body += '</a>';
-		}
-		else {
-		    table_body += jobobj.listing[i]['name'];
-		}
-		table_body +='</td></tr>';
-	    }
-	    table_body+='</tbody></table>';
+	    // get the directory listing in table format
+	    var table_body = this.generate_listings_table_html(jobobj);
 	    $('#tableDiv'+this.sitenumber).html(table_body);
 	    $('#table'+this.sitenumber).DataTable({
+		"columnDefs": [
+                    { "type": "alt-string", targets: 0 }
+		],
 		paging : false,
 		searching: false,
 		info: false,
@@ -205,7 +172,7 @@ class Listings {
 	    }
 	}
 	if (jobobj.status == "FAILED") {
-	    var failed_string = '<p style="color:red">FAILED</>'
+	    var failed_string = '<p style="color:red">FAILED</>';
 	    $("#reqstatus"+this.sitenumber).html(failed_string);
 	}
 	else {
@@ -213,4 +180,48 @@ class Listings {
 	}
     
     } // get_status
-} // Listings
+
+    // makes a pretty table to list the requested directory
+    generate_listings_table_html(jobobj) {       
+        var n_of_rows = jobobj.listing.length;
+        var table_body = '<table id="table'+this.sitenumber+'" class="display"><thead><tr><th>type </th> <th> uid </th> <th> gid </th> <th> size </th> <th> date </th> <th> file name </th></thead><tbody>';
+        var sitepath = encodeURIComponent($("#pathatsite" + this.sitenumber).val());
+	// TODO: type is not sortable
+        for (var i =0; i < n_of_rows; i++) {
+            table_body += '<tr>';
+            table_body += '<td>';
+            if (jobobj.listing[i]['is_directory'] == true) {
+                table_body += '<img src = "/static/images/folder'+this.sitenumber+'.png" alt="folder">';
+            }
+            else {
+                table_body += '<img src = "/static/images/file'+this.sitenumber+'.png" alt="file">';
+            }
+            table_body +='</td><td>';
+            table_body += jobobj.listing[i]['userid'];
+            table_body +='</td><td>';
+            table_body += jobobj.listing[i]['groupid'];
+            table_body +='</td><td>';
+            table_body += jobobj.listing[i]['size'];
+            table_body +='</td><td>';
+            // convert back from unix timestamp
+            var prettytime = time_converter(jobobj.listing[i]['datestamp']);
+            table_body += prettytime;
+            table_body +='</td><td>';
+            if (jobobj.listing[i]['is_directory'] == true) {
+                var dir_name = jobobj.listing[i]['name'];
+                table_body += '<a href="javascript:list'+this.sitenumber+'.update_and_list_dir(\''+dir_name+'\');">' ;
+                table_body += dir_name;
+                table_body += '</a>';
+            }
+            else {
+                table_body += jobobj.listing[i]['name'];
+            }
+            table_body +='</td></tr>';
+        }
+        table_body+='</tbody></table>';
+	
+	return table_body;
+	
+    } // generate_listings_table_html
+    
+} // Listings class
