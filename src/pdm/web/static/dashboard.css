@@ -64,9 +64,11 @@ body {
 
 /* customize datatables */
 /* removes black lines under header (and about footer -- not used) */
+
 table.dataTable thead th {
     background-color : white;
     border-bottom: 0;
+    text-align: left;
 }
 table.dataTable tfoot th {
     border-top: 0;
@@ -91,9 +93,14 @@ table.dataTable.display tbody tr.even {
 }
 
 
-/* leave the sorted column alone */
-table.dataTable.display tbody tr.odd .sorting_1 {
-    background-color: white;
+table.dataTable thead .sorting_asc {
+  background: url("http://cdn.datatables.net/1.10.0/images/sort_asc.png") no-repeat center left;
+}
+table.dataTable thead .sorting_desc {
+  background: url("http://cdn.datatables.net/1.10.0/images/sort_desc.png") no-repeat center left;
+}
+table.dataTable thead .sorting {
+  background: url("http://cdn.datatables.net/1.10.0/images/sort_both.png") no-repeat center left;
 }
 
 /* address table by id, not sure if different colours is a good idea here */ 
@@ -101,19 +108,32 @@ table.dataTable.display tbody tr.odd .sorting_1 {
 
 
 #table0 {
+    width : auto;
     border-style : solid;
     border-color : #bca1ce;
     border-radius: 10px;
-    font-size: 0.9em;
+    font-size: 0.8em;
 }
 
+#table0 tbody tr.selected {
+    color: black;
+    background-color: #bca1ce;
+}
 
 #table1 {
+    width : auto;
     border-style : solid;
     border-color : #afcae4;
     border-radius: 10px;
-    font-size: 0.9em;
+    font-size: 0.8em;
 }
+
+#table1 tbody tr.selected {
+    color: black;
+    background-color: #afcae4;
+}
+
+
 
 /* end of table */
 

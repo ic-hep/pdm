@@ -3,6 +3,8 @@
     <title>Dashboard</title>
     <!--- The order matters --->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
+    <!--- for row selection --->
+    <link rel="stylesheet" href="https://cdn.datatables.net/select/1.2.5/css/select.dataTables.min.css">
     <link rel="stylesheet" href="/static/dashboard.css">
     <link rel="shortcut icon" href="/static/favicon.ico">
 
@@ -15,8 +17,10 @@
  
     <script src="/static/listinghelpers.js"> </script>
     
-    <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js">
-    </script>
+    <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+    <!--- for row selection --->
+    <script src="https://cdn.datatables.net/select/1.2.5/js/dataTables.select.min.js"></script>
+    
 
     <script> $(document).ready(); </script>
 
@@ -98,7 +102,7 @@
 		  		  
 		  
 		  <!-- the width doesn't do what I want here -->
-		  <div id="tableDiv{{ i }}" style="margin-top: 1px">
+		  <div id="tableDiv{{ i }}" style="margin-top: 1px; overflow-x: auto">
 		      <p style="color:#808080">The results will appear here.</p>
 		  </div>
 		  

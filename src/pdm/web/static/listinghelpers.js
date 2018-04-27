@@ -73,7 +73,7 @@ class Listings {
 	this.jobid = result;
 	this.jobattempts = 10; 
 	console.log("Listing jobid: "+this.jobid);
-	setTimeout($.proxy(this.get_query_status, this), 3000);
+	setTimeout($.proxy(this.get_query_status, this), 2000);
     }
 
     job_submission_failed(xhr, status, err) {
@@ -145,13 +145,16 @@ class Listings {
 	    // get the directory listing in table format
 	    var table_body = this.generate_listings_table_html(jobobj);
 	    $('#tableDiv'+this.sitenumber).html(table_body);
+	    //  "orderClasses": false: do not highlight sorted column
 	    $('#table'+this.sitenumber).DataTable({
 		"columnDefs": [
-                    { "type": "alt-string", targets: 0 }
+                    { "type": "alt-string", targets: 0 },
 		],
 		paging : false,
 		searching: false,
 		info: false,
+		select: true,
+		"orderClasses": false,
 		"order": [[ 5, "asc" ]]
 	    });
         } // DONE
@@ -163,7 +166,7 @@ class Listings {
 	    console.log("rescheduling");
 	    if (this.jobattempts > 0) {
 		this.jobattempts--;
-		setTimeout($.proxy(this.get_query_status, this), 3000);
+		setTimeout($.proxy(this.get_query_status, this), 2000);
 	    }
 	    else {
 		$("#listspinner"+this.sitenumber).hide();
