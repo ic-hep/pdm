@@ -117,7 +117,7 @@ table.dataTable.display tbody tr.odd .sorting_1 {
 
 /* end of table */
 
-/* navidation bars at top of tables */
+/* navigation bars at top of tables */
 #navbar0 {
     border-color : #bca1ce;
      
@@ -134,10 +134,12 @@ table.dataTable.display tbody tr.odd .sorting_1 {
 
 #navbar1 {
     border-color : #afcae4;
+    
+    display: none;
     border-style : solid;
     border-radius: 10px;
     font-size: 0.9em;
-    background-color: pink;
+    background-color: white;
     text-align : center;
     table-layout: fixed;
     width: 100%;

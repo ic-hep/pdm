@@ -58,7 +58,6 @@ class Listings {
 	var fullpath = "/web/js/list?siteid="+sitename+"&sitepath="+sitepath;
 	// make spinner visible
 	$("#listspinner"+sitenumber).show();
-	// TODO: maybe put spinner in here or something else clever 
 	$('#tableDiv'+this.sitenumber).html("");
 
 	$.ajax({url: fullpath, 
@@ -70,7 +69,6 @@ class Listings {
 
     // assuming success.....
     job_submission_complete(result) {
-        // $("#listspinner"+this.sitenumber).hide();
         $("#jobnumberfield"+this.sitenumber).val(result);
 	this.jobid = result;
 	this.jobattempts = 10; 
@@ -91,7 +89,6 @@ class Listings {
     // gets the status of the request and if it is DONE or FAILED displays the result
     get_query_status(){
 	console.log("get_query_status called");
-	// var j = encodeURIComponent($("#jobnumberfield"+this.sitenumber).val());
 	var fullpath = "/web/js/status?jobid="+this.jobid;
 	$.ajax({url: fullpath, 
 		success: $.proxy(this.job_status_success, this), 
@@ -109,31 +106,24 @@ class Listings {
 	var sitepath = encodeURIComponent($("#pathatsite" + this.sitenumber).val());
 	var up_path = this.which_way_is_up(sitepath);
 	$("#pathatsite" + this.sitenumber).val(up_path);
-	console.log('go_up_one');
         this.get_query_result();
     }	
 
     which_way_is_up(path_uri) {
-	console.log('which_way_is_up');
 	var one_dir_up = '/';
-	console.log(path_uri);
 	// make this fit unix style again
 	var path = decodeURIComponent(path_uri);
-	console.log(path);
 	// remove trailing slash(es) if present, thank you stackoverflow
 	var clean_path = path.replace(/\/+$/, "");
 	// remove any double slashes, thank you Simon
 	clean_path = clean_path.replace(/\/\/+/g,"/");
 	// deal with '/'
 	if (clean_path == '') { clean_path = '/';}
-	console.log(clean_path);
 	// all the special cases
 	if ( (clean_path == '/') || (clean_path == '/~') || (clean_path == '~')) { 
-	    console.log('the short way');
 	    return one_dir_up; 
 	}
 	else {
-	    console.log('the long way around');
 	    // remove everything until the next slash, but leave / (i.e. /bin -> /, /bin/blah -> /bin/)
 	    var dir_name_bits = clean_path.split("/");
 	    one_dir_up = dir_name_bits.slice(0, dir_name_bits.length - 1).join("/");
@@ -144,15 +134,14 @@ class Listings {
     } // which_way_is_up
     
 
-    // TODO: Deal with 'FAILED' and all other states beyong 'DONE' correctly.
-    // TODO: convert day stamp
-    // TODO: make sortable by date
     job_status_success(result) {
         var jobobj = JSON.parse(result);
 	console.log("Got status: "+jobobj.status);
 	// Found something ? Display if in a table
 	if (jobobj.status == "DONE") {
 	    $("#listspinner"+this.sitenumber).hide();
+	    // make the navigation bar visible
+	    $("#navbar"+this.sitenumber).show();
 	    // make a table
 	    var n_of_rows = jobobj.listing.length;
 	    var table_body = '<table id="table'+this.sitenumber+'" class="display"><thead><tr><th>type </th> <th> uid </th> <th> gid </th> <th> size </th> <th> date </th> <th> file name </th></thead><tbody>';
@@ -201,6 +190,7 @@ class Listings {
         } // DONE
 	else if (jobobj.status == "FAILED") {
 	    $("#listspinner"+this.sitenumber).hide();
+	    $("#navbar"+this.sitenumber).hide();
 	}
 	else {
 	    console.log("rescheduling");
@@ -214,7 +204,13 @@ class Listings {
 		return;
 	    }
 	}
-	$("#reqstatus"+this.sitenumber).html(jobobj.status);
+	if (jobobj.status == "FAILED") {
+	    var failed_string = '<p style="color:red">FAILED</>'
+	    $("#reqstatus"+this.sitenumber).html(failed_string);
+	}
+	else {
+	    $("#reqstatus"+this.sitenumber).html(jobobj.status);
+	}
     
     } // get_status
-}
+} // Listings
