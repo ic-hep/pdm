@@ -14,7 +14,8 @@ def event_callback(event):
 
 
 def monitor_callback(src, dst, average, instant, transferred, elapsed):
-    print >> sys.stderr, "MONITOR: [%4d] %.2fMB (%.2fKB/s)\n" % (elapsed, transferred / 1048576, average / 1024),
+    print >> sys.stderr, "MONITOR src: %s [%4d] %.2fMB (%.2fKB/s)\n" % (
+    src, elapsed, transferred / 1048576, average / 1024),
     sys.stdout.flush()
 
 
@@ -32,9 +33,12 @@ def pdm_gfal_copy(copy_json, s_cred_file=None, t_cred_file=None, overwrite=False
     _logger.setLevel(verbosity)
 
     copy_dict = json.loads(copy_json)
-    copy_list = copy_dict.get('files',[])
+    copy_list = copy_dict.get('files', [])
+
     if not copy_list:
-        return []
+        print json.dumps([])
+        return
+
     for x, y in copy_list:
         _logger.info("gfal copy source: %s TO dest: %s , overwrite ? %s ", x, y, overwrite)
 
@@ -44,7 +48,8 @@ def pdm_gfal_copy(copy_json, s_cred_file=None, t_cred_file=None, overwrite=False
     if s_cred is None or t_cred is None:
         _logger.error("FATAL: Please provide credential location: source %s, dest %s. ",
                       s_cred, t_cred)
-        return [{"Reason": "No credentials passed in", "Code": 1}] * len(copy_list)
+        print json.dumps({"Reason": "No credentials passed in", "Code": 1})
+        return
 
     ctx = gfal2.creat_context()
 
@@ -70,11 +75,15 @@ def pdm_gfal_copy(copy_json, s_cred_file=None, t_cred_file=None, overwrite=False
     for file_pair in copy_list:
         try:
             res = ctx.filecopy(params, str(file_pair[0]), str(file_pair[1]))
-            result.append({'Code': res, 'Reason': 'OK'})
+            # result.append({'Code': res, 'Reason': 'OK'})
+            print json.dumps({'Code': res, 'Reason': 'OK'})
+            sys.stdout.flush()
         except gfal2.GError as ge:
-            result.append({'Code': 1, 'Reason': str(ge)})
+            print json.dumps({'Code': 1, 'Reason': str(ge)})
+            sys.stdout.flush()
+            # result.append({'Code': 1, 'Reason': str(ge)})
             _logger.error(str(ge))
-    return result
+    return  # result
 
 
 def _get_cred(cred_file):
@@ -103,9 +112,9 @@ def main():
     parser.add_argument("-n", "--nbstreams", default=1, type=int, help="number of streams")
     args = parser.parse_args()
 
-    print json.dumps(
-        pdm_gfal_copy(args.copylist, args.s_cred, args.t_cred, args.overwrite, args.parent, args.nbstreams))
-    # print json.dumps(pdm_gfal_ls(args.topdir, max_depth = args.depth, verbosity = args.verbosity))
+    # print json.dumps(
+    #    pdm_gfal_copy(args.copylist, args.s_cred, args.t_cred, args.overwrite, args.parent, args.nbstreams))
+    pdm_gfal_copy(args.copylist, args.s_cred, args.t_cred, args.overwrite, args.parent, args.nbstreams)
 
 
 if __name__ == "__main__":
