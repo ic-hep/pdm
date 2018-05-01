@@ -1,32 +1,48 @@
 #!/usr/bin/env python
 import os
 import sys
-import gfal2
 import argparse
 import json
 import logging
+import gfal2
 
 _logger = logging.getLogger(__name__)
 
 
 def event_callback(event):
-    print >> sys.stderr, "[%s] %s %s %s" % (event.timestamp, event.domain, event.stage, event.description)
+    """
+    gfal-copy event callback. Print event information to sys.stderr
+    :param event:
+    :return:
+    """
+    print >> sys.stderr, "[%s] %s %s %s" % \
+                         (event.timestamp, event.domain, event.stage, event.description)
 
 
-def monitor_callback(src, dst, average, instant, transferred, elapsed):
+def monitor_callback(src, dst, average, instant, transferred, elapsed): #pylint: disable=too-many-arguments
+    """
+    gfal-copy monitor callback. Print Monitoring information to sys.stderr
+    :param src: source file
+    :param dst: dest file
+    :param average: average speed in kB/s
+    :param instant:
+    :param transferred: MB transferred
+    :param elapsed: time in seconds
+    :return:
+    """
     print >> sys.stderr, "MONITOR src: %s [%4d] %.2fMB (%.2fKB/s)\n" % (
-    src, elapsed, transferred / 1048576, average / 1024),
+        src, elapsed, transferred / 1048576, average / 1024),
     sys.stdout.flush()
 
 
-def pdm_gfal_copy(copy_json, s_cred_file=None, t_cred_file=None, overwrite=False,
+def pdm_gfal_copy(copy_json, s_cred_file=None, t_cred_file=None, overwrite=False, # pylint: disable=too-many-arguments, too-many-locals
                   parent=True, nbstreams=1,
                   verbosity=logging.INFO):
     """
     Copy a single source file to a target file.
     Use separate source and target credentials. Do not overwrite destination by
     default.
-    Copy list is of a form: [(source1, dest1), (source2, dest2),...]
+    Copy json string is of a form: '{"files":[(source1, dest1), (source2, dest2),...]}'
     """
 
     _logger.addHandler(logging.StreamHandler())
@@ -39,14 +55,16 @@ def pdm_gfal_copy(copy_json, s_cred_file=None, t_cred_file=None, overwrite=False
         print json.dumps([])
         return
 
-    for x, y in copy_list:
-        _logger.info("gfal copy source: %s TO dest: %s , overwrite ? %s ", x, y, overwrite)
+    if _logger.isEnabledFor(logging.DEBUG):
+        for f_source, f_dest in copy_list:
+            _logger.debug("gfal copy source: %s TO dest: %s , overwrite ? %s ",
+                          f_source, f_dest, overwrite)
 
     s_cred = _get_cred(s_cred_file)
     t_cred = _get_cred(t_cred_file)
 
     if s_cred is None or t_cred is None:
-        _logger.error("FATAL: Please provide credential location: source %s, dest %s. ",
+        _logger.fatal("FATAL: Please provide credential location: source %s, dest %s. ",
                       s_cred, t_cred)
         print json.dumps({"Reason": "No credentials passed in", "Code": 1})
         return
@@ -71,18 +89,18 @@ def pdm_gfal_copy(copy_json, s_cred_file=None, t_cred_file=None, overwrite=False
     gfal2.cred_set(ctx, s_root, s_cred)
     gfal2.cred_set(ctx, d_root, t_cred)
 
-    result = []
+    # result = []
     for file_pair in copy_list:
         try:
             res = ctx.filecopy(params, str(file_pair[0]), str(file_pair[1]))
             # result.append({'Code': res, 'Reason': 'OK'})
             print json.dumps({'Code': res, 'Reason': 'OK'})
             sys.stdout.flush()
-        except gfal2.GError as ge:
-            print json.dumps({'Code': 1, 'Reason': str(ge)})
+        except gfal2.GError as gerror:
+            print json.dumps({'Code': 1, 'Reason': str(gerror)})
             sys.stdout.flush()
             # result.append({'Code': 1, 'Reason': str(ge)})
-            _logger.error(str(ge))
+            _logger.error(str(gerror))
     return  # result
 
 
@@ -101,7 +119,8 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("copylist", type=str, help="copylist: {'files':[(s,t), 9s2, t2) ...]}")
-    parser.add_argument("-v", "--verbosity", action='store_const', const=logging.DEBUG, default=logging.INFO,
+    parser.add_argument("-v", "--verbosity", action='store_const',
+                        const=logging.DEBUG, default=logging.INFO,
                         help="verbosity, INFO, if omitted")
     parser.add_argument("-s", "--s_cred", default=os.environ.get('X509_USER_PROXY_SRC', None),
                         help="source credential location")
@@ -113,8 +132,10 @@ def main():
     args = parser.parse_args()
 
     # print json.dumps(
-    #    pdm_gfal_copy(args.copylist, args.s_cred, args.t_cred, args.overwrite, args.parent, args.nbstreams))
-    pdm_gfal_copy(args.copylist, args.s_cred, args.t_cred, args.overwrite, args.parent, args.nbstreams)
+    #    pdm_gfal_copy(args.copylist, args.s_cred, args.t_cred,
+    #             args.overwrite, args.parent, args.nbstreams))
+    pdm_gfal_copy(args.copylist, args.s_cred, args.t_cred,
+                  args.overwrite, args.parent, args.nbstreams)
 
 
 if __name__ == "__main__":
