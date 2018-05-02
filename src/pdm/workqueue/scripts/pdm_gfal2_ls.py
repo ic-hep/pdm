@@ -22,7 +22,9 @@ def pdm_gfal_ls(root, max_depth=-1, verbosity=logging.INFO):
     _logger.addHandler(logging.StreamHandler())
     _logger.setLevel(verbosity)
 
-    _logger.info("gfal listing root: %s at depth: %d", root, max_depth)
+    _logger.info("gfal listing root: %s at max depth: %d", root, max_depth)
+
+    max_depth=max(-1, max_depth)
 
     ctx = gfal2.creat_context()
     result = {}
@@ -59,6 +61,8 @@ def pdm_gfal_list_dir(ctx, root, result, max_depth=-1, depth=1):
     Recursively list files and directories of root (if roor is a directory)
     """
 
+    _logger.debug("gfal listing root: %s at depth: %d", root, depth)
+
     try:
         a = ((item, ctx.stat(os.path.join(root, item))) for item in ctx.listdir(root))
     except Exception as e:
@@ -92,8 +96,21 @@ def main():
                         help="verbosity level")
     parser.add_argument("-d", "--depth", default=-1, type=int, help="depth")
     args = parser.parse_args()
-    print json.dumps(pdm_gfal_ls(args.topdir, max_depth=args.depth, verbosity=args.verbosity))
+    print json.dumps(pdm_gfal_ls(args.topdir, max_depth=max(-1, args.depth), verbosity=args.verbosity))
 
+def json_input():
+    """
+    gfal-ls directory/file based on a json document read from stdin.
+    :return:
+    """
+
+    data = json.load(sys.stdin)
+    print json.dumps(pdm_gfal_ls(str(data.get('files')[0]), **data.get('options', {})))
 
 if __name__ == "__main__":
-    main()
+    #main()
+    json_input()
+
+
+
+

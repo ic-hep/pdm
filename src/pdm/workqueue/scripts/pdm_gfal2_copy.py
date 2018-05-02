@@ -35,7 +35,7 @@ def monitor_callback(src, dst, average, instant, transferred, elapsed): #pylint:
     sys.stdout.flush()
 
 
-def pdm_gfal_copy(copy_json, s_cred_file=None, t_cred_file=None, overwrite=False, # pylint: disable=too-many-arguments, too-many-locals
+def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False, # pylint: disable=too-many-arguments, too-many-locals
                   parent=True, nbstreams=1,
                   verbosity=logging.INFO):
     """
@@ -48,7 +48,8 @@ def pdm_gfal_copy(copy_json, s_cred_file=None, t_cred_file=None, overwrite=False
     _logger.addHandler(logging.StreamHandler())
     _logger.setLevel(verbosity)
 
-    copy_dict = json.loads(copy_json)
+    #copy_dict = json.loads(copy_json)
+
     copy_list = copy_dict.get('files', [])
 
     if not copy_list:
@@ -114,7 +115,7 @@ def _get_cred(cred_file):
 
 def main():
     """
-    Gfal2 copy wrapper with different source and destination proxies.
+    Gfal2 copy wrapper with different source and destination proxies. Works with command line
     """
 
     parser = argparse.ArgumentParser()
@@ -134,9 +135,21 @@ def main():
     # print json.dumps(
     #    pdm_gfal_copy(args.copylist, args.s_cred, args.t_cred,
     #             args.overwrite, args.parent, args.nbstreams))
-    pdm_gfal_copy(args.copylist, args.s_cred, args.t_cred,
+    pdm_gfal_copy(json.loads(args.copylist), args.s_cred, args.t_cred,
                   args.overwrite, args.parent, args.nbstreams)
+
+def json_input():
+    """
+    gfal2 wrapper which takes a json doc from stdin.
+    :return:
+    """
+
+    data = json.load(sys.stdin)
+    data['options'].setdefault('s_cred_file',os.environ.get('X509_USER_PROXY_SRC', None) )
+    data['options'].setdefault('t_cred_file',os.environ.get('X509_USER_PROXY_DST', None) )
+    pdm_gfal_copy(data, **data.get('options', {}))
 
 
 if __name__ == "__main__":
-    main()
+    json_input()
+    #main()
