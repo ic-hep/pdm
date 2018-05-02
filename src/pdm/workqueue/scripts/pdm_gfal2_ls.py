@@ -5,6 +5,7 @@ import inspect
 import gfal2
 import stat
 import argparse
+from collections import OrderedDict
 import json
 import logging
 import pprint as pp
@@ -27,7 +28,7 @@ def pdm_gfal_ls(root, max_depth=-1, verbosity=logging.INFO):
     max_depth=max(-1, max_depth)
 
     ctx = gfal2.creat_context()
-    result = {}
+    result = OrderedDict()
     # determine if the path point to a file, no recursion if True
     try:
         a = ctx.stat(root)
