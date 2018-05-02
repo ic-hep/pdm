@@ -12,6 +12,23 @@ function time_converter(UNIX_timestamp) {
 }
 
 
+// check if copy is possible
+function copy_enable(list0, list1) {
+    var retval = {status: false, reason : "unknown"};
+    return retval;
+}
+
+function copy_me(list0, list1) {
+    var retval = copy_enable(list0, list1);
+    if (retval.status) {
+	console.log("now I could do a copy");
+    }
+    else {
+	console.log("not this way: "+retval.reason);
+    }
+}
+
+
 // DATATABLES
 class Listings {
 
@@ -19,6 +36,7 @@ class Listings {
 	this.sitenumber = sitenumber;
 	// console.log(this.sitenumber);
 	this.jobid = undefined;
+	this.listings_table = undefined;
     }
 
     // updates the directory entry in the list field
@@ -146,7 +164,8 @@ class Listings {
 	    var table_body = this.generate_listings_table_html(jobobj);
 	    $('#tableDiv'+this.sitenumber).html(table_body);
 	    //  "orderClasses": false: do not highlight sorted column
-	    $('#table'+this.sitenumber).DataTable({
+	    var events = $('#events');
+	    this.listings_table = $('#table'+this.sitenumber).DataTable({
 		"columnDefs": [
                     { "type": "alt-string", targets: 0 },
 		],
@@ -155,9 +174,9 @@ class Listings {
 		info: false,
 		select: true,
 		"orderClasses": false,
-		"order": [[ 5, "asc" ]]
+		"order": [[ 5, "asc" ]],
 	    });
-        } // DONE
+	} // DONE
 	else if (jobobj.status == "FAILED") {
 	    $("#listspinner"+this.sitenumber).hide();
 	    $("#navbar"+this.sitenumber).hide();
@@ -226,5 +245,28 @@ class Listings {
 	return table_body;
 	
     } // generate_listings_table_html
+
+
+    count_rows() {
+	// first I need to check if actually anything was selected
+	if (this.listings_table == undefined) {
+	    alert("Please select a file to copy");
+	    return;
+	}
+	
+	// do I have a target site/dir ?
+	
+	var count = this.listings_table.rows( { selected: true } ).count();
+	console.log("count_rows");
+	console.log(count); 
+	if (count != 1) {
+	    alert("One file at a time, you have selected: "+count);
+	}
+	else {
+	    alert("I should really copy this");
+	}
+	return;
+
+    }
     
 } // Listings class

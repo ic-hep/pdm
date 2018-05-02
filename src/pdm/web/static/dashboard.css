@@ -3,6 +3,18 @@
 #anotherthing : id
 */
 
+/* temporary */
+#events {
+        margin-bottom: 1em;
+        padding: 1em;
+        background-color: red;
+        border: 1px solid #999;
+        border-radius: 3px;
+        height: 100px;
+        overflow: auto;
+    }
+
+
 /* html */
 
 body {
@@ -94,13 +106,13 @@ table.dataTable.display tbody tr.even {
 
 
 table.dataTable thead .sorting_asc {
-  background: url("http://cdn.datatables.net/1.10.0/images/sort_asc.png") no-repeat center left;
+  background: url("https://cdn.datatables.net/1.10.0/images/sort_asc.png") no-repeat center left;
 }
 table.dataTable thead .sorting_desc {
-  background: url("http://cdn.datatables.net/1.10.0/images/sort_desc.png") no-repeat center left;
+  background: url("https://cdn.datatables.net/1.10.0/images/sort_desc.png") no-repeat center left;
 }
 table.dataTable thead .sorting {
-  background: url("http://cdn.datatables.net/1.10.0/images/sort_both.png") no-repeat center left;
+  background: url("https://cdn.datatables.net/1.10.0/images/sort_both.png") no-repeat center left;
 }
 
 /* address table by id, not sure if different colours is a good idea here */ 
@@ -211,6 +223,27 @@ table.dataTable thead .sorting {
     cursor: pointer;
 }
 
+
+/* copy button */
+
+#copybutton {
+    float: right;
+    background-color: lightgrey;
+    border : hidden;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 1em;
+    color: black; /* text colour */
+    padding-left: 10px;
+    padding-bottom: 10px; 
+    padding-top: 10px;
+    padding-right: 34px;
+    margin: 8px 0;
+    cursor: pointer;
+    background-image:url('/static/images/arrow24.png');
+    background-repeat: no-repeat; 
+    background-position: 95%;
+}
 
 
 

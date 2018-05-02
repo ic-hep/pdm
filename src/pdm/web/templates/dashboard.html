@@ -5,6 +5,7 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
     <!--- for row selection --->
     <link rel="stylesheet" href="https://cdn.datatables.net/select/1.2.5/css/select.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.dataTables.min.css">
     <link rel="stylesheet" href="/static/dashboard.css">
     <link rel="shortcut icon" href="/static/favicon.ico">
 
@@ -20,7 +21,7 @@
     <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
     <!--- for row selection --->
     <script src="https://cdn.datatables.net/select/1.2.5/js/dataTables.select.min.js"></script>
-    
+    <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
 
     <script> $(document).ready(); </script>
 
@@ -46,7 +47,7 @@
                  list1.get_query_result();
              }
          }); // keypress
-
+	 $("#copybutton").click(copy_me(list0, list1));
      }); // ready
 
 
@@ -89,6 +90,11 @@
 		  <br>
 		  Status of the last job is: <p id="reqstatus{{ i }}"> No job started yet. </p>
 		  
+		  {% if i == 0 %}
+                  <button id="copybutton">Copy</button>
+                  {% endif %}
+
+
 		  <br>
 		  <table id="navbar{{ i }}">
 		      <tr><td></td>                                                                    
@@ -99,9 +105,7 @@
 			  <td></td></tr>
                   </table>
 		  <br>   
-		  		  
-		  
-		  <!-- the width doesn't do what I want here -->
+
 		  <div id="tableDiv{{ i }}" style="margin-top: 1px; overflow-x: auto">
 		      <p style="color:#808080">The results will appear here.</p>
 		  </div>
