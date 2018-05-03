@@ -70,7 +70,6 @@ class WebPageService(object):
             flash('Could not login user (%s)' % err)
             status = WebPageService.datamover_status()
             return flask.render_template("datamover.html", status=status)
-
         resp = flask.make_response(flask.redirect("/web/dashboard"))
         resp.set_cookie('name', 'I am a cookie')
         return resp
@@ -169,3 +168,21 @@ class WebPageService(object):
         if res['status'] in ('DONE', 'FAILED'):
             res.update(tclient.output(jobid))
         return json.dumps(res)
+
+    @staticmethod
+    @export_ext("js/copy")
+    def js_copy():
+        """interface to the actual copy function"""
+        source_site = request.args.get('source_site', None)
+        source_path = request.args.get('source_path', None)
+        dest_site = request.args.get('dest_site', None)
+        dest_dir_path = request.args.get('dest_dir_path', None)
+        if (not source_site) or (not source_path):
+            return "Missing source parameter", 400
+        if (not dest_site) or (not dest_dir_path):
+            return "Missing destination parameter", 400
+        user_token = flask.session['token']
+        tclient = TransferClient(user_token)
+        jobinfo = tclient.copy(source_site, source_path,
+                               dest_site, dest_dir_path)
+        return json.dumps(jobinfo['id'])

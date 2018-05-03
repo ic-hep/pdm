@@ -14,18 +14,77 @@ function time_converter(UNIX_timestamp) {
 
 // check if copy is possible
 function copy_enable(list0, list1) {
+    console.log('in copy_enable');
     var retval = {status: false, reason : "unknown"};
+    var sitenameFrom = encodeURIComponent($("#Endpoints0").val());
+    var sitepathFrom = encodeURIComponent($("#pathatsite0").val());
+    var sitenameTo = encodeURIComponent($("#Endpoints1").val());
+    var sitepathTo = encodeURIComponent($("#pathatsite1").val());
+    if ((sitenameFrom == "droptitle") || (sitenameTo == "droptitle")) {
+        retval = {status: false, reason : "No source and/or target site selected"};
+	return retval;
+    }
+    
+    if (list0.listings_table == undefined) {
+        alert("Please select a file to copy.");
+	retval = {status: false, reason : "No file selected."};
+	return retval;
+    }
+
+    if (list1.listings_table == undefined) {
+	alert("Cannot list traget dir, no copy possible");
+	retval = {status: false, reason : "Target directory inaccessible, please try listing it again."};
+	return retval;
+    }
+
+        
+    var count = list0.listings_table.rows( { selected: true } ).count();
+    console.log("count_rows");
+    console.log(count);
+    if (count != 1) {
+        alert("Only one file at a time can be copied, you have selected: "+count);
+	retval = {status: false, reason : "Too many files selected."};
+	
+    }
+    else {
+	retval = {status: true, reason : "All peachy."};
+    }
+   
     return retval;
 }
 
 function copy_me(list0, list1) {
     var retval = copy_enable(list0, list1);
-    if (retval.status) {
-	console.log("now I could do a copy");
+    if (! retval.status) {
+	alert("Cannot copy: "+retval.reason);
+	return;
     }
-    else {
-	console.log("not this way: "+retval.reason);
-    }
+    console.log("now I could do a copy");
+    var sitenameFrom = encodeURIComponent($("#Endpoints0").val());
+    var sitepathFrom = $("#pathatsite0").val(); // to be encoded later
+    var sitenameTo = encodeURIComponent($("#Endpoints1").val());
+    var sitepathTo = encodeURIComponent($("#pathatsite1").val());
+    var filename = list0.listings_table.row( { selected: true } ).data()[5];
+    var source_path = encodeURIComponent(sitepathFrom + "/" + filename);  
+    var copyendpoint = "/web/js/copy?source_site="+sitenameFrom+"&source_path="+source_path
+	+"&dest_site="+sitenameTo+"&dest_dir_path="+sitepathTo;
+    
+    console.log(copyendpoint);
+
+    $.ajax({url: copyendpoint,
+            success: copy_submission_complete,
+            error: copy_submission_failed
+           } // dict                                                                                                            
+          ); // ajax
+} //copy_me
+
+
+function copy_submission_complete(result) {
+    alert("Copy submitted: "+result);
+}
+
+function copy_submission_failed(xhr, status, err) {
+    alert("Copy submission failed "+err);
 }
 
 
@@ -77,7 +136,7 @@ class Listings {
 	// make spinner visible
 	$("#listspinner"+sitenumber).show();
 	$('#tableDiv'+this.sitenumber).html("");
-
+	this.listings_table = undefined; // forget any previously made tables
 	$.ajax({url: fullpath, 
 		success: $.proxy(this.job_submission_complete, this), 
 		error: $.proxy(this.job_submission_failed, this)

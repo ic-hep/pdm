@@ -47,8 +47,9 @@
                  list1.get_query_result();
              }
          }); // keypress
-	 $("#copybutton").click(copy_me(list0, list1));
-     }); // ready
+	 // possibly wrong....
+	 // $("#copybutton").click(copy_me(list0, list1));
+     }); // function ready
 
 
     </script>
@@ -76,7 +77,7 @@
 		  </select>
 		  
 		  <br><br>
-      		  directory: <input type="text" id="pathatsite{{ i }}" value="/"/> <br>
+      		  directory: <input type="text" id="pathatsite{{ i }}" value="/~"/> <br>
 		  <br>
 		  
 		  
@@ -91,7 +92,7 @@
 		  Status of the last job is: <p id="reqstatus{{ i }}"> No job started yet. </p>
 		  
 		  {% if i == 0 %}
-                  <button id="copybutton">Copy</button>
+                  <button onclick="copy_me(list0,list1)" id="copybutton">Copy</button>
                   {% endif %}
 
 
