@@ -14,6 +14,10 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 # Login
 /web/datamover = "ALL"
 /web/datamover%POST = "ALL"
+# About
+/web/about = "ALL"
+# Forgotten Password
+/web/forgottenpwd = "ALL"
 # All other pages
 /web/* = "SESSION"
 

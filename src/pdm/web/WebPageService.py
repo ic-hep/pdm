@@ -71,7 +71,7 @@ class WebPageService(object):
             status = WebPageService.datamover_status()
             return flask.render_template("datamover.html", status=status)
         resp = flask.make_response(flask.redirect("/web/dashboard"))
-        resp.set_cookie('name', 'I am a cookie')
+        # resp.set_cookie('name', 'I am a cookie')
         return resp
 
 
@@ -116,6 +116,12 @@ class WebPageService(object):
             return flask.render_template("registration.html")
 
         return '%s' % request.form
+
+    @staticmethod
+    @export_ext("forgottenpwd")
+    def forgottenpwd():
+        """TODO: make a function that resets the password"""
+        return flask.render_template("forgottenpwd.html")
 
 
     # *** The main page ***

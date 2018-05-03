@@ -178,6 +178,25 @@ table.dataTable thead .sorting {
       
 }
 
+/* not a real button */
+
+a.logoutbutton {
+    -webkit-appearance: button;
+    -moz-appearance : button;
+    appearance: button;
+    background-color: forestgreen;
+    border-style : hidden;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 1em;
+    text-decoration: none;
+    color: black;
+    padding: 10px 10px;
+    cursor: pointer;
+
+}
+
+/* real buttons */
 
 
 .lbutton0 {
