@@ -3,6 +3,9 @@
     <title>Dashboard</title>
     <!--- The order matters --->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
+    <!--- for row selection --->
+    <link rel="stylesheet" href="https://cdn.datatables.net/select/1.2.5/css/select.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.dataTables.min.css">
     <link rel="stylesheet" href="/static/dashboard.css">
     <link rel="shortcut icon" href="/static/favicon.ico">
 
@@ -15,8 +18,10 @@
  
     <script src="/static/listinghelpers.js"> </script>
     
-    <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js">
-    </script>
+    <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+    <!--- for row selection --->
+    <script src="https://cdn.datatables.net/select/1.2.5/js/dataTables.select.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
 
     <script> $(document).ready(); </script>
 
@@ -28,15 +33,33 @@
      $(document).ready(function(){
          $("#listbutton0").click($.proxy(list0.get_query_result, list0));
 	 $("#listbutton1").click($.proxy(list1.get_query_result, list1));
-     });
-     
+	 $("#pathatsite0").keypress(function(event) {
+	     // 13 == enter
+	     if (event.keyCode === 13) {
+		 event.preventDefault();
+		 list0.get_query_result();
+	     }
+	 }); // keypress
+	 $("#pathatsite1").keypress(function(event) {
+             // 13 == enter
+             if (event.keyCode === 13) {
+                 event.preventDefault();
+                 list1.get_query_result();
+             }
+         }); // keypress
+	 // possibly wrong....
+	 // $("#copybutton").click(copy_me(list0, list1));
+     }); // function ready
+
+
     </script>
 
   </head>
 
   <body>
+      <p style="text-align:right;"> <a href="logout" class="logoutbutton">Logout</a></p>
       <center>
-	  <h2>{{ user_name }}'s Dashboard</h2>
+	  <h2 style="text-align:center;">{{ user_name }}'s Dashboard</h2>
 	  <br>
 	  
 	  <div class="outer">
@@ -55,24 +78,38 @@
 		  </select>
 		  
 		  <br><br>
-      		  directory: <input type="text" id="pathatsite{{ i }}" value="/"/> <br>
+      		  directory: <input type="text" id="pathatsite{{ i }}" value="/~"/> <br>
 		  <br>
 		  
 		  
 		  <button class="lbutton{{ i }}" id="listbutton{{ i }}">List</button>
-		  <div visibility="hidden" id="listspinner{{ i }}" class="loader"></div>
+		  <div id="listspinner{{ i }}" class="loader"></div>
 		  
 		  <br>
 		  
 		  job number  <input type="text" id="jobnumberfield{{ i }}"/> <br>
 		  
 		  <br>
-		  Status of the job is: <p id="reqstatus{{ i }}"> No job started yet. </p>
+		  Status of the last job is: <p id="reqstatus{{ i }}"> No job started yet. </p>
 		  
+		  {% if i == 0 %}
+                  <button onclick="copy_me(list0,list1)" id="copybutton">Copy</button>
+                  {% endif %}
+
+
 		  <br>
-		  <!-- the width doesn't do what I want here -->
-		  <div id="tableDiv{{ i }}" style="margin-top: 20px">
-		      The results will appear here.
+		  <table id="navbar{{ i }}">
+		      <tr><td></td>                                                                    
+			  <td onclick="javascript:list{{ i }}.go_up_one();" style="cursor:pointer;">
+			      Up one directory &nbsp;
+			      <img src="/static/images/arrow-up{{ i }}.png" alt="Arrow">
+			  </td>
+			  <td></td></tr>
+                  </table>
+		  <br>   
+
+		  <div id="tableDiv{{ i }}" style="margin-top: 1px; overflow-x: auto">
+		      <p style="color:#808080">The results will appear here.</p>
 		  </div>
 		  
 	      </div>
