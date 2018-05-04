@@ -12,6 +12,82 @@ function time_converter(UNIX_timestamp) {
 }
 
 
+// check if copy is possible
+function copy_enable(list0, list1) {
+    console.log('in copy_enable');
+    var retval = {status: false, reason : "unknown"};
+    var sitenameFrom = encodeURIComponent($("#Endpoints0").val());
+    var sitepathFrom = encodeURIComponent($("#pathatsite0").val());
+    var sitenameTo = encodeURIComponent($("#Endpoints1").val());
+    var sitepathTo = encodeURIComponent($("#pathatsite1").val());
+    if ((sitenameFrom == "droptitle") || (sitenameTo == "droptitle")) {
+        retval = {status: false, reason : "No source and/or target site selected"};
+	return retval;
+    }
+    
+    if (list0.listings_table == undefined) {
+        alert("Please select a file to copy.");
+	retval = {status: false, reason : "No file selected."};
+	return retval;
+    }
+
+    if (list1.listings_table == undefined) {
+	alert("Cannot list traget dir, no copy possible");
+	retval = {status: false, reason : "Target directory inaccessible, please try listing it again."};
+	return retval;
+    }
+
+        
+    var count = list0.listings_table.rows( { selected: true } ).count();
+    console.log("count_rows");
+    console.log(count);
+    if (count != 1) {
+        alert("Only one file at a time can be copied, you have selected: "+count);
+	retval = {status: false, reason : "Too many files selected."};
+	
+    }
+    else {
+	retval = {status: true, reason : "All peachy."};
+    }
+   
+    return retval;
+}
+
+function copy_me(list0, list1) {
+    var retval = copy_enable(list0, list1);
+    if (! retval.status) {
+	alert("Cannot copy: "+retval.reason);
+	return;
+    }
+    console.log("now I could do a copy");
+    var sitenameFrom = encodeURIComponent($("#Endpoints0").val());
+    var sitepathFrom = $("#pathatsite0").val(); // to be encoded later
+    var sitenameTo = encodeURIComponent($("#Endpoints1").val());
+    var sitepathTo = encodeURIComponent($("#pathatsite1").val());
+    var filename = list0.listings_table.row( { selected: true } ).data()[5];
+    var source_path = encodeURIComponent(sitepathFrom + "/" + filename);  
+    var copyendpoint = "/web/js/copy?source_site="+sitenameFrom+"&source_path="+source_path
+	+"&dest_site="+sitenameTo+"&dest_dir_path="+sitepathTo;
+    
+    console.log(copyendpoint);
+
+    $.ajax({url: copyendpoint,
+            success: copy_submission_complete,
+            error: copy_submission_failed
+           } // dict                                                                                                            
+          ); // ajax
+} //copy_me
+
+
+function copy_submission_complete(result) {
+    alert("Copy submitted: "+result);
+}
+
+function copy_submission_failed(xhr, status, err) {
+    alert("Copy submission failed "+err);
+}
+
+
 // DATATABLES
 class Listings {
 
@@ -19,6 +95,7 @@ class Listings {
 	this.sitenumber = sitenumber;
 	// console.log(this.sitenumber);
 	this.jobid = undefined;
+	this.listings_table = undefined;
     }
 
     // updates the directory entry in the list field
@@ -59,7 +136,7 @@ class Listings {
 	// make spinner visible
 	$("#listspinner"+sitenumber).show();
 	$('#tableDiv'+this.sitenumber).html("");
-
+	this.listings_table = undefined; // forget any previously made tables
 	$.ajax({url: fullpath, 
 		success: $.proxy(this.job_submission_complete, this), 
 		error: $.proxy(this.job_submission_failed, this)
@@ -73,7 +150,7 @@ class Listings {
 	this.jobid = result;
 	this.jobattempts = 10; 
 	console.log("Listing jobid: "+this.jobid);
-	setTimeout($.proxy(this.get_query_status, this), 3000);
+	setTimeout($.proxy(this.get_query_status, this), 2000);
     }
 
     job_submission_failed(xhr, status, err) {
@@ -145,16 +222,20 @@ class Listings {
 	    // get the directory listing in table format
 	    var table_body = this.generate_listings_table_html(jobobj);
 	    $('#tableDiv'+this.sitenumber).html(table_body);
-	    $('#table'+this.sitenumber).DataTable({
+	    //  "orderClasses": false: do not highlight sorted column
+	    var events = $('#events');
+	    this.listings_table = $('#table'+this.sitenumber).DataTable({
 		"columnDefs": [
-                    { "type": "alt-string", targets: 0 }
+                    { "type": "alt-string", targets: 0 },
 		],
 		paging : false,
 		searching: false,
 		info: false,
-		"order": [[ 5, "asc" ]]
+		select: true,
+		"orderClasses": false,
+		"order": [[ 5, "asc" ]],
 	    });
-        } // DONE
+	} // DONE
 	else if (jobobj.status == "FAILED") {
 	    $("#listspinner"+this.sitenumber).hide();
 	    $("#navbar"+this.sitenumber).hide();
@@ -163,7 +244,7 @@ class Listings {
 	    console.log("rescheduling");
 	    if (this.jobattempts > 0) {
 		this.jobattempts--;
-		setTimeout($.proxy(this.get_query_status, this), 3000);
+		setTimeout($.proxy(this.get_query_status, this), 2000);
 	    }
 	    else {
 		$("#listspinner"+this.sitenumber).hide();
@@ -223,5 +304,28 @@ class Listings {
 	return table_body;
 	
     } // generate_listings_table_html
+
+
+    count_rows() {
+	// first I need to check if actually anything was selected
+	if (this.listings_table == undefined) {
+	    alert("Please select a file to copy");
+	    return;
+	}
+	
+	// do I have a target site/dir ?
+	
+	var count = this.listings_table.rows( { selected: true } ).count();
+	console.log("count_rows");
+	console.log(count); 
+	if (count != 1) {
+	    alert("One file at a time, you have selected: "+count);
+	}
+	else {
+	    alert("I should really copy this");
+	}
+	return;
+
+    }
     
 } // Listings class
