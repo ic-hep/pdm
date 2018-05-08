@@ -115,6 +115,12 @@ class X509Utils(object):
         cert = X509.load_cert_string(cert_pem, X509.FORMAT_PEM)
         return cert.get_not_after().get_datetime()
 
+    @staticmethod
+    def add_ca_to_dir(cert_pem, dir_path):
+        """ Adds a CA to OpenSSL style hash dir. """
+        # TODO: Implement this
+        pass
+
 
 class X509CA(object):
     """ An X509 Certificate Authority implementation.
