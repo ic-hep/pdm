@@ -3,6 +3,7 @@
 """
 
 import json
+from collections import Mapping
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.pool import StaticPool
@@ -89,3 +90,4 @@ class DictMixin(object):
     def __len__(self):
         """Returns number of db columns."""
         return len(self.columns)
+Mapping.register(DictMixin)
