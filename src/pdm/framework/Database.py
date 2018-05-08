@@ -8,6 +8,8 @@ from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.pool import StaticPool
 
+
+# pylint: disable=too-few-public-methods
 class MemSafeSQLAlchemy(SQLAlchemy):
     """ A wrapper around SQLAlchemy which detects if an in-memory database on
         sqlite and disables pooling.
@@ -19,14 +21,15 @@ class MemSafeSQLAlchemy(SQLAlchemy):
         """
         if info.drivername == "sqlite" and not info.database:
             # This should be fine for testing as long as sqlite version is "high enough"
-            options["connect_args"] = {'check_same_thread':False}
+            options["connect_args"] = {'check_same_thread': False}
             options["poolclass"] = StaticPool
         return super(MemSafeSQLAlchemy, self).apply_driver_hacks(app, info, options)
+
 
 class JSONTableEncoder(json.JSONEncoder):
     """JSON DB Table Encoder."""
 
-    #pylint: disable=method-hidden
+    # pylint: disable=method-hidden
     def default(self, obj):
         """Default encoding method."""
         if isinstance(obj, datetime):
@@ -37,7 +40,8 @@ class JSONTableEncoder(json.JSONEncoder):
             return {column: getattr(obj, column) for column in cols}
         return super(JSONTableEncoder, self).default(obj)
 
-#pylint: disable=too-few-public-methods
+
+# pylint: disable=too-few-public-methods
 class JSONMixin(object):
     """
     JSON serialisation mixin for DB tables.
@@ -90,4 +94,4 @@ class DictMixin(object):
     def __len__(self):
         """Returns number of db columns."""
         return len(self.columns)
-Mapping.register(DictMixin)
+Mapping.register(DictMixin)  # pylint: disable=no-member
