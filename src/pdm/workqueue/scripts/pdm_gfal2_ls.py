@@ -14,6 +14,11 @@ import pprint as pp
 
 _logger = logging.getLogger(__name__)
 
+#ToDo
+# if a listing cannot be obtained (at any level) sys.exit(1) and dump the exit code
+# and the reason {'Code': 1, 'Reason': str(exception)} to stdout (line 76 and 42)
+#
+#
 
 def pdm_gfal_ls(root, max_depth=-1, verbosity=logging.INFO):
     """
