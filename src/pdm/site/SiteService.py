@@ -133,8 +133,8 @@ class SiteService(object):
         endpoints = []
         for ep_info in site.endpoints:
             endpoints.append(ep_info.ep_uri)
-        # TODO: Replace this with a dict mixin
-        dict_out = json.loads(site.json())
+        # Prepare the output data
+        dict_out = dict(site)
         dict_out["endpoints"] = endpoints
         return jsonify(dict_out)
 

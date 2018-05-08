@@ -3,7 +3,7 @@
 
 from sqlalchemy import Column, Boolean, Integer, TEXT, TIMESTAMP, ForeignKey
 from sqlalchemy.orm import relationship
-from pdm.framework.Database import JSONMixin
+from pdm.framework.Database import JSONMixin, DictMixin
 
 #pylint: disable=too-few-public-methods
 class SiteDBModel(object):
@@ -13,7 +13,7 @@ class SiteDBModel(object):
         """ Define site database tables. """
 
         #pylint: disable=too-few-public-methods, unused-variable
-        class Site(db_base, JSONMixin):
+        class Site(db_base, JSONMixin, DictMixin):
             """ Sites table. """
             __tablename__ = 'sites'
             __excluded_fields__ = ["site_owner", "endpoints", "creds"]
