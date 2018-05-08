@@ -56,3 +56,36 @@ class JSONMixin(object):
     def from_json(cls, json_str):
         """Load object from JSON string."""
         return cls(**json.loads(json_str))
+
+
+class DictMixin(object):
+    """
+    Iterable mixin for DB tables.
+
+    Mixin class that provides an iterable view on a DB
+    model allong with dict like getitem accessor methods.
+
+    This allows amongst other things easy dictionary representation
+    of models using the following:
+
+    dict(model)
+    """
+
+    @property
+    def columns(self):
+        """list of db model column names."""
+        return [column.name for column in self.__table__.columns]
+
+    def __iter__(self):
+        """Iterator through db columns."""
+        return ((column.name, self[column.name]) for column in self.__table__.columns)
+
+    def __getitem__(self, item):
+        """Get specific column value."""
+        if item not in self.columns:
+            raise KeyError("Invalid attribute name: %s" % item)
+        return getattr(self, item)
+
+    def __len__(self):
+        """Returns number of db columns."""
+        return len(self.columns)
