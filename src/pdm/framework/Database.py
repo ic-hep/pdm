@@ -50,7 +50,7 @@ class DictMixin(object):
 
     def __iter__(self):
         """Iterator through db columns."""
-        return ((column.name, self[column.name]) for column in self.__table__.columns
+        return ((column.name, getattr(self, column.name)) for column in self.__table__.columns
                 if column.name not in self.__excluded_fields__)
 
     def __getitem__(self, item):
