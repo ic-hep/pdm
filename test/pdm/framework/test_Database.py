@@ -65,8 +65,7 @@ class TestDBJson(unittest.TestCase):
     """ Test database JSON methods. """
 
     def test_plain(self):
-        """ Test that JSONTableEncoder works on plain objects,
-            including date-times.
+        """ Test that JSONTableEncoder works on plain objects.
         """
         test_dict = {'A': 1, 'B': 2}
         json_str = json.dumps(test_dict, cls=JSONTableEncoder)
