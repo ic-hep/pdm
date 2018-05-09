@@ -103,7 +103,8 @@ class SiteService(object):
             if not is_visible:
                 continue
             # Build the output object
-            cur_site = {"is_owner": is_owner}
+            cur_site = {"is_owner": is_owner,
+                        "public": site_entry.public}
             for key in ("site_id", "site_name", "site_desc", "def_path"):
                 cur_site[key] = getattr(site_entry, key)
             site_list.append(cur_site)
@@ -135,6 +136,7 @@ class SiteService(object):
             endpoints.append(ep_info.ep_uri)
         # Prepare the output data
         dict_out = dict(site)
+        dict_out["is_owner"] = is_owner
         dict_out["endpoints"] = endpoints
         return jsonify(dict_out)
 
