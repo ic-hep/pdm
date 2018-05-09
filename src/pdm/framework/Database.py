@@ -45,9 +45,14 @@ class DictMixin(object):
     @property
     def columns(self):
         """list of db model column names."""
-        return [column.name for column in self.__table__.columns
-                if column.name not in self.__excluded_fields__]
+        return [name for name, _ in self]
 
+    # This doesn't match the return from a normal mapping which is just keys.
+    # This is necessary to allow dictionary conversion as dict constructor
+    # doesn't recognise this class as a Mapping despite the manual registration.
+    # Only way to change this is to give flask_sqlalchemy.make_declarative_base()
+    # a new meta which is a subclass of ABCMeta. Our version doesn't allow this so
+    # until we can update we have to do it this way.
     def __iter__(self):
         """Iterator through db columns."""
         return ((column.name, getattr(self, column.name)) for column in self.__table__.columns
