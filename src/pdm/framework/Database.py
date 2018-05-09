@@ -26,43 +26,6 @@ class MemSafeSQLAlchemy(SQLAlchemy):
         return super(MemSafeSQLAlchemy, self).apply_driver_hacks(app, info, options)
 
 
-class JSONTableEncoder(json.JSONEncoder):
-    """JSON DB Table Encoder."""
-
-    # pylint: disable=method-hidden
-    def default(self, obj):
-        """Default encoding method."""
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        if isinstance(obj, JSONMixin):
-            cols = [column.name for column in obj.__table__.columns
-                    if column.name not in obj.__excluded_fields__]
-            return {column: getattr(obj, column) for column in cols}
-        return super(JSONTableEncoder, self).default(obj)
-
-
-# pylint: disable=too-few-public-methods
-class JSONMixin(object):
-    """
-    JSON serialisation mixin for DB tables.
-
-    A mixin class which provides basic serialisation
-    for SQLAlchemy based table classes.
-    """
-
-    # No fields excluded by default
-    __excluded_fields__ = []
-
-    def json(self):
-        """JSONify the table object."""
-        return json.dumps(self, cls=JSONTableEncoder)
-
-    @classmethod
-    def from_json(cls, json_str):
-        """Load object from JSON string."""
-        return cls(**json.loads(json_str))
-
-
 class DictMixin(object):
     """
     Iterable mixin for DB tables.
@@ -82,12 +45,17 @@ class DictMixin(object):
     @property
     def columns(self):
         """list of db model column names."""
-        return [column.name for column in self.__table__.columns
-                if column.name not in self.__excluded_fields__]
+        return [name for name, _ in self]
 
+    # This doesn't match the return from a normal mapping which is just keys.
+    # This is necessary to allow dictionary conversion as dict constructor
+    # doesn't recognise this class as a Mapping despite the manual registration.
+    # Only way to change this is to give flask_sqlalchemy.make_declarative_base()
+    # a new meta which is a subclass of ABCMeta. Our version doesn't allow this so
+    # until we can update we have to do it this way.
     def __iter__(self):
         """Iterator through db columns."""
-        return ((column.name, self[column.name]) for column in self.__table__.columns
+        return ((column.name, getattr(self, column.name)) for column in self.__table__.columns
                 if column.name not in self.__excluded_fields__)
 
     def __getitem__(self, item):
@@ -100,3 +68,39 @@ class DictMixin(object):
         """Returns number of db columns."""
         return len(self.columns)
 Mapping.register(DictMixin)  # pylint: disable=no-member
+
+
+# pylint: disable=too-few-public-methods
+class JSONMixin(DictMixin):
+    """
+    JSON serialisation mixin for DB tables.
+
+    A mixin class which provides basic serialisation
+    for SQLAlchemy based table classes.
+    """
+
+    def encode_for_json(self):
+        """Return an object that can be encoded with the default JSON encoder."""
+        return dict(self)
+
+    def json(self):
+        """JSONify the table object."""
+        return json.dumps(self.encode_for_json())
+
+    @classmethod
+    def from_json(cls, json_str):
+        """Load object from JSON string."""
+        return cls(**json.loads(json_str))
+
+
+class JSONTableEncoder(json.JSONEncoder):
+    """JSON DB Table Encoder."""
+
+    # pylint: disable=method-hidden
+    def default(self, obj):
+        """Default encoding method."""
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        if isinstance(obj, JSONMixin):
+            return obj.encode_for_json()
+        return super(JSONTableEncoder, self).default(obj)
