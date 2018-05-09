@@ -273,7 +273,7 @@ class CredService(object):
         newest_cred = UserCred.query.filter_by(user_id=user_id) \
                                     .order_by(UserCred.expiry_date.desc()) \
                                     .first_or_404()
-        res = {'valid_until': newest_cred.expiry_date}
+        res = {'valid_until': newest_cred.expiry_date.isoformat()}
         return jsonify(res)
 
     @staticmethod
