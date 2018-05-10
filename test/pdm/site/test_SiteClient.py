@@ -93,7 +93,7 @@ class test_SiteClient(unittest.TestCase):
         res = self._inst.get_session_info(site_id)
         self.assertIsInstance(res, dict)
         self.assertFalse(res['ok'])
-        self._inst.logon(site_id, "a", "b", 123, vo="vo1")
+        self._inst.logon(site_id, "a", "b", 123, voms="vo1")
         cred = self._inst.get_cred(site_id, 1000)
         self.assertEqual(cred, "PROXY_DATA")
         self._inst.logoff(site_id)
