@@ -2,11 +2,14 @@
 """ X509 CA: Modules for issuing certificates.
 """
 
+import os
 import random
 import hashlib
+import tempfile
 #pylint: disable=no-member
 from M2Crypto import m2
 from M2Crypto import ASN1, EVP, RSA, X509
+from OpenSSL import crypto
 
 
 class X509Utils(object):
@@ -114,6 +117,64 @@ class X509Utils(object):
         """
         cert = X509.load_cert_string(cert_pem, X509.FORMAT_PEM)
         return cert.get_not_after().get_datetime()
+
+    @staticmethod
+    def write_policy(ca_pem, target_file):
+        """ Writes a signing policy for CA described by ca_pem
+            into the file with filename target_file.
+
+            The policy file will allow any issued certs to be in
+            /OU=Users or /OU=Hosts.
+
+            Returns None.
+        """
+        cert = X509.load_cert_string(ca_pem, X509.FORMAT_PEM)
+        ca_raw_dn = X509Utils.x509name_to_str(cert.get_subject())
+        ca_dn = X509Utils.rfc_to_openssl(ca_raw_dn)
+        policy_text = "access_id_CA   X509    '%s'\n" % ca_dn
+        policy_text += "pos_rights     globus  CA:sign\n"
+        policy_text += "cond_subjects  globus  '\"/OU=Users/*\" \"/OU=Hosts/*\"'\n"
+        with open(target_file, "w") as pol_fd:
+            pol_fd.write(policy_text)
+
+    @staticmethod
+    def add_ca_to_dir(ca_list, dir_path=None):
+        """ Adds a CA list to OpenSSL style hash dir.
+
+            ca_list - A list of strings, each one a PEM encoded CA certificate
+                      to be written to the directory.
+            dir_path - The directory to write the files to. If not specified a
+                       temporary directory will be created.
+                       Note: The caller must delete the directory when they are
+                             finished with it to prevent cluttering up /tmp.
+            Returns the directory path to the CA dir.
+        """
+        ca_path = dir_path
+        if not ca_path:
+            ca_path = tempfile.mkdtemp(prefix='tmpca')
+        for ca_pem in ca_list:
+            # Get the OpenSSL hash of the PEM file
+            cert = crypto.load_certificate(crypto.FILETYPE_PEM, ca_pem)
+            cert_hash = "%08x" % cert.subject_name_hash()
+            # Normally we would have to support writing .n files where
+            # .n gets larger if earlier numbers already exist.
+            # But the signing_policy files don't support that, so instead
+            # we'll only support .0 and throw an exception otherwise.
+            cert_name = "%s.0" % cert_hash
+            cert_path = os.path.join(ca_path, cert_name)
+            sigpol_name = "%s.signing_policy" % cert_hash
+            sigpol_path = os.path.join(ca_path, sigpol_name)
+            if os.path.exists(cert_path):
+                raise Exception("A cert '%s' already exists in dir." % \
+                                cert_hash)
+            elif os.path.exists(sigpol_path):
+                raise Exception("A policy '%s' already exists in dir." % \
+                                cert_hash)
+
+            with open(cert_path, "w") as cert_fd:
+                cert_fd.write(ca_pem)
+            X509Utils.write_policy(ca_pem, sigpol_path)
+        return ca_path
 
 
 class X509CA(object):
