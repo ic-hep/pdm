@@ -291,7 +291,7 @@ class SiteService(object):
         res = {'ok': False}
         if cred:
             res['username'] = cred.cred_username
-            res['expiry'] = cred.cred_expiry.isoformat()
+            res['expiry'] = cred.cred_expiry
             if cred.cred_expiry > datetime.datetime.utcnow():
                 res['ok'] = True
         log.info("Fetched info for user %u at site %u.", user_id, site_id)
