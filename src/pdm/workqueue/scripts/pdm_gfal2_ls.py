@@ -14,13 +14,6 @@ import pprint as pp
 
 _logger = logging.getLogger(__name__)
 
-
-# ToDo
-# if a listing cannot be obtained (at any level) sys.exit(1) and dump the exit code
-# and the reason {'Code': 1, 'Reason': str(exception)} to stdout (line 76 and 42)
-#
-#
-
 def pdm_gfal_ls(root, max_depth=-1, verbosity=logging.INFO):
     """
     Get a directory listing of a given depth. Depth = -1 list the filesystem for all levels
@@ -117,18 +110,25 @@ def pdm_gfal_long_list_dir(ctx, root, result, max_depth=-1, depth=1):
     """
 
     dir_entries = []
-    dirp = ctx.opendir(root)
-    while (True):
-        (dirent, stats) = dirp.readpp()
-        if (dirent is None):
-            break;
-        dir_entry = {k: getattr(stats, k) for k, _ in
-                     inspect.getmembers(stats.__class__, lambda x: isinstance(x, property))}
-        dir_entry['name'] = dirent.d_name
-        dir_entries.append(dir_entry)
+    try:
+        dirp = ctx.opendir(root)
 
-    result[root] = dir_entries
 
+        while (True):
+            (dirent, stats) = dirp.readpp()
+            if (dirent is None):
+                break;
+            dir_entry = {k: getattr(stats, k) for k, _ in
+                         inspect.getmembers(stats.__class__, lambda x: isinstance(x, property))}
+            dir_entry['name'] = dirent.d_name
+            dir_entries.append(dir_entry)
+
+        result[root] = dir_entries
+    except Exception as e:
+        _logger.error("Error when analysing %s \n %s", root, e)
+        print {'Reason': str(e), 'Code': 1}
+        sys.exit(1)
+        
     if depth >= max_depth and max_depth != -1:
         return
 
