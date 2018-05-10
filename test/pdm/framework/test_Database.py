@@ -65,17 +65,14 @@ class TestDBJson(unittest.TestCase):
     """ Test database JSON methods. """
 
     def test_plain(self):
-        """ Test that JSONTableEncoder works on plain objects,
-            including date-times.
+        """ Test that JSONTableEncoder works on plain objects.
         """
-        my_time = datetime.datetime.now()
-        test_dict = {'A': 1, 'B': 2, 'C': my_time}
+        test_dict = {'A': 1, 'B': 2}
         json_str = json.dumps(test_dict, cls=JSONTableEncoder)
         output_dict = json.loads(json_str)
         self.assertItemsEqual(test_dict.keys(), output_dict.keys())
         self.assertEqual(test_dict['A'], output_dict['A'])
         self.assertEqual(test_dict['B'], output_dict['B'])
-        self.assertEqual(my_time.isoformat(), output_dict['C'])
         # Other objects should fall through to the default,
         # which causes a TypeError
         self.assertRaises(TypeError, json.dumps,
