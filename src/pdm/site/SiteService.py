@@ -44,9 +44,11 @@ class SiteService(object):
     def setup_security(conf):
         current_app.cadir = conf.pop('cadir', None)
         current_app.vo_list = []
-        vomsdir = conf.pop('vomsdir', None)
-        if vomsdir:
-            current_app.vo_list = MyProxyUtils.load_voms_list(vomsdir)
+        current_app.myproxy_bin = conf.pop('myproxy_bin', None)
+        vomses = conf.pop('vomses', None)
+        current_app.vomses = vomses
+        if vomses:
+            current_app.vo_list = MyProxyUtils.load_voms_list(vomses)
 
     @staticmethod
     @export_ext("service")
@@ -346,7 +348,10 @@ class SiteService(object):
         # Actually run the myproxy command
         try:
             proxy = MyProxyUtils.logon(site.auth_uri, username, password,
-                                       ca_info, vo_name, lifetime)
+                                       ca_info, vo_name, lifetime,
+                                       myproxy_bin=current_app.myproxy_bin,
+                                       vomses=current_app.vomses,
+                                       log=log)
         except Exception as err:
             log.error("Failed to login user: %s", str(err))
             return "Login failed: %s" % str(err), 400

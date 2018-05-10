@@ -3,6 +3,7 @@
 
 import os
 import sys
+import shutil
 from subprocess import Popen, PIPE
 from pdm.utils.X509 import X509Utils
 
