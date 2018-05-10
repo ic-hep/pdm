@@ -11,7 +11,7 @@ from pdm.framework.Decorators import db_model, export_ext, startup, startup_test
 from pdm.site.SiteDB import SiteDBModel
 from pdm.userservicedesk.HRService import HRService
 from pdm.utils.db import managed_session
-from pdm.utils.config import ConfigSystem
+from pdm.utils.config import getConfig
 from pdm.utils.myproxy import MyProxyUtils
 from pdm.utils.X509 import X509Utils
 
@@ -56,8 +56,7 @@ class SiteService(object):
         """
         log = current_app.log
         ca_data = None
-        conf = ConfigSystem.get_instance()
-        client_conf = conf.get_section("client")
+        client_conf = getConfig("client")
         ca_cert = client_conf.get("cafile", None)
         if ca_cert:
             try:
@@ -67,7 +66,7 @@ class SiteService(object):
                 log.error("Failed to read cafile for service endpoint: %s",
                           str(err))
         # Get the user endpoint
-        ep_conf = conf.get_section("endpoints")
+        ep_conf = getConfig("endpoints")
         user_ep = ep_conf.get("users", None)
         # Build output dictionary
         res = {}

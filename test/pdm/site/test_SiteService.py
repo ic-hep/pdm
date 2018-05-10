@@ -80,15 +80,13 @@ class test_SiteService(unittest.TestCase):
         self.assertFalse(SiteService.check_uri("localhost:bah"))
 
     @mock.patch("pdm.site.SiteService.open", create=True)
-    @mock.patch("pdm.site.SiteService.ConfigSystem")
+    @mock.patch("pdm.site.SiteService.getConfig")
     def test_service_info(self, mock_conf, mock_open):
         """ Test the service info endpoint.
         """
         # Set-up mock conifg
-        conf = mock.MagicMock()
-        mock_conf.get_instance.return_value = conf
-        conf.get_section.return_value = {'cafile': 'mytestfile',
-                                         'users': 'https://localhost:1234'}
+        mock_conf.return_value = {'cafile': 'mytestfile',
+                                  'users': 'https://localhost:1234'}
         # Set-up mock open
         fd = mock.MagicMock()
         mock_open.return_value.__enter__.return_value = fd
