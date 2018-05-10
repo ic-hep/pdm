@@ -2,11 +2,14 @@
 """ X509 CA: Modules for issuing certificates.
 """
 
+import os
 import random
 import hashlib
+import tempfile
 #pylint: disable=no-member
 from M2Crypto import m2
 from M2Crypto import ASN1, EVP, RSA, X509
+from OpenSSL import crypto
 
 
 class X509Utils(object):
@@ -116,10 +119,35 @@ class X509Utils(object):
         return cert.get_not_after().get_datetime()
 
     @staticmethod
-    def add_ca_to_dir(cert_pem, dir_path):
-        """ Adds a CA to OpenSSL style hash dir. """
-        # TODO: Implement this
-        pass
+    def add_ca_to_dir(ca_list, dir_path=None):
+        """ Adds a CA list to OpenSSL style hash dir.
+            
+            ca_list - A list of strings, each one a PEM encoded CA certificate
+                      to be written to the directory.
+            dir_path - The directory to write the files to. If not specified a
+                       temporary directory will be created.
+                       Note: The caller must delete the directory when they are
+                             finished with it to prevent cluttering up /tmp.
+            Returns the directory path to the CA dir.
+        """
+        # TODO: Handle signing_policy files too
+        ca_path = dir_path
+        if not ca_path:
+            ca_path = tempfile.mkdtemp(prefix='tmpca')
+        for ca_pem in ca_list:
+            # Get the OpenSSL hash of the PEM file
+            cert = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
+            cert_hash = "%08x" % cert.subject_name_hash()
+            for i in xrange(10):
+                cur_hash = "%s.%u" % (cert_hash, i)
+                full_path = os.path.join(ca_path, cur_hash)
+                if os.path.exists(full_path):
+                    continue # This one already exists
+                # Write CA...
+                with open(full_path, "w") as cert_fd:
+                    cert_fd.write(ca_pem)
+                break
+        return ca_path
 
 
 class X509CA(object):
