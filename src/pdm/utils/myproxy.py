@@ -10,6 +10,7 @@ from pdm.utils.X509 import X509Utils
 class MyProxyUtils(object):
     """ Util functions for myproxy. """
 
+    # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
     @staticmethod
     def logon(myproxy_server, username, password,
               ca_certs=None, voms=None, hours=12,
@@ -34,14 +35,14 @@ class MyProxyUtils(object):
             RuntimeError exception if anything goes wrong.
         """
         hostname, port = myproxy_server.split(':', 1)
-        myproxy_opts = [ 'myproxy-logon',    # Exectuable name
-                         '-s', hostname,     # MyProxy server name
-                         '-p', '%s' % port,  # MyProxy port number
-                         '-l', username,     # Username at remote site
-                         '-t', '%u' % hours, # Lifetime in hours
-                         '-o', '-',          # Proxy on stdout
-                         '-q',               # Quiet (output only on error)
-                         '-S',               # Password on stdin
+        myproxy_opts = ['myproxy-logon',    # Exectuable name
+                        '-s', hostname,     # MyProxy server name
+                        '-p', '%s' % port,  # MyProxy port number
+                        '-l', username,     # Username at remote site
+                        '-t', '%u' % hours, # Lifetime in hours
+                        '-o', '-',          # Proxy on stdout
+                        '-q',               # Quiet (output only on error)
+                        '-S',               # Password on stdin
                        ]
         if myproxy_bin:
             myproxy_opts[0] = myproxy_bin
@@ -103,7 +104,7 @@ class MyProxyUtils(object):
                     vo_name, _ = vo_line.split(" ", 1)
                     vo_name = vo_name.replace('"', '')
                     vo_list.append(vo_name)
-            except:
+            except Exception:
                 continue # Unreadable file => Ignore it
         # Return a de-duplicated & sorted list
         vo_list = list(set(vo_list))

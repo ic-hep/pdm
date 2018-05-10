@@ -42,6 +42,7 @@ class SiteService(object):
     @staticmethod
     @startup
     def setup_security(conf):
+        """ Load the security settings from the config dict. """
         current_app.cadir = conf.pop('cadir', None)
         current_app.vo_list = []
         current_app.myproxy_bin = conf.pop('myproxy_bin', None)
@@ -74,7 +75,7 @@ class SiteService(object):
         res = {}
         if ca_data:
             res["central_ca"] = ca_data
-        if user_ep: 
+        if user_ep:
             res["user_ep"] = user_ep
         if current_app.vo_list:
             res["vos"] = current_app.vo_list
@@ -130,7 +131,7 @@ class SiteService(object):
                      user_id, site_id)
             abort(404) # User isn't allowed to see this site
         log.info("User %u got details of site %u (%s).", user_id, site_id,
-                                                         site.site_name)
+                 site.site_name)
         # Add the endpoint info
         endpoints = []
         for ep_info in site.endpoints:
@@ -141,6 +142,7 @@ class SiteService(object):
         dict_out["endpoints"] = endpoints
         return jsonify(dict_out)
 
+    # pylint: disable=too-many-locals,too-many-return-statements,too-many-branches
     @staticmethod
     @export_ext("site", ["POST"])
     def add_site():
@@ -170,11 +172,11 @@ class SiteService(object):
                     site_data[key] = raw_val
             # Check the auth types
             if site_data["auth_type"] not in (0, 1):
-                log.warn("Unable to add site: Invalid auth_type (%s)" % \
+                log.warn("Unable to add site: Invalid auth_type (%s)",
                          site_data["auth_type"])
                 return "Invalid auth_type.", 400
             if not SiteService.check_uri(site_data["auth_uri"]):
-                log.warn("Unable to add site: Invalid auth_uri (%s)" % \
+                log.warn("Unable to add site: Invalid auth_uri (%s)",
                          site_data["auth_uri"])
                 return "Invalid auth_uri.", 400
             # Extra fields
@@ -183,7 +185,7 @@ class SiteService(object):
             raw_eps = raw_site_data.get('endpoints', [])
             for raw_ep in raw_eps:
                 if not SiteService.check_uri(raw_ep):
-                    log.warn("Unable to add site: Bad endpoint (%s)" % raw_ep)
+                    log.warn("Unable to add site: Bad endpoint (%s)", raw_ep)
                     return "Invalid endpoint format.", 400
             endpoints.extend(raw_eps)
         except Exception as err:
@@ -197,7 +199,7 @@ class SiteService(object):
                 session.flush() # Ensure new_site gets an ID
                 site_id = new_site.site_id
                 # Also create the endpoints
-                for ep_uri in endpoints: 
+                for ep_uri in endpoints:
                     session.add(Endpoint(site_id=site_id, ep_uri=ep_uri))
         except IntegrityError:
             # site_name is probably not unique
@@ -238,7 +240,6 @@ class SiteService(object):
         """ Get a list of all endpoints at a given site_id.
             Designed for cert auth.
         """
-        log = current_app.log
         db = request.db
         Site = db.tables.Site
         site = Site.query.filter_by(site_id=site_id).first_or_404()
@@ -282,6 +283,7 @@ class SiteService(object):
     @staticmethod
     @export_ext("session/<int:site_id>")
     def get_session_info(site_id):
+        """ Get the session info for the current user at a given site. """
         log = current_app.log
         db = request.db
         Cred = db.tables.Cred
@@ -295,11 +297,13 @@ class SiteService(object):
             if cred.cred_expiry > datetime.datetime.utcnow():
                 res['ok'] = True
         log.info("Fetched info for user %u at site %u.", user_id, site_id)
-        return jsonify(res)                                    
+        return jsonify(res)
 
+    # pylint: disable=too-many-locals
     @staticmethod
     @export_ext("session/<int:site_id>", ["POST"])
     def logon_session(site_id):
+        """ Create a session for the current user at a given site. """
         log = current_app.log
         db = request.db
         Site = db.tables.Site
@@ -369,6 +373,7 @@ class SiteService(object):
     @staticmethod
     @export_ext("session/<int:site_id>", ["DELETE"])
     def logoff_session(site_id):
+        """ Delete a session for the current user at a given site. """
         log = current_app.log
         db = request.db
         Cred = db.tables.Cred
@@ -376,15 +381,17 @@ class SiteService(object):
         cred = Cred.query.filter_by(cred_owner=user_id,
                                     site_id=site_id).first()
         if cred:
-          with managed_session(request,
-                               message="Database error while deleting creds",
-                               http_error_code=500) as session:
-            session.delete(cred)
+            with managed_session(request,
+                                 message="Database error while deleting creds",
+                                 http_error_code=500) as session:
+                session.delete(cred)
+        log.info("Deleted session for user %u at site %u.", user_id, site_id)
         return ""
 
     @staticmethod
     @export_ext("cred/<int:site_id>/<int:user_id>")
     def get_cred(site_id, user_id):
+        """ Get a credential for a user at a specific site. """
         log = current_app.log
         db = request.db
         Cred = db.tables.Cred
@@ -492,7 +499,7 @@ class SiteService(object):
             db.session.add(entry)
         db.session.commit()
 
-UK_ESCIENCE_CA="""-----BEGIN CERTIFICATE-----
+UK_ESCIENCE_CA = """-----BEGIN CERTIFICATE-----
 MIIDwzCCAqugAwIBAgICASMwDQYJKoZIhvcNAQELBQAwVDELMAkGA1UEBhMCVUsx
 FTATBgNVBAoTDGVTY2llbmNlUm9vdDESMBAGA1UECxMJQXV0aG9yaXR5MRowGAYD
 VQQDExFVSyBlLVNjaWVuY2UgUm9vdDAeFw0xMTA2MTgxMzAwMDBaFw0yNzEwMzAw
@@ -516,7 +523,7 @@ nPQiwuIyf3OJ9eifAOGXk9Nlpha9C54zhc+hAkSLnpx/FhPjwLgpwDRgDJud6otH
 9qoDx3FeEg==
 -----END CERTIFICATE-----"""
 
-TEST_HOST_CA="""-----BEGIN CERTIFICATE-----
+TEST_HOST_CA = """-----BEGIN CERTIFICATE-----
 MIIC+zCCAeOgAwIBAgIBATANBgkqhkiG9w0BAQsFADAfMQswCQYDVQQGEwJYWDEQ
 MA4GA1UECwwHVGVzdCBDQTAeFw0xODAzMjIxMDI4MDZaFw0yODAzMTkxMDI4MDZa
 MB8xCzAJBgNVBAYTAlhYMRAwDgYDVQQLDAdUZXN0IENBMIIBIjANBgkqhkiG9w0B
@@ -534,4 +541,3 @@ QzMGtONjzZjacXlOmuZwHuPFL2Z5iLl8z38yPwUzQuv72UKa7w39fafx4ufOG8GT
 1h9GEWwMiFLyuVI4wDaa9/qxhxHcmGxjNFK0+3AtiwIQGfG4fdtgSgIC+fzvoGmZ
 mg7aHC1OCuhBmSRXtuezPvftl2yzoUUhSg75/UleQ0zCWSJkJyjIXf/m1jz5HJA=
 -----END CERTIFICATE-----"""
-

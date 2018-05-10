@@ -140,7 +140,7 @@ class X509Utils(object):
     @staticmethod
     def add_ca_to_dir(ca_list, dir_path=None):
         """ Adds a CA list to OpenSSL style hash dir.
-            
+
             ca_list - A list of strings, each one a PEM encoded CA certificate
                       to be written to the directory.
             dir_path - The directory to write the files to. If not specified a

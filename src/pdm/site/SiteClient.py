@@ -49,13 +49,14 @@ class SiteClient(RESTClient):
         """ Get session info for user at site. """
         return self.get('session/%u' % site_id)
 
-    def logon(self, site_id, username, password, lifetime=36, vo=None):
+    # pylint: disable=too-many-arguments
+    def logon(self, site_id, username, password, lifetime=36, voms=None):
         """ Create a user session at the given site. """
         data = {'username': username,
                 'password': password,
                 'lifetime': lifetime}
-        if vo:
-            data['vo'] = vo
+        if voms:
+            data['vo'] = voms
         self.post('session/%u' % site_id, data)
 
     def logoff(self, site_id):
