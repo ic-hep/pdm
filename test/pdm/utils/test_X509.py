@@ -161,17 +161,23 @@ class TestX509Utils(unittest.TestCase):
         # correct name.
         res = X509Utils.add_ca_to_dir([cert_pem], "/mydir")
         self.assertEqual(res, "/mydir")
-        self.assertEqual(open_mock.call_args[0][0], "/mydir/%s.0" % cert_hash)
-        # Now check that writing a cert with matching hash results in a .1 file.
-        # Also check the directory name generation at the same time.
-        def cert_zero_exists(path):
-            return path.endswith('.0')
-        os_mock.path.exists.side_effect = cert_zero_exists
-        temp_mock.mkdtemp.return_value = "/tmp/tmpca.test"
+        open_mock.assert_has_calls([
+            mock.call("/mydir/%s.0" % cert_hash, "w"),
+            mock.call("/mydir/%s.signing_policy" % cert_hash, "w")],
+            any_order=True)
+        # Test directory creation
+        temp_mock.mkdtemp.return_value = "/tmpca.test"
         res = X509Utils.add_ca_to_dir([cert_pem])
-        self.assertEqual(res, "/tmp/tmpca.test")
-        self.assertEqual(open_mock.call_args[0][0],
-                         "%s/%s.1" % (res, cert_hash))
+        self.assertEqual(res, "/tmpca.test")
+        # Check that duplicate CA causes an exception
+        os_mock.path.exists.return_value = True
+        self.assertRaises(Exception, X509Utils.add_ca_to_dir,
+                          [cert_pem], "/mydir")
+        def pol_exists(path):
+            return path.endswith('.signing_policy')
+        os_mock.path.exists.side_effect = pol_exists
+        self.assertRaises(Exception, X509Utils.add_ca_to_dir,
+                          [cert_pem], "/mydir")
 
 class TestX509CA(unittest.TestCase):
     """ Tests of the X509CA module. """

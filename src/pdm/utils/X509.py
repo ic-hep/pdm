@@ -119,6 +119,25 @@ class X509Utils(object):
         return cert.get_not_after().get_datetime()
 
     @staticmethod
+    def write_policy(ca_pem, target_file):
+        """ Writes a signing policy for CA described by ca_pem
+            into the file with filename target_file.
+
+            The policy file will allow any issued certs to be in
+            /OU=Users or /OU=Hosts.
+
+            Returns None.
+        """
+        cert = X509.load_cert_string(ca_pem, X509.FORMAT_PEM)
+        ca_raw_dn = X509Utils.x509name_to_str(cert.get_subject())
+        ca_dn = X509Utils.rfc_to_openssl(ca_raw_dn)
+        policy_text = "access_id_CA   X509    '%s'\n" % ca_dn
+        policy_text += "pos_rights     globus  CA:sign\n"
+        policy_text += "cond_subjects  globus  '\"/OU=Users/*\" \"/OU=Hosts/*\"'\n"
+        with open(target_file, "w") as pol_fd:
+            pol_fd.write(policy_text)
+
+    @staticmethod
     def add_ca_to_dir(ca_list, dir_path=None):
         """ Adds a CA list to OpenSSL style hash dir.
             
@@ -130,7 +149,6 @@ class X509Utils(object):
                              finished with it to prevent cluttering up /tmp.
             Returns the directory path to the CA dir.
         """
-        # TODO: Handle signing_policy files too
         ca_path = dir_path
         if not ca_path:
             ca_path = tempfile.mkdtemp(prefix='tmpca')
@@ -138,15 +156,24 @@ class X509Utils(object):
             # Get the OpenSSL hash of the PEM file
             cert = crypto.load_certificate(crypto.FILETYPE_PEM, ca_pem)
             cert_hash = "%08x" % cert.subject_name_hash()
-            for i in xrange(10):
-                cur_hash = "%s.%u" % (cert_hash, i)
-                full_path = os.path.join(ca_path, cur_hash)
-                if os.path.exists(full_path):
-                    continue # This one already exists
-                # Write CA...
-                with open(full_path, "w") as cert_fd:
-                    cert_fd.write(ca_pem)
-                break
+            # Normally we would have to support writing .n files where
+            # .n gets larger if earlier numbers already exist.
+            # But the signing_policy files don't support that, so instead
+            # we'll only support .0 and throw an exception otherwise.
+            cert_name = "%s.0" % cert_hash
+            cert_path = os.path.join(ca_path, cert_name)
+            sigpol_name = "%s.signing_policy" % cert_hash
+            sigpol_path = os.path.join(ca_path, sigpol_name)
+            if os.path.exists(cert_path):
+                raise Exception("A cert '%s' already exists in dir." % \
+                                cert_hash)
+            elif os.path.exists(sigpol_path):
+                raise Exception("A policy '%s' already exists in dir." % \
+                                cert_hash)
+
+            with open(cert_path, "w") as cert_fd:
+                cert_fd.write(ca_pem)
+            X509Utils.write_policy(ca_pem, sigpol_path)
         return ca_path
 
 
