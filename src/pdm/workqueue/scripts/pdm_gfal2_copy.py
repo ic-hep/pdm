@@ -33,7 +33,7 @@ def monitor_callback(src, dst, average, instant, transferred, elapsed):  # pylin
     """
     print >> sys.stderr, "MONITOR src: %s [%4d] %.2fMB (%.2fKB/s)\n" % (
         src, elapsed, transferred / 1048576, average / 1024),
-    sys.stdout.flush()
+    sys.stderr.flush()
 
 
 def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False, # pylint: disable=too-many-arguments, too-many-locals
