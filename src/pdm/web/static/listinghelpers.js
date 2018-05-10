@@ -11,33 +11,40 @@ function time_converter(UNIX_timestamp) {
     return short_date + " " + short_time;
 }
 
+function copy_loc() {
+    var sitenameFrom = undefined;
+    var sitepathFrom = undefined;
+    var sitenameTo = undefined;
+    var sitepathTo = undefined;
+    sitenameFrom = encodeURIComponent($("#Endpoints0").val());
+    sitepathFrom = encodeURIComponent($("#pathatsite0").val());
+    sitenameTo = encodeURIComponent($("#Endpoints1").val());
+    sitepathTo = encodeURIComponent($("#pathatsite1").val());
+    retval = {sourceSite: sitenameFrom, sourcePath: sitepathFrom, targetSite: sitenameTo, targetPath: sitepathTo};
+    return retval;
+}
+
 
 // check if copy is possible
 function copy_enable(list0, list1) {
     console.log('in copy_enable');
     var retval = {status: false, reason : "unknown"};
-    var sitenameFrom = encodeURIComponent($("#Endpoints0").val());
-    var sitepathFrom = encodeURIComponent($("#pathatsite0").val());
-    var sitenameTo = encodeURIComponent($("#Endpoints1").val());
-    var sitepathTo = encodeURIComponent($("#pathatsite1").val());
-    if ((sitenameFrom == "droptitle") || (sitenameTo == "droptitle")) {
+    copyloc = copy_loc();
+
+    if ((copyloc.sourceSite == "droptitle") || (copyloc.targetSite == "droptitle")) {
         retval = {status: false, reason : "No source and/or target site selected"};
 	return retval;
     }
-    
     if (list0.listings_table == undefined) {
         alert("Please select a file to copy.");
 	retval = {status: false, reason : "No file selected."};
 	return retval;
     }
-
     if (list1.listings_table == undefined) {
 	alert("Cannot list traget dir, no copy possible");
 	retval = {status: false, reason : "Target directory inaccessible, please try listing it again."};
 	return retval;
     }
-
-        
     var count = list0.listings_table.rows( { selected: true } ).count();
     console.log("count_rows");
     console.log(count);
@@ -49,7 +56,8 @@ function copy_enable(list0, list1) {
     else {
 	retval = {status: true, reason : "All peachy."};
     }
-   
+    // not sure this works
+    $("#copybutton").prop('disabled', false);
     return retval;
 }
 
@@ -60,14 +68,12 @@ function copy_me(list0, list1) {
 	return;
     }
     console.log("now I could do a copy");
-    var sitenameFrom = encodeURIComponent($("#Endpoints0").val());
-    var sitepathFrom = $("#pathatsite0").val(); // to be encoded later
-    var sitenameTo = encodeURIComponent($("#Endpoints1").val());
-    var sitepathTo = encodeURIComponent($("#pathatsite1").val());
+    copylocs = copy_loc();
     var filename = list0.listings_table.row( { selected: true } ).data()[5];
-    var source_path = encodeURIComponent(sitepathFrom + "/" + filename);  
-    var copyendpoint = "/web/js/copy?source_site="+sitenameFrom+"&source_path="+source_path
-	+"&dest_site="+sitenameTo+"&dest_dir_path="+sitepathTo;
+    var source_path = copylocs.sourcePath + encodeURIComponent("/" + filename);  
+
+    var copyendpoint = "/web/js/copy?source_site="+copylocs.sourceSite+"&source_path="+source_path
+	+"&dest_site="+copylocs.targetSite+"&dest_dir_path="+copylocs.targetPath;
     
     console.log(copyendpoint);
 
@@ -87,6 +93,7 @@ function copy_submission_failed(xhr, status, err) {
     alert("Copy submission failed "+err);
 }
 
+// TODO: check if copy was successfull, if yes, update listing on target site.
 
 // DATATABLES
 class Listings {
@@ -305,27 +312,5 @@ class Listings {
 	
     } // generate_listings_table_html
 
-
-    count_rows() {
-	// first I need to check if actually anything was selected
-	if (this.listings_table == undefined) {
-	    alert("Please select a file to copy");
-	    return;
-	}
-	
-	// do I have a target site/dir ?
-	
-	var count = this.listings_table.rows( { selected: true } ).count();
-	console.log("count_rows");
-	console.log(count); 
-	if (count != 1) {
-	    alert("One file at a time, you have selected: "+count);
-	}
-	else {
-	    alert("I should really copy this");
-	}
-	return;
-
-    }
     
 } // Listings class

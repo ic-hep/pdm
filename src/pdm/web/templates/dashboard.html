@@ -47,8 +47,23 @@
                  list1.get_query_result();
              }
          }); // keypress
-	 // possibly wrong....
+	 // this syntax is wrong
 	 // $("#copybutton").click(copy_me(list0, list1));
+	 // need to work out how/when to enable it
+	 $("#copybutton").prop('disabled', true);
+	 // https://www.w3schools.com/jsref/obj_event.asp
+	 $('#tableDiv0').on('click', function() {
+	     // now it needs to do all the other checks
+	     areweready = copy_enable(list0, list1).status
+	     if (areweready) {
+		 $("#copybutton").prop('disabled', false);
+	     }
+	     else {
+		 $("#copybutton").prop('disabled', true);
+	     }
+	     
+         });
+	 
      }); // function ready
 
 

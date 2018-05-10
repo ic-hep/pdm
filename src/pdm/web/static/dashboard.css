@@ -247,7 +247,7 @@ a.logoutbutton {
 
 #copybutton {
     float: right;
-    background-color: lightgrey;
+    background-color: lightgreen;
     border : hidden;
     border-radius: 10px;
     text-align: center;
@@ -264,6 +264,11 @@ a.logoutbutton {
     background-position: 95%;
 }
 
+
+#copybutton:disabled  {
+    background-color: lightgrey;
+    cursor: default;
+}
 
 
 /* pseudo button (just a link) */                                                                                                 
