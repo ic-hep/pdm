@@ -136,7 +136,7 @@ class X509Utils(object):
             ca_path = tempfile.mkdtemp(prefix='tmpca')
         for ca_pem in ca_list:
             # Get the OpenSSL hash of the PEM file
-            cert = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
+            cert = crypto.load_certificate(crypto.FILETYPE_PEM, ca_pem)
             cert_hash = "%08x" % cert.subject_name_hash()
             for i in xrange(10):
                 cur_hash = "%s.%u" % (cert_hash, i)

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import mock
 import unittest
 from functools import partial
@@ -10,6 +11,7 @@ from pdm.utils.X509 import X509Utils, X509CA
 # We need a keypair for testing proxy generation
 # It doesn't matter that these are expired and we don't
 # have a CA.
+TESTCERT_HASH = "4ee00b4f" # OpenSSL hash for this cert
 TESTCERT_AND_KEY = ("""-----BEGIN CERTIFICATE-----
 MIIC2DCCAcCgAwIBAgIBAjANBgkqhkiG9w0BAQsFADAfMQswCQYDVQQGEwJYWDEQ
 MA4GA1UEAwwHVGVzdCBDQTAeFw0xODAxMzAxNDE5NDhaFw0xODAyMDMxNDE5NDha
@@ -146,6 +148,30 @@ class TestX509Utils(unittest.TestCase):
         ca_exp = ca_obj.get_not_after().get_datetime()
         self.assertEqual(X509Utils.get_cert_expiry(ca_pem), ca_exp)
         
+    @mock.patch("pdm.utils.X509.open", create=True)
+    @mock.patch("pdm.utils.X509.os")
+    @mock.patch("pdm.utils.X509.tempfile")
+    def test_add_ca_to_dir(self, temp_mock, os_mock, open_mock):
+        """ Test the add_ca_to_dir functions. """
+        os_mock.path.join.side_effect = os.path.join
+        os_mock.path.exists.return_value = False
+        cert_pem = TESTCERT_AND_KEY[0]
+        cert_hash = TESTCERT_HASH
+        # Try just writing a single CA and check it gets written to the
+        # correct name.
+        res = X509Utils.add_ca_to_dir([cert_pem], "/mydir")
+        self.assertEqual(res, "/mydir")
+        self.assertEqual(open_mock.call_args[0][0], "/mydir/%s.0" % cert_hash)
+        # Now check that writing a cert with matching hash results in a .1 file.
+        # Also check the directory name generation at the same time.
+        def cert_zero_exists(path):
+            return path.endswith('.0')
+        os_mock.path.exists.side_effect = cert_zero_exists
+        temp_mock.mkdtemp.return_value = "/tmp/tmpca.test"
+        res = X509Utils.add_ca_to_dir([cert_pem])
+        self.assertEqual(res, "/tmp/tmpca.test")
+        self.assertEqual(open_mock.call_args[0][0],
+                         "%s/%s.1" % (res, cert_hash))
 
 class TestX509CA(unittest.TestCase):
     """ Tests of the X509CA module. """
