@@ -104,6 +104,8 @@ class JSONTableEncoder(json.JSONEncoder):
     # pylint: disable=method-hidden
     def default(self, obj):
         """Default encoding method."""
+        if isinstance(obj, datetime):
+            return obj.isoformat()
         if isinstance(obj, JSONMixin):
             return obj.encode_for_json()
         return super(JSONTableEncoder, self).default(obj)
