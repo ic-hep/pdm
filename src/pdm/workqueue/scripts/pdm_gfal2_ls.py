@@ -11,7 +11,9 @@ import logging
 import pprint as pp
 import gfal2
 
-_logger = logging.getLogger(__name__) #pylint: disable=invalid-name
+logging.basicConfig()
+_logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
 
 def pdm_gfal_ls(root, max_depth=-1, verbosity=logging.INFO):
     """
@@ -29,20 +31,22 @@ def pdm_gfal_ls(root, max_depth=-1, verbosity=logging.INFO):
     result = OrderedDict()
     # determine if the path point to a file, no recursion if True
     try:
-        a = ctx.stat(root)
-    except Exception as e:
-        _logger.error("Error when obtaining ctx.stat(%s) \n %s", root, e)
-        print {'Reason': str(e), 'Code': 1}
+        stat_tup = ctx.stat(root)
+    except Exception as gfal_exc:
+        _logger.error("Error when obtaining ctx.stat(%s) \n %s", root, gfal_exc)
+        json.dump({'Reason': str(gfal_exc), 'Code': 1}, sys.stdout)
+        sys.stdout.flush()
         sys.exit(1)
 
-    b = {k: getattr(a, k) for k, _ in inspect.getmembers(a.__class__,
-                                                         lambda x: isinstance(x, property))}
+    stat_dict = {k: getattr(stat_tup, k)
+                 for k, _ in inspect.getmembers(stat_tup.__class__,
+                                                lambda x: isinstance(x, property))}
 
-    if stat.S_ISDIR(b['st_mode']):
+    if stat.S_ISDIR(stat_dict['st_mode']):
         pdm_gfal_long_list_dir(ctx, root, result, max_depth)
     else:
         _logger.debug("Top path points to a file ...")
-        pdm_gfal_list_file(b, root, result)
+        pdm_gfal_list_file(stat_dict, root, result)
 
     if verbosity == logging.DEBUG:
         pp.pprint(result, stream=sys.stderr)
@@ -74,24 +78,26 @@ def pdm_gfal_list_dir(ctx, root, result, max_depth=-1, depth=1):
     _logger.debug("gfal listing root: %s at depth: %d", root, depth)
 
     try:
-        a = ((item, ctx.stat(os.path.join(root, item))) for item in ctx.listdir(root))
-    except Exception as e:
-        _logger.error("Error when analysing %s \n %s", root, e)
-        print {'Reason': str(e), 'Code': 1}
+        stat_tup = ((item, ctx.stat(os.path.join(root, item))) for item in ctx.listdir(root))
+    except Exception as gfal_exc:
+        _logger.error("Error when analysing %s \n %s", root, gfal_exc)
+        json.dump({'Reason': str(gfal_exc), 'Code': 1}, sys.stdout)
+        sys.stdout.flush()
         sys.exit(1)
 
-    b = [dict(((k, getattr(j, k))
-               for k, l in inspect.getmembers(j.__class__,
-                                              lambda x: isinstance(x, property))), name=i)
-         for i, j in a]
+    stat_d_list = [dict(((k, getattr(j, k))
+                         for k, l in inspect.getmembers(j.__class__,
+                                                        lambda x: isinstance(x, property))),
+                        name=i)
+                   for i, j in stat_tup]
 
-    result[root] = b
+    result[root] = stat_d_list
 
     if depth >= max_depth and max_depth != -1:
         return
 
     # sub directories of root
-    subdirs = [elem['name'] for elem in b if stat.S_ISDIR(elem['st_mode'])]
+    subdirs = [elem['name'] for elem in stat_d_list if stat.S_ISDIR(elem['st_mode'])]
     if not subdirs:
         # we reached the bottom
         return
@@ -119,7 +125,6 @@ def pdm_gfal_long_list_dir(ctx, root, result, max_depth=-1, depth=1):
     try:
         dirp = ctx.opendir(root)
 
-
         while True:
             (dirent, stats) = dirp.readpp()
             if dirent is None:
@@ -130,9 +135,10 @@ def pdm_gfal_long_list_dir(ctx, root, result, max_depth=-1, depth=1):
             dir_entries.append(dir_entry)
 
         result[root] = dir_entries
-    except Exception as e:
-        _logger.error("Error when analysing %s \n %s", root, e)
-        print {'Reason': str(e), 'Code': 1}
+    except Exception as gfal_exc:
+        _logger.error("Error when analysing %s \n %s", root, gfal_exc)
+        json.dump({'Reason': str(gfal_exc), 'Code': 1}, sys.stdout)
+        sys.stdout.flush()
         sys.exit(1)
 
     if depth >= max_depth and max_depth != -1:
@@ -157,8 +163,9 @@ def main():
                         help="verbosity level")
     parser.add_argument("-d", "--depth", default=-1, type=int, help="depth")
     args = parser.parse_args()
-    print json.dumps(pdm_gfal_ls(args.topdir,
-                                 max_depth=max(-1, args.depth), verbosity=args.verbosity))
+    json.dump(pdm_gfal_ls(args.topdir,
+                          max_depth=max(-1, args.depth), verbosity=args.verbosity), sys.stdout)
+    sys.stdout.flush()
 
 
 def json_input():
@@ -168,7 +175,8 @@ def json_input():
     """
 
     data = json.load(sys.stdin)
-    print json.dumps(pdm_gfal_ls(str(data.get('files')[0]), **data.get('options', {})))
+    json.dump(pdm_gfal_ls(str(data.get('files')[0]), **data.get('options', {})), sys.stdout)
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":

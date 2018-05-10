@@ -8,6 +8,7 @@ import json
 import logging
 import gfal2
 
+logging.basicConfig()
 _logger = logging.getLogger(__name__)  #pylint: disable=invalid-name
 
 
@@ -20,19 +21,14 @@ def pdm_gfal_rm(rmdict, verbosity=logging.INFO):
 
     ctx = gfal2.creat_context()
 
-    #rmdict = json.loads(remove_json)
-    #result = []
-
     # files
     file_list = rmdict.get('files', [])
     for elem in file_list:
         try:
             res = ctx.unlink(str(elem))
-            print json.dumps({'Code': res, 'Reason': 'OK'})
-            #result.append({'Code': res, 'Reason': 'OK'})
+            json.dump({'Code': res, 'Reason': 'OK'}, sys.stdout)
         except gfal2.GError as gerror:
-            print json.dumps({'Code': 1, 'Reason': str(gerror)})
-            #result.append({'Code': 1, 'Reason': str(gerror)})
+            json.dump({'Code': 1, 'Reason': str(gerror)}, sys.stdout)
             _logger.error(str(gerror))
 
     # directories
@@ -40,11 +36,11 @@ def pdm_gfal_rm(rmdict, verbosity=logging.INFO):
     for elem in dir_list:
         try:
             ctx.rmdir(elem)
-            print json.dumps({'Code': res, 'Reason': 'OK'})
+            json.dump({'Code': res, 'Reason': 'OK'}, sys.stdout)
             #result.append({'Code': res, 'Reason': 'OK'})
         except gfal2.GError as gerror:
             #result.append({'Code': 1, 'Reason': str(gerror)})
-            print json.dumps({'Code': 1, 'Reason': str(gerror)})
+            json.dump({'Code': 1, 'Reason': str(gerror)}, sys.stdout)
             _logger.error(str(gerror))
 
     return
@@ -72,7 +68,7 @@ def json_input():
     """
 
     data = json.load(sys.stdin)
-    json.dumps(pdm_gfal_rm(data), **data.get('options', {}))
+    pdm_gfal_rm(data, **data.get('options', {}))
 
 if __name__ == "__main__":
     #main()

@@ -7,7 +7,8 @@ import json
 import logging
 import gfal2
 
-_logger = logging.getLogger(__name__)  #pylint: disable=invalid-name
+logging.basicConfig()
+_logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def event_callback(event):
@@ -36,7 +37,8 @@ def monitor_callback(src, dst, average, instant, transferred, elapsed):  # pylin
     sys.stderr.flush()
 
 
-def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False, # pylint: disable=too-many-arguments, too-many-locals
+def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False,
+                  # pylint: disable=too-many-arguments, too-many-locals
                   parent=True, nbstreams=1,
                   verbosity=logging.INFO):
     """
@@ -54,7 +56,8 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     copy_list = copy_dict.get('files', [])
 
     if not copy_list:
-        print json.dumps([])
+        json.dump([], sys.stdout)
+        sys.stdout.flush()
         return
 
     if _logger.isEnabledFor(logging.DEBUG):
@@ -66,9 +69,10 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     t_cred = _get_cred(t_cred_file)
 
     if s_cred is None or t_cred is None:
-        _logger.fatal("FATAL: Please provide credential location: source %s, dest %s. ",
+        _logger.fatal("Please provide credential location: source %s, dest %s. ",
                       s_cred, t_cred)
-        print json.dumps({"Reason": "No credentials passed in", "Code": 1})
+        json.dump({"Reason": "No credentials passed in", "Code": 1}, sys.stdout)
+        sys.stdout.flush()
         return
 
     ctx = gfal2.creat_context()
@@ -95,13 +99,11 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     for file_pair in copy_list:
         try:
             res = ctx.filecopy(params, str(file_pair[0]), str(file_pair[1]))
-            # result.append({'Code': res, 'Reason': 'OK'})
-            print json.dumps({'Code': res, 'Reason': 'OK'})
+            json.dump({'Code': res, 'Reason': 'OK'}, sys.stdout)
             sys.stdout.flush()
         except gfal2.GError as gerror:
-            print json.dumps({'Code': 1, 'Reason': str(gerror)})
+            json.dump({'Code': 1, 'Reason': str(gerror)}, sys.stdout)
             sys.stdout.flush()
-            # result.append({'Code': 1, 'Reason': str(ge)})
             _logger.error(str(gerror))
     return  # result
 
@@ -133,9 +135,6 @@ def main():
     parser.add_argument("-n", "--nbstreams", default=1, type=int, help="number of streams")
     args = parser.parse_args()
 
-    # print json.dumps(
-    #    pdm_gfal_copy(args.copylist, args.s_cred, args.t_cred,
-    #             args.overwrite, args.parent, args.nbstreams))
     pdm_gfal_copy(json.loads(args.copylist), args.s_cred, args.t_cred,
                   args.overwrite, args.parent, args.nbstreams)
 
