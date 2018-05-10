@@ -3,7 +3,7 @@
 
 from sqlalchemy import Column, Boolean, Integer, TEXT, TIMESTAMP, ForeignKey
 from sqlalchemy.orm import relationship
-from pdm.framework.Database import JSONMixin, DictMixin
+from pdm.framework.Database import JSONMixin
 
 #pylint: disable=too-few-public-methods
 class SiteDBModel(object):
