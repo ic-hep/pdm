@@ -81,7 +81,12 @@ class JSONMixin(DictMixin):
 
     def encode_for_json(self):
         """Return an object that can be encoded with the default JSON encoder."""
-        return dict(self)
+        ret = {}
+        for key, value in self:
+            if isinstance(value, datetime):
+                value = value.isoformat()
+            ret[key] = value
+        return ret
 
     def json(self):
         """JSONify the table object."""
@@ -99,8 +104,6 @@ class JSONTableEncoder(json.JSONEncoder):
     # pylint: disable=method-hidden
     def default(self, obj):
         """Default encoding method."""
-        if isinstance(obj, datetime):
-            return obj.isoformat()
         if isinstance(obj, JSONMixin):
             return obj.encode_for_json()
         return super(JSONTableEncoder, self).default(obj)
