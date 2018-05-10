@@ -2,7 +2,7 @@
 """ A module for myproxy functions. """
 
 import os
-import sys
+import copy
 import shutil
 from subprocess import Popen, PIPE
 from pdm.utils.X509 import X509Utils
@@ -36,7 +36,7 @@ class MyProxyUtils(object):
         hostname, port = myproxy_server.split(':', 1)
         myproxy_opts = [ 'myproxy-logon',    # Exectuable name
                          '-s', hostname,     # MyProxy server name
-                         '-p', '%u' % port,  # MyProxy port number
+                         '-p', '%s' % port,  # MyProxy port number
                          '-l', username,     # Username at remote site
                          '-t', '%u' % hours, # Lifetime in hours
                          '-o', '-',          # Proxy on stdout
@@ -47,7 +47,7 @@ class MyProxyUtils(object):
             myproxy_opts[0] = myproxy_bin
         if voms:
             myproxy_opts.extend(['-m', voms])
-        env = copy.deepcopy(sys.environ)
+        env = copy.deepcopy(os.environ)
         ca_dir = None
         if ca_certs:
             if isinstance(ca_certs, str):
@@ -55,7 +55,7 @@ class MyProxyUtils(object):
                 env["X509_CERT_DIR"] = ca_certs
             else:
                 # ca_certs is a list of PEM strings
-                ca_dir = add_ca_to_dir(ca_certs, None)
+                ca_dir = X509Utils.add_ca_to_dir(ca_certs, None)
                 env["X509_CERT_DIR"] = ca_dir
         if vomses:
             env["X509_VOMS_DIR"] = vomses
