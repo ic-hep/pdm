@@ -258,7 +258,7 @@ class test_SiteService(unittest.TestCase):
         TEST_VOS = ["vo1", "vo2.test.vo"]
         mp_utils.load_voms_list.return_value = TEST_VOS
         # Load in the conf with VOMS
-        self.__service.before_startup({'vomsdir': '/myvoms'}, True)
+        self.__service.before_startup({'vomses': '/myvoms'}, True)
         mp_utils.load_voms_list.assert_called_once_with('/myvoms')
         # Check that the service endpoint returns the correct list
         res = self.__client.get('/site/api/v1.0/service')
@@ -336,7 +336,7 @@ class test_SiteService(unittest.TestCase):
         x509_mock.get_cert_expiry.return_value = datetime.datetime.utcnow()
         CA_DIR = "/etc/grid-security/certificates"
         CONF_DATA = {
-            'vomsdir': '/myvoms',
+            'vomses': '/myvoms',
             'cadir': CA_DIR,
         }
         self.__service.before_startup(CONF_DATA, True)
