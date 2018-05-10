@@ -8,7 +8,7 @@ import json
 import logging
 import gfal2
 
-_logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)  #pylint: disable=invalid-name
 
 
 def pdm_gfal_rm(rmdict, verbosity=logging.INFO):

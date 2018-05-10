@@ -1,18 +1,17 @@
 #!/usr/bin/env python
+""" pdm gfal-ls wrapper """
 import os
 import sys
 import inspect
-import gfal2
 import stat
 import argparse
 from collections import OrderedDict
 import json
 import logging
 import pprint as pp
+import gfal2
 
-# root = 'gsiftp://dc2-grid-64.brunel.ac.uk/dpm/brunel.ac.uk/home/gridpp/gridpp/user/s'
-
-_logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__) #pylint: disable=invalid-name
 
 def pdm_gfal_ls(root, max_depth=-1, verbosity=logging.INFO):
     """
@@ -36,7 +35,8 @@ def pdm_gfal_ls(root, max_depth=-1, verbosity=logging.INFO):
         print {'Reason': str(e), 'Code': 1}
         sys.exit(1)
 
-    b = {k: getattr(a, k) for k, _ in inspect.getmembers(a.__class__, lambda x: isinstance(x, property))}
+    b = {k: getattr(a, k) for k, _ in inspect.getmembers(a.__class__,
+                                                         lambda x: isinstance(x, property))}
 
     if stat.S_ISDIR(b['st_mode']):
         pdm_gfal_long_list_dir(ctx, root, result, max_depth)
@@ -63,8 +63,10 @@ def pdm_gfal_list_dir(ctx, root, result, max_depth=-1, depth=1):
     Recursively list files and directories of root (if root is a directory)
     :param ctx: gfal2 context
     :param root: root directory to start from
-    :param result: result dictionary for root: {root:[{'name':filename,... stat dict entries ...},{..}]}
-    :param max_depth: maximum recursion dpeth: positive integer or -1 for a max depth (0 is equivalent to -1)
+    :param result: result dictionary for root:
+    {root:[{'name':filename,... stat dict entries ...},{..}]}
+    :param max_depth: maximum recursion depth:
+    positive integer or -1 for a max depth (0 is equivalent to -1)
     :param depth: current depth. Used internally for recursion (leave out)
     :return: None
     """
@@ -80,7 +82,8 @@ def pdm_gfal_list_dir(ctx, root, result, max_depth=-1, depth=1):
 
     b = [dict(((k, getattr(j, k))
                for k, l in inspect.getmembers(j.__class__,
-                                              lambda x: isinstance(x, property))), name=i) for i, j in a]
+                                              lambda x: isinstance(x, property))), name=i)
+         for i, j in a]
 
     result[root] = b
 
@@ -98,12 +101,15 @@ def pdm_gfal_list_dir(ctx, root, result, max_depth=-1, depth=1):
 
 def pdm_gfal_long_list_dir(ctx, root, result, max_depth=-1, depth=1):
     """
-    Recursively list files and directories of root (if root is a directory). Use opendir
-    method, so file or directory names are obtained together with their stat information in one go.
+    Recursively list files and directories of root (if root is a directory).
+    Use opendir method, so file or directory names are obtained together
+    with their stat information in one go.
     :param ctx: gfal2 context
     :param root: root directory to start from
-    :param result: result dictionary for root: {root:[{'name':filename,... stat dict entries ...},{..}]}
-    :param max_depth: maximum recursion dpeth: positive integer or -1 for a max depth (0 is equivalent to -1)
+    :param result: result dictionary for root:
+    {root:[{'name':filename,... stat dict entries ...},{..}]}
+    :param max_depth: maximum recursion depth:
+    positive integer or -1 for a max depth (0 is equivalent to -1)
     :param depth: current depth. Used internally for recursion (leave out)
     :return: None
 
@@ -114,10 +120,10 @@ def pdm_gfal_long_list_dir(ctx, root, result, max_depth=-1, depth=1):
         dirp = ctx.opendir(root)
 
 
-        while (True):
+        while True:
             (dirent, stats) = dirp.readpp()
-            if (dirent is None):
-                break;
+            if dirent is None:
+                break
             dir_entry = {k: getattr(stats, k) for k, _ in
                          inspect.getmembers(stats.__class__, lambda x: isinstance(x, property))}
             dir_entry['name'] = dirent.d_name
@@ -128,7 +134,7 @@ def pdm_gfal_long_list_dir(ctx, root, result, max_depth=-1, depth=1):
         _logger.error("Error when analysing %s \n %s", root, e)
         print {'Reason': str(e), 'Code': 1}
         sys.exit(1)
-        
+
     if depth >= max_depth and max_depth != -1:
         return
 

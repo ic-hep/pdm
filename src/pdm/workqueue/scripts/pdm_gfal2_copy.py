@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+""" PDM gfal2-copy wrapper """
 import os
 import sys
 import argparse
@@ -6,7 +7,7 @@ import json
 import logging
 import gfal2
 
-_logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)  #pylint: disable=invalid-name
 
 
 def event_callback(event):
@@ -19,7 +20,7 @@ def event_callback(event):
                          (event.timestamp, event.domain, event.stage, event.description)
 
 
-def monitor_callback(src, dst, average, instant, transferred, elapsed): #pylint: disable=too-many-arguments
+def monitor_callback(src, dst, average, instant, transferred, elapsed):  # pylint: disable=too-many-arguments
     """
     gfal-copy monitor callback. Print Monitoring information to sys.stderr
     :param src: source file
@@ -48,7 +49,7 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     _logger.addHandler(logging.StreamHandler())
     _logger.setLevel(verbosity)
 
-    #copy_dict = json.loads(copy_json)
+    # copy_dict = json.loads(copy_json)
 
     copy_list = copy_dict.get('files', [])
 
@@ -83,7 +84,7 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     src_l, dst_l = zip(*copy_list)
     s_root = str(os.path.dirname(os.path.commonprefix(src_l)))
     d_root = str(os.path.dirname(os.path.commonprefix(dst_l)))
-    # TODO stat it !
+
     _logger.info("common source prefix: %s ", s_root)
     _logger.info("common dest   prefix: %s ", d_root)
 
@@ -138,6 +139,7 @@ def main():
     pdm_gfal_copy(json.loads(args.copylist), args.s_cred, args.t_cred,
                   args.overwrite, args.parent, args.nbstreams)
 
+
 def json_input():
     """
     gfal2 wrapper which takes a json doc from stdin.
@@ -145,11 +147,11 @@ def json_input():
     """
 
     data = json.load(sys.stdin)
-    data['options'].setdefault('s_cred_file',os.environ.get('X509_USER_PROXY_SRC', None) )
-    data['options'].setdefault('t_cred_file',os.environ.get('X509_USER_PROXY_DST', None) )
+    data['options'].setdefault('s_cred_file', os.environ.get('X509_USER_PROXY_SRC', None))
+    data['options'].setdefault('t_cred_file', os.environ.get('X509_USER_PROXY_DST', None))
     pdm_gfal_copy(data, **data.get('options', {}))
 
 
 if __name__ == "__main__":
     json_input()
-    #main()
+    # main()
