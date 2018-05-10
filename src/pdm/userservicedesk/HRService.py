@@ -38,6 +38,8 @@ class HRService(object):
         current_app.cs_client = CredClient()
 
         current_app.pwd_len = config.pop("pswd_length", 8)
+        #token validity period: HH:MM:SS
+        current_app.token_validity = config.pop("token_validity", "12:00:00")
 
     @staticmethod
     @export
