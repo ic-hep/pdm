@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Stop on any kind of error
+set -e
+
 # Generate a CA, arguments:
 # base_dir, ca_dn, ca_days, ca_keylen, ca_signdn
 function gen_ca
@@ -54,6 +57,8 @@ function gen_hostcert
                -CAserial "${BASE_DIR}/serial" -days $CERT_DAYS -sha256 \
                -in "${HOSTREQ}" -extfile "${CA_CONF}" -extensions SAN \
                -out "${HOSTCERT}"
+  # MyProxy is fussy about key permissions, even if directory protects files
+  chmod 600 "${HOSTKEY}"
   return
 }
 
@@ -75,6 +80,8 @@ if [ "$#" -ne "2" ]; then
   exit 1
 fi
 
+# Create the directory if it doesn't exist
+mkdir -p "${1}"
 TARGET_DIR="`realpath "${1}"`"
 MY_HOST=$2
 CA_DAYS=3650
@@ -88,8 +95,8 @@ USER_CA_PATH="${TARGET_DIR}/user"
 USER_CA_DN="/O=${MY_HOST}/CN=User CA"
 USER_CA_SIGNDN="/O=${MY_HOST}/OU=Users"
 
-if [ -d "${TARGET_DIR}" ]; then
-  echo "Target dir (${TARGET_DIR}) already exists. Exiting."
+if [ -d "${HOST_CA_PATH}" ]; then
+  echo "Target dir (${TARGET_DIR}) already contains a CA. Exiting." >&2
   exit 1
 fi
 
