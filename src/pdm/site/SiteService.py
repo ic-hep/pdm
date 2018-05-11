@@ -25,7 +25,8 @@ class SiteService(object):
         """ A helper function to return the user ID of the current
             request.
         """
-        return HRService.get_token_userid(request.token)
+        # TODO: Find a better way to access the token
+        return request.token['id']
 
     URI_FORMAT = re.compile(r'^[a-z][a-z0-9.-]+:[0-9]+$')
 
