@@ -9,14 +9,14 @@ import logging
 import gfal2
 
 logging.basicConfig()
-_logger = logging.getLogger(__name__)  #pylint: disable=invalid-name
+_logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def pdm_gfal_rm(rmdict, verbosity=logging.INFO):
     """
     Remove files and directories. Print json string immediately after a file is removed.
     """
-    _logger.addHandler(logging.StreamHandler())
+    # _logger.addHandler(logging.StreamHandler())
     _logger.setLevel(verbosity)
 
     ctx = gfal2.creat_context()
@@ -27,8 +27,10 @@ def pdm_gfal_rm(rmdict, verbosity=logging.INFO):
         try:
             res = ctx.unlink(str(elem))
             json.dump({'Code': res, 'Reason': 'OK'}, sys.stdout)
+            sys.stdout.flush()
         except gfal2.GError as gerror:
             json.dump({'Code': 1, 'Reason': str(gerror)}, sys.stdout)
+            sys.stdout.flush()
             _logger.error(str(gerror))
 
     # directories
@@ -37,10 +39,9 @@ def pdm_gfal_rm(rmdict, verbosity=logging.INFO):
         try:
             ctx.rmdir(elem)
             json.dump({'Code': res, 'Reason': 'OK'}, sys.stdout)
-            #result.append({'Code': res, 'Reason': 'OK'})
         except gfal2.GError as gerror:
-            #result.append({'Code': 1, 'Reason': str(gerror)})
             json.dump({'Code': 1, 'Reason': str(gerror)}, sys.stdout)
+            sys.stdout.flush()
             _logger.error(str(gerror))
 
     return
@@ -61,15 +62,17 @@ def main():
 
     pdm_gfal_rm(json.loads(args.rmdict), args.verbosity)
 
+
 def json_input():
     """
     gfal-ls directory/file based on a json document read from stdin.
-    :return:
+    :return: None
     """
 
     data = json.load(sys.stdin)
     pdm_gfal_rm(data, **data.get('options', {}))
 
+
 if __name__ == "__main__":
-    #main()
+    # main()
     json_input()

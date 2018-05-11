@@ -20,7 +20,7 @@ def pdm_gfal_ls(root, max_depth=-1, verbosity=logging.INFO):
     Get a directory listing of a given depth. Depth = -1 list the filesystem for all levels
     """
 
-    _logger.addHandler(logging.StreamHandler())
+    # _logger.addHandler(logging.StreamHandler())
     _logger.setLevel(verbosity)
 
     _logger.info("gfal listing root: %s at max depth: %d", root, max_depth)

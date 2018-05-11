@@ -48,7 +48,7 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     Copy json string is of a form: '{"files":[(source1, dest1), (source2, dest2),...]}'
     """
 
-    _logger.addHandler(logging.StreamHandler())
+    # _logger.addHandler(logging.StreamHandler())
     _logger.setLevel(verbosity)
 
     # copy_dict = json.loads(copy_json)
@@ -110,7 +110,7 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
 
 def _get_cred(cred_file):
     if cred_file:
-        cred = gfal2.cred_new('X509_CERT', cred_file)
+        cred = gfal2.cred_new('X509_CERT', str(cred_file))
     else:
         return None
     return cred
