@@ -25,9 +25,7 @@ class test_SiteClient(unittest.TestCase):
                  'endpoints': [ "localhost1:2", "localhost3:4" ]}
 
     def set_user_token(self, user_id):
-        raw_token = {'id': user_id}
-        token_svc = TokenService()
-        token = token_svc.issue(raw_token)
+        token = {'id': user_id}
         self._service.fake_auth("TOKEN", token)
 
     def setUp(self):

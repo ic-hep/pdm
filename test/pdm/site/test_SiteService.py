@@ -43,9 +43,7 @@ class test_SiteService(unittest.TestCase):
         mock_session.side_effect = run_session
 
     def set_user_token(self, user_id):
-        raw_token = {'id': user_id}
-        token_svc = TokenService()
-        token = token_svc.issue(raw_token)
+        token = {'id': user_id}
         self.__service.fake_auth("TOKEN", token)
 
     def setUp(self):
