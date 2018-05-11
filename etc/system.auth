@@ -14,6 +14,10 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 # Login
 /web/datamover = "ALL"
 /web/datamover%POST = "ALL"
+# About
+/web/about = "ALL"
+# Forgotten Password
+/web/forgottenpwd = "ALL"
 # All other pages
 /web/* = "SESSION"
 
@@ -88,3 +92,26 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 /workqueue/api/v1.0/worker%POST = "@worker"
 # Return job status information
 /workqueue/api/v1.0/worker/?%PUT = "@worker"
+
+[auth/site]
+# Get public service details
+/site/api/v1.0/service%GET = "ALL"
+# Get list of all sites for current user
+/site/api/v1.0/site%GET = "@user"
+# Get details of a specific site
+/site/api/v1.0/site/?%GET = "@user"
+# Add a site
+/site/api/v1.0/site%POST = "@user"
+# Delete a site
+/site/api/v1.0/site/?%DELETE = "@user"
+# Get an endpoint list for any site
+/site/api/v1.0/endpoint/?%GET = "@system"
+# Get session information for a site
+/site/api/v1.0/session/?%GET = "@user"
+# Logon to a site (create a session)
+/site/api/v1.0/session/?%POST = "@user"
+# Logoff from a remote site (delete a session)
+/site/api/v1.0/session/?%DELETE = "@user"
+# Get the credentials for a session
+/site/api/v1.0/cred/?/?%GET = "@system"
+

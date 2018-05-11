@@ -1,3 +1,4 @@
+// My first javascript
 // All javascript functions related to listing files and directories
 /*jshint sub:true*/
 /*jshint esversion: 6*/
@@ -6,15 +7,84 @@ function time_converter(UNIX_timestamp) {
     "use strict";
     var a = new Date(UNIX_timestamp * 1000);
     var short_time = a.toTimeString().slice(0, -18);
-    return a.toDateString() + " " + short_time;
+    var short_date = a.toDateString().slice(3);
+    return short_date + " " + short_time;
 }
 
 
-function update_dir(sitenumber, dir_name) {
-    "use strict";
-    var base_path = $("#pathatsite" + sitenumber).val();
-    var new_path = base_path + "/" + dir_name;
-    $("#pathatsite" + sitenumber).val(new_path);
+// check if copy is possible
+function copy_enable(list0, list1) {
+    console.log('in copy_enable');
+    var retval = {status: false, reason : "unknown"};
+    var sitenameFrom = encodeURIComponent($("#Endpoints0").val());
+    var sitepathFrom = encodeURIComponent($("#pathatsite0").val());
+    var sitenameTo = encodeURIComponent($("#Endpoints1").val());
+    var sitepathTo = encodeURIComponent($("#pathatsite1").val());
+    if ((sitenameFrom == "droptitle") || (sitenameTo == "droptitle")) {
+        retval = {status: false, reason : "No source and/or target site selected"};
+	return retval;
+    }
+    
+    if (list0.listings_table == undefined) {
+        alert("Please select a file to copy.");
+	retval = {status: false, reason : "No file selected."};
+	return retval;
+    }
+
+    if (list1.listings_table == undefined) {
+	alert("Cannot list traget dir, no copy possible");
+	retval = {status: false, reason : "Target directory inaccessible, please try listing it again."};
+	return retval;
+    }
+
+        
+    var count = list0.listings_table.rows( { selected: true } ).count();
+    console.log("count_rows");
+    console.log(count);
+    if (count != 1) {
+        alert("Only one file at a time can be copied, you have selected: "+count);
+	retval = {status: false, reason : "Too many files selected."};
+	
+    }
+    else {
+	retval = {status: true, reason : "All peachy."};
+    }
+   
+    return retval;
+}
+
+function copy_me(list0, list1) {
+    var retval = copy_enable(list0, list1);
+    if (! retval.status) {
+	alert("Cannot copy: "+retval.reason);
+	return;
+    }
+    console.log("now I could do a copy");
+    var sitenameFrom = encodeURIComponent($("#Endpoints0").val());
+    var sitepathFrom = $("#pathatsite0").val(); // to be encoded later
+    var sitenameTo = encodeURIComponent($("#Endpoints1").val());
+    var sitepathTo = encodeURIComponent($("#pathatsite1").val());
+    var filename = list0.listings_table.row( { selected: true } ).data()[5];
+    var source_path = encodeURIComponent(sitepathFrom + "/" + filename);  
+    var copyendpoint = "/web/js/copy?source_site="+sitenameFrom+"&source_path="+source_path
+	+"&dest_site="+sitenameTo+"&dest_dir_path="+sitepathTo;
+    
+    console.log(copyendpoint);
+
+    $.ajax({url: copyendpoint,
+            success: copy_submission_complete,
+            error: copy_submission_failed
+           } // dict                                                                                                            
+          ); // ajax
+} //copy_me
+
+
+function copy_submission_complete(result) {
+    alert("Copy submitted: "+result);
+}
+
+function copy_submission_failed(xhr, status, err) {
+    alert("Copy submission failed "+err);
 }
 
 
@@ -25,7 +95,30 @@ class Listings {
 	this.sitenumber = sitenumber;
 	// console.log(this.sitenumber);
 	this.jobid = undefined;
+	this.listings_table = undefined;
     }
+
+    // updates the directory entry in the list field
+    update_dir(dir_name) {
+	"use strict";
+	var base_path = $("#pathatsite" + this.sitenumber).val();
+	var new_path = base_path + "/" + dir_name;
+	// replace any double slashes
+	var clean_new_path = new_path.replace(/\/\//g, "/");
+	$("#pathatsite" + this.sitenumber).val(clean_new_path);
+    }
+
+
+
+    // and actually lists the new directory
+    update_and_list_dir(dir_name) {
+	"use strict";
+	this.update_dir(dir_name);
+	console.log('update_and_list_dir');
+	this.get_query_result();
+    }
+
+
 
 
     // this is called by the 'List' button
@@ -42,9 +135,8 @@ class Listings {
 	var fullpath = "/web/js/list?siteid="+sitename+"&sitepath="+sitepath;
 	// make spinner visible
 	$("#listspinner"+sitenumber).show();
-	// TODO: maybe put spinner in here or something else clever 
 	$('#tableDiv'+this.sitenumber).html("");
-
+	this.listings_table = undefined; // forget any previously made tables
 	$.ajax({url: fullpath, 
 		success: $.proxy(this.job_submission_complete, this), 
 		error: $.proxy(this.job_submission_failed, this)
@@ -54,12 +146,11 @@ class Listings {
 
     // assuming success.....
     job_submission_complete(result) {
-        // $("#listspinner"+this.sitenumber).hide();
         $("#jobnumberfield"+this.sitenumber).val(result);
 	this.jobid = result;
 	this.jobattempts = 10; 
 	console.log("Listing jobid: "+this.jobid);
-	setTimeout($.proxy(this.get_query_status, this), 3000);
+	setTimeout($.proxy(this.get_query_status, this), 2000);
     }
 
     job_submission_failed(xhr, status, err) {
@@ -75,7 +166,6 @@ class Listings {
     // gets the status of the request and if it is DONE or FAILED displays the result
     get_query_status(){
 	console.log("get_query_status called");
-	// var j = encodeURIComponent($("#jobnumberfield"+this.sitenumber).val());
 	var fullpath = "/web/js/status?jobid="+this.jobid;
 	$.ajax({url: fullpath, 
 		success: $.proxy(this.job_status_success, this), 
@@ -87,71 +177,74 @@ class Listings {
         this.jobid = undefined;
         console.log("Listing job status failed: "+err);
     } // error           
+
+
+    go_up_one() {
+	var sitepath = encodeURIComponent($("#pathatsite" + this.sitenumber).val());
+	var up_path = this.which_way_is_up(sitepath);
+	$("#pathatsite" + this.sitenumber).val(up_path);
+        this.get_query_result();
+    }	
+
+    which_way_is_up(path_uri) {
+	var one_dir_up = '/';
+	// make this fit unix style again
+	var path = decodeURIComponent(path_uri);
+	// remove trailing slash(es) if present, thank you stackoverflow
+	var clean_path = path.replace(/\/+$/, "");
+	// remove any double slashes, thank you Simon
+	clean_path = clean_path.replace(/\/\/+/g,"/");
+	// deal with '/'
+	if (clean_path == '') { clean_path = '/';}
+	// all the special cases
+	if ( (clean_path == '/') || (clean_path == '/~') || (clean_path == '~')) { 
+	    return one_dir_up; 
+	}
+	else {
+	    // remove everything until the next slash, but leave / (i.e. /bin -> /, /bin/blah -> /bin/)
+	    var dir_name_bits = clean_path.split("/");
+	    one_dir_up = dir_name_bits.slice(0, dir_name_bits.length - 1).join("/");
+	    if (one_dir_up == "") { one_dir_up = '/'; } 
+	}
+	console.log(one_dir_up);
+	return one_dir_up;
+    } // which_way_is_up
     
 
-    // TODO: Deal with 'FAILED' and all other states beyong 'DONE' correctly.
-    // TODO: convert day stamp
-    // TODO: make sortable by date
-    // TODO: start new query when clicking on dir
     job_status_success(result) {
         var jobobj = JSON.parse(result);
 	console.log("Got status: "+jobobj.status);
 	// Found something ? Display if in a table
 	if (jobobj.status == "DONE") {
 	    $("#listspinner"+this.sitenumber).hide();
-	    // make a table
-	    var n_of_rows = jobobj.listing.length;
-	    // TODO: apparently html5 doesn't do borders and needs a css instead
-	    var table_body = '<table id="table'+this.sitenumber+'" class="display"><thead><tr><th>type </th> <th> uid </th> <th> gid </th> <th> size </th> <th> date </th> <th> file name </th></thead><tbody>';
-	    for (var i =0; i < n_of_rows; i++) {
-		table_body += '<tr>';
-		table_body += '<td>';
-		if (jobobj.listing[i]['is_directory'] == true) {
-		    table_body += '<img src = "/static/folder'+this.sitenumber+'.png">'; 
-		}
-		else {
-		    table_body += '<img src = "/static/file'+this.sitenumber+'.png">';
-		}
-		table_body +='</td><td>';
-		table_body += jobobj.listing[i]['userid'];
-		table_body +='</td><td>';
-		table_body += jobobj.listing[i]['groupid'];
-		table_body +='</td><td>';
-		table_body += jobobj.listing[i]['size'];
-		table_body +='</td><td>';
-		// convert back from unix timestamp
-		var prettytime = time_converter(jobobj.listing[i]['datestamp']);
-		// table_body += jobobj.listing[i]['datestamp'];
-		table_body += prettytime;
-		table_body +='</td><td>';
-		if (jobobj.listing[i]['is_directory'] == true) { 
-		    var dir_name = jobobj.listing[i]['name']; 
-		    table_body += '<a href="javascript:update_dir('+this.sitenumber+',\''+dir_name+'\');">' ;
-		    table_body += dir_name;
-		    table_body += '</a>';
-		}
-		else {
-		    table_body += jobobj.listing[i]['name'];
-		}
-		table_body +='</td></tr>';
-	    }
-	    table_body+='</tbody></table>';
+	    // make the navigation bar visible
+	    $("#navbar"+this.sitenumber).show();
+	    // get the directory listing in table format
+	    var table_body = this.generate_listings_table_html(jobobj);
 	    $('#tableDiv'+this.sitenumber).html(table_body);
-	    $('#table'+this.sitenumber).DataTable({
+	    //  "orderClasses": false: do not highlight sorted column
+	    var events = $('#events');
+	    this.listings_table = $('#table'+this.sitenumber).DataTable({
+		"columnDefs": [
+                    { "type": "alt-string", targets: 0 },
+		],
 		paging : false,
 		searching: false,
 		info: false,
-		"order": [[ 5, "asc" ]]
+		select: true,
+		"orderClasses": false,
+		"order": [[ 5, "asc" ]],
 	    });
-        } // DONE
+	} // DONE
 	else if (jobobj.status == "FAILED") {
 	    $("#listspinner"+this.sitenumber).hide();
+	    $("#navbar"+this.sitenumber).hide();
 	}
 	else {
 	    console.log("rescheduling");
 	    if (this.jobattempts > 0) {
 		this.jobattempts--;
-		setTimeout($.proxy(this.get_query_status, this), 3000);
+		setTimeout($.proxy(this.get_query_status, this), 2000);
 	    }
 	    else {
 		$("#listspinner"+this.sitenumber).hide();
@@ -159,7 +252,80 @@ class Listings {
 		return;
 	    }
 	}
-	$("#reqstatus"+this.sitenumber).html(jobobj.status);
+	if (jobobj.status == "FAILED") {
+	    var failed_string = '<p style="color:red">FAILED</>';
+	    $("#reqstatus"+this.sitenumber).html(failed_string);
+	}
+	else {
+	    $("#reqstatus"+this.sitenumber).html(jobobj.status);
+	}
     
     } // get_status
-}
+
+    // makes a pretty table to list the requested directory
+    generate_listings_table_html(jobobj) {       
+        var n_of_rows = jobobj.listing.length;
+        var table_body = '<table id="table'+this.sitenumber+'" class="display"><thead><tr><th>type </th> <th> uid </th> <th> gid </th> <th> size </th> <th> date </th> <th> file name </th></thead><tbody>';
+        var sitepath = encodeURIComponent($("#pathatsite" + this.sitenumber).val());
+	// TODO: type is not sortable
+        for (var i =0; i < n_of_rows; i++) {
+            table_body += '<tr>';
+            table_body += '<td>';
+            if (jobobj.listing[i]['is_directory'] == true) {
+                table_body += '<img src = "/static/images/folder'+this.sitenumber+'.png" alt="folder">';
+            }
+            else {
+                table_body += '<img src = "/static/images/file'+this.sitenumber+'.png" alt="file">';
+            }
+            table_body +='</td><td>';
+            table_body += jobobj.listing[i]['userid'];
+            table_body +='</td><td>';
+            table_body += jobobj.listing[i]['groupid'];
+            table_body +='</td><td>';
+            table_body += jobobj.listing[i]['size'];
+            table_body +='</td><td>';
+            // convert back from unix timestamp
+            var prettytime = time_converter(jobobj.listing[i]['datestamp']);
+            table_body += prettytime;
+            table_body +='</td><td>';
+            if (jobobj.listing[i]['is_directory'] == true) {
+                var dir_name = jobobj.listing[i]['name'];
+                table_body += '<a href="javascript:list'+this.sitenumber+'.update_and_list_dir(\''+dir_name+'\');">' ;
+                table_body += dir_name;
+                table_body += '</a>';
+            }
+            else {
+                table_body += jobobj.listing[i]['name'];
+            }
+            table_body +='</td></tr>';
+        }
+        table_body+='</tbody></table>';
+	
+	return table_body;
+	
+    } // generate_listings_table_html
+
+
+    count_rows() {
+	// first I need to check if actually anything was selected
+	if (this.listings_table == undefined) {
+	    alert("Please select a file to copy");
+	    return;
+	}
+	
+	// do I have a target site/dir ?
+	
+	var count = this.listings_table.rows( { selected: true } ).count();
+	console.log("count_rows");
+	console.log(count); 
+	if (count != 1) {
+	    alert("One file at a time, you have selected: "+count);
+	}
+	else {
+	    alert("I should really copy this");
+	}
+	return;
+
+    }
+    
+} // Listings class
