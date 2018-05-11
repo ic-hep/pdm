@@ -224,7 +224,7 @@ def login_user():
             print "Login request failed (%u), maybe invalid password?" % \
                   res.status_code
             continue
-        OPTS['token'] = res.text
+        OPTS['token'] = res.json()
         return
     print "Three login attempts failed. Exiting."
     sys.exit(1)
@@ -331,6 +331,7 @@ def register_service():
     if res.status_code != 200:
         print "ERROR: Failed to register site centrally:"
         print res.text
+        sys.exit(1)
     return
 
 def main():
