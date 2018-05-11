@@ -5,6 +5,7 @@
 import os
 import sys
 import socket
+import getpass
 import ConfigParser
 from subprocess import Popen, PIPE
 try:
@@ -63,6 +64,7 @@ def read_config(fname):
     """
     print "[*] Loading config file..."
     conf = ConfigParser.ConfigParser()
+    conf.read(fname)
     # All options are optional at this point
     for opt in ('conf_dir', 'ca_dir', 'hostname', 'gridftpd_path',
                 'myproxy_path', 'service_url', 'sitename',
@@ -154,6 +156,79 @@ def check_conf():
                 print "Please review your config file and try again."
                 sys.exit(1)
 
+def get_central_ca():
+    """ Gets the central server config if registration is enabled.
+    """
+    # We have to disable warnings to prevent the SSL inscure connection
+    # message
+    import warnings
+    warnings.filterwarnings("ignore")
+    if 'service_url' not in OPTS:
+        return # Registration not configured, skip this step
+    print "[*] Getting central services details..."
+    full_url = "%s/service" % OPTS['service_url']
+    print "  Connecting to central info service: %s" % full_url
+    res = requests.get(full_url, verify=False)
+    if res.status_code != 200:
+       print "ERROR: Failed to connect to central service (%u)." % res.status_code
+       print "  %s" % res.text
+    data = res.json()
+    central_ca = data['central_ca']
+    # Get the fingerprint of the CA for verification
+    proc = Popen(['openssl', 'x509', '-noout', '-fingerprint'],
+                 stdin=PIPE, stdout=PIPE, shell=False)
+    stdout, _ = proc.communicate(central_ca)
+    if proc.returncode:
+        print "ERROR: Failed to check fingerprint of CA cert."
+        sys.exit(1)
+    stdout = stdout.strip()
+    print "  The central CA certificate has fingerprint:"
+    print "  %s" % stdout
+    print ""
+    print "  You should check this with the central admin."
+    while True:
+        user_ip = raw_input("  Is this fingerprint correct? [y/n] ")
+        if user_ip == 'y':
+            break
+        if user_ip == 'n':
+            print "An incorrect fingerprint indicates an insecure connection."
+            print "Please contact the central admin for further advice."
+            sys.exit(1)
+    ca_file = os.path.join(OPTS['conf_dir'], 'central.pem')
+    with open(ca_file, 'w') as ca_fd:
+        ca_fd.write(central_ca)
+    OPTS['ssl_ca'] = ca_file
+
+def login_user():
+    """ Get a token for a central user for registering the site at the end.
+    """
+    if 'service_url' not in OPTS:
+        return
+    # We need to get the users URL
+    print "[*] Preparing to login to central service..."
+    full_url = "%s/service" % OPTS['service_url']
+    res = requests.get(full_url, verify=OPTS['ssl_ca'])
+    data = res.json()
+    if not 'user_ep' in data:
+        print "ERROR: Central service didn't return a user endpoint."
+        sys.exit(1)
+    print "  Please supply your login details for the central service:"
+    email = raw_input("  E-mail address: ")
+    passwd = getpass.getpass("  Password: ")
+    user_data = { 'email': email,
+                  'passwd': passwd }
+    login_ep = "%s/login" % data['user_ep']
+    for _ in xrange(3):
+        res = requests.post(login_ep, verify=OPTS['ssl_ca'], json=user_data)
+        if res.status_code != 200:
+            print "Login request failed (%u), maybe invalid password?" % \
+                  res.status_code
+            continue
+        OPTS['token'] = res.text
+        return
+    print "Three login attempts failed. Exiting."
+    sys.exit(1)
+
 def create_ca_dir():
     """ Create system CA files.
     """
@@ -229,8 +304,33 @@ def register_service():
     if 'service_url' not in OPTS:
         return # Registration not configured, skip this step
     print "[*] Registering with central server..."
-    # TODO: Write central registration code
-    pass
+    # Load the load CA files
+    user_ca = ""
+    with open(os.path.join(OPTS['ca_dir'], 'user/ca_crt.pem'), "r") as pem_fd:
+        user_ca = pem_fd.read()
+    host_ca = ""
+    with open(os.path.join(OPTS['ca_dir'], 'host/ca_crt.pem'), "r") as pem_fd:
+        host_ca = pem_fd.read()
+    # Prepare the POST information
+    reg_url = "%s/site" % OPTS['service_url']
+    reg_data = {
+      'site_name': OPTS['sitename'],
+      'site_desc': OPTS['sitedesc'],
+      'auth_type': 0,
+      'auth_uri': '%s:%s' % (OPTS['hostname'], OPTS['myproxy_port']),
+      'public': OPTS['public'],
+      'def_path': '/~',
+      'user_ca_cert': user_ca,
+      'service_ca_cert': host_ca,
+    }
+    reg_hdrs = {'X-Token': OPTS['token']}
+    # Call the service
+    res = requests.post(reg_url, json=reg_data,
+                        headers=reg_hdrs, verify=OPTS['ssl_ca'])
+    if res.status_code != 200:
+        print "ERROR: Failed to register site centrally:"
+        print res.text
+    return
 
 def main():
     """ Main script entry point. """
@@ -250,6 +350,12 @@ def main():
     read_config(conf_file)
     find_bins()
     check_conf()
+    try:
+        os.makedirs(OPTS['conf_dir'])
+    except Exception:
+        pass # It probably just already exists
+    get_central_ca()
+    login_user()
     create_ca_dir()
     install_services()
     register_systemd()
