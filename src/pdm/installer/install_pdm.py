@@ -102,10 +102,10 @@ def find_bin_helper(prog_name, conf_name, include_loc=False):
         # User set path, only use that if it's there
         bin_path = OPTS[conf_name]
         if not os.access(bin_path, os.X_OK):
-           print "ERROR: Configured path '%s' for '%s' is not found or exectuable." % \
-                 (bin_path, conf_name)
-           print "Please review your config file and try again."
-           sys.exit(1)
+            print "ERROR: Configured path '%s' for '%s' is not found or exectuable." % \
+                  (bin_path, conf_name)
+            print "Please review your config file and try again."
+            sys.exit(1)
         return bin_path
     # Search the PATH
     paths = os.environ['PATH'].split(':')
@@ -170,8 +170,8 @@ def get_central_ca():
     print "  Connecting to central info service: %s" % full_url
     res = requests.get(full_url, verify=False)
     if res.status_code != 200:
-       print "ERROR: Failed to connect to central service (%u)." % res.status_code
-       print "  %s" % res.text
+        print "ERROR: Failed to connect to central service (%u)." % res.status_code
+        print "  %s" % res.text
     data = res.json()
     central_ca = data['central_ca']
     # Get the fingerprint of the CA for verification
@@ -215,8 +215,8 @@ def login_user():
     print "  Please supply your login details for the central service:"
     email = raw_input("  E-mail address: ")
     passwd = getpass.getpass("  Password: ")
-    user_data = { 'email': email,
-                  'passwd': passwd }
+    user_data = {'email': email,
+                 'passwd': passwd}
     login_ep = "%s/login" % data['user_ep']
     for _ in xrange(3):
         res = requests.post(login_ep, verify=OPTS['ssl_ca'], json=user_data)
@@ -239,11 +239,11 @@ def create_ca_dir():
     proc = Popen(cmd_args, stdout=PIPE, stderr=PIPE, shell=False)
     stdout, stderr = proc.communicate()
     if proc.returncode:
-       print "ERROR: Building CAs failed, stderr:"
-       print stderr
-       print "stdout:"
-       print stdout
-       sys.exit(1)
+        print "ERROR: Building CAs failed, stderr:"
+        print stderr
+        print "stdout:"
+        print stdout
+        sys.exit(1)
 
 def install_services():
     """ Create the config files for all of the PDM services.
@@ -257,23 +257,23 @@ def install_services():
             with open(full_path, 'w') as conf_fd:
                 conf_fd.write(ftemp % OPTS)
         except Exception as err:
-           print "ERROR: Failed to write config '%s' (%s)." % (full_path, str(err))
-           sys.exit(1)
+            print "ERROR: Failed to write config '%s' (%s)." % (full_path, str(err))
+            sys.exit(1)
 
 def register_systemd():
     """ Create the systemd config file to start the relevant services
         at system boot.
     """
     print "[*] Creating systemd unit files..."
-    for fname, ftemp in (('pdm-gridftpd.service' , GRIDFTP_SYSTEMD),
+    for fname, ftemp in (('pdm-gridftpd.service', GRIDFTP_SYSTEMD),
                          ('pdm-myproxy.service', MYPROXY_SYSTEMD)):
         full_path = os.path.join(SYSTEMD_UNIT_PATH, fname)
         try:
             with open(full_path, 'w') as conf_fd:
                 conf_fd.write(ftemp % OPTS)
         except Exception as err:
-           print "ERROR: Failed to write unit file '%s' (%s)." % (full_path, str(err))
-           sys.exit(1)
+            print "ERROR: Failed to write unit file '%s' (%s)." % (full_path, str(err))
+            sys.exit(1)
     print "  Reloading systemd to pick up new files..."
     proc = Popen(['systemctl', 'daemon-reload'], stdout=PIPE, stderr=PIPE, shell=False)
     proc.communicate()
@@ -314,14 +314,15 @@ def register_service():
     # Prepare the POST information
     reg_url = "%s/site" % OPTS['service_url']
     reg_data = {
-      'site_name': OPTS['sitename'],
-      'site_desc': OPTS['sitedesc'],
-      'auth_type': 0,
-      'auth_uri': '%s:%s' % (OPTS['hostname'], OPTS['myproxy_port']),
-      'public': OPTS['public'],
-      'def_path': '/~',
-      'user_ca_cert': user_ca,
-      'service_ca_cert': host_ca,
+        'site_name': OPTS['sitename'],
+        'site_desc': OPTS['sitedesc'],
+        'auth_type': 0,
+        'auth_uri': '%s:%u' % (OPTS['hostname'], OPTS['myproxy_port']),
+        'public': OPTS['public'],
+        'def_path': '/~',
+        'user_ca_cert': user_ca,
+        'service_ca_cert': host_ca,
+        'endpoints': ['%s:%u' % (OPTS['hostname'], OPTS['gridftp_port'])],
     }
     reg_hdrs = {'X-Token': OPTS['token']}
     # Call the service
@@ -335,8 +336,8 @@ def register_service():
 def main():
     """ Main script entry point. """
     if os.getuid() != 0:
-       print "ERROR: This program required root access."
-       sys.exit(1)
+        print "ERROR: This program required root access."
+        sys.exit(1)
     if len(sys.argv) != 2:
         usage()
     if sys.argv[1] in ('-h', '-?', '--help'):
