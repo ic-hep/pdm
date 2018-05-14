@@ -40,7 +40,7 @@ class HRService(object):
         current_app.cs_client = CredClient()
 
         current_app.pwd_len = config.pop("pswd_length", 8)
-        #token validity period struct (from: HH:MM:SS)
+        # token validity period struct (from: HH:MM:SS)
         try:
             time_struct = time.strptime(config.pop("token_validity", "12:00:00"), "%H:%M:%S")
             current_app.token_duration = datetime.timedelta(hours=time_struct.tm_hour,
@@ -115,7 +115,7 @@ class HRService(object):
         data.pop('date_created', None)
         data.pop('date_modified', None)
         data.pop('state', 0)
-        #user = User.from_json(json.dumps(data))
+        # user = User.from_json(json.dumps(data))
         user = User(**data)
         db = request.db
 
@@ -241,7 +241,7 @@ class HRService(object):
             abort(404)
 
         try:
-            #user.delete(db)
+            # user.delete(db)
             db.session.delete(user)
             current_app.cs_client.del_user(user_id)
             db.session.commit()
@@ -290,9 +290,9 @@ class HRService(object):
             abort(403)
         # hashed key for CS
         cs_hashed_key = hash_pass(user.password, current_app.cs_key)
-        #plain = "User_%s" % user_id
+        # plain = "User_%s" % user_id
         expiry = datetime.datetime.utcnow() + current_app.token_duration
-        plain = {'id':user_id, 'expiry':expiry.isoformat(), 'key':cs_hashed_key}
+        plain = {'id': user_id, 'expiry': expiry.isoformat(), 'key': cs_hashed_key}
         HRService._logger.info("login request accepted for %s", data['email'])
         token = request.token_svc.issue(plain)
         return jsonify(token)
@@ -327,7 +327,7 @@ class HRService(object):
         Token validity helper. Check token integrity and expiry date. Emit 403 if the check fails.
         :return: user id from the token.
         """
-        isoformat='%Y-%m-%dT%H:%M:%S.%f'
+        isoformat = '%Y-%m-%dT%H:%M:%S.%f'
         if request.token_ok:
             expiry_iso = request.token['expiry']
             if datetime.datetime.strptime(expiry_iso, isoformat) < datetime.datetime.utcnow():

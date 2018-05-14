@@ -20,6 +20,7 @@ class TestHRService(unittest.TestCase):
         self.__service.test_mode(HRService, None)  # to skip DB auto build
         self.__service.fake_auth("ALL")
         self.__future_date = (datetime.timedelta(0, 600) + datetime.datetime.utcnow()).isoformat()
+        self.__past_date = (-datetime.timedelta(0, 60) + datetime.datetime.utcnow()).isoformat()
         # database
         # self.__service.test_mode(HRService, None)
         self.__service.build_db()  # build manually
@@ -40,6 +41,12 @@ class TestHRService(unittest.TestCase):
         GET operation on users/self
         :return:
         """
+
+        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__past_date,
+                                           'key': 'unused'})
+        res = self.__test.get('/users/api/v1.0/users/self')
+        assert (res.status_code == 403)  # token expired
+
         self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__future_date, 'key': 'unused'})
         res = self.__test.get('/users/api/v1.0/users/self')
         assert (res.status_code == 200)
@@ -152,6 +159,13 @@ class TestHRService(unittest.TestCase):
         Test the password changing operation
         :return:
         """
+
+        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__past_date,
+                                           'key': 'unused'})
+        new_pass_data = {'passwd': 'very_secret', 'newpasswd': 'even_more_secret'}
+        res = self.__test.put('/users/api/v1.0/passwd', data=new_pass_data)
+        assert (res.status_code == 403)
+
         self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__future_date,
                                            'key': 'unused'})  # fake auth John, which is id=1
         new_pass_data = {'passwd': 'very_secret', 'newpasswd': 'even_more_secret'}
@@ -236,8 +250,13 @@ class TestHRService(unittest.TestCase):
         res = self.__test.delete('/users/api/v1.0/users/self')
         assert (res.status_code == 404)
         assert not mock_del_user.called
-
-        # delete poor Johny ;-(
+        # attempt to delete Johnny with an expired token
+        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__past_date,
+                                           'key': 'unused'})  # fake auth John, which is id=1
+        res = self.__test.delete('/users/api/v1.0/users/self')
+        assert (res.status_code == 403)
+        assert not mock_del_user.called
+        # delete poor Johnny ;-(
         self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__future_date,
                                            'key': 'unused'})  # fake auth John, which is id=1
         res = self.__test.delete('/users/api/v1.0/users/self')
