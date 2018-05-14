@@ -304,6 +304,13 @@ class TestHRService(unittest.TestCase):
         Test the user login procedure
         :return:
         """
+
+        res = self.__test.post('/users/api/v1.0/login') #empty req.
+        assert (res.status_code == 400)
+
+        res = self.__test.post('/users/api/v1.0/login', data=('hulagula'))
+        assert (res.status_code == 400)
+
         login_creds = {'email': 'Johnny@example.com', 'passwd': 'very_secret'}
         res = self.__test.post('/users/api/v1.0/login', data=login_creds)
         assert (res.status_code == 200)

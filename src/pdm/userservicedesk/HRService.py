@@ -265,7 +265,18 @@ class HRService(object):
         User login procedure.
         :return: token
         """
-        data = json.loads(request.data)
+
+        # empty request ?
+        if not request.data:
+            HRService._logger.error("login request:no data supplied (emty request)")
+            abort(400)
+
+        try:
+            data = json.loads(request.data)
+        except ValueError as verror:
+            HRService._logger.error("login request exception: str(verror)")
+            abort(400)
+
 
         if not ('email' in data and 'passwd' in data):
             HRService._logger.error("login request:no password or email supplied")
