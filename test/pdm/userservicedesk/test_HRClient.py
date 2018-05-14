@@ -5,6 +5,7 @@ RESTful test client API for the HRService service
 import json
 import unittest
 import mock
+import datetime
 
 from pdm.userservicedesk.HRClient import HRClient
 from pdm.userservicedesk.HRService import HRService
@@ -21,6 +22,8 @@ class TestHRClient(unittest.TestCase):
         cred_mock.return_value = MockCredClient()
         # Get an instance of HRService to test against
         conf = {'CS_secret':'HJGnbfdsV'}
+        self.__future_date = (datetime.timedelta(0, 600) + datetime.datetime.utcnow()).isoformat()
+        self.__past_date = (-datetime.timedelta(0, 600) + datetime.datetime.utcnow()).isoformat()
         self.__service = FlaskServer("pdm.userservicedesk.HRService")
         self.__service.test_mode(HRService, None)
         self.__service.fake_auth("ALL")
@@ -81,7 +84,7 @@ class TestHRClient(unittest.TestCase):
         assert (the_exception.code == 403)
 
     def test_change_password(self):
-        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':None, 'key': 'unused'})
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__future_date, 'key': 'unused'})
         # client takes plain passwords
         res = self.__client.change_password('very_secret', 'newpassword')
         print res
@@ -93,13 +96,32 @@ class TestHRClient(unittest.TestCase):
         the_exception = pwd_ex.exception
         assert (the_exception.code == 400)
 
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__past_date, 'key': 'unused'})
+        with self.assertRaises(Exception) as pwd_ex:
+            res = self.__client.change_password('newpassword', 'evennewerpasword')
+
+        the_exception = pwd_ex.exception
+        assert (the_exception.code == 403)
+
     def test_get_user(self):
-        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':None, 'key': 'unused'})
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__future_date, 'key': 'unused'})
         res = self.__client.get_user()
         assert (res['email'] == self.__userdict['email'])
 
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__past_date, 'key': 'unused'})
+        with self.assertRaises(Exception) as pwd_ex:
+            res = self.__client.get_user()
+        the_exception = pwd_ex.exception
+        assert (the_exception.code == 403)
+
     @mock.patch('pdm.cred.CredClient.MockCredClient.del_user')
     def test_del_user(self, mock_del):
-        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':None, 'key': 'unused'})
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__future_date, 'key': 'unused'})
         res = self.__client.del_user()
         assert ('message' in res[0])
+
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__past_date, 'key': 'unused'})
+        with self.assertRaises(Exception) as pwd_ex:
+            res = self.__client.del_user()
+        the_exception = pwd_ex.exception
+        assert (the_exception.code == 403)

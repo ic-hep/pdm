@@ -6,6 +6,8 @@ User Interface Service
 import sys
 import logging
 import json
+import time
+import datetime
 from sqlalchemy import func
 from flask import request, abort, current_app
 from pdm.framework.FlaskWrapper import jsonify
@@ -38,6 +40,16 @@ class HRService(object):
         current_app.cs_client = CredClient()
 
         current_app.pwd_len = config.pop("pswd_length", 8)
+        # token validity period struct (from: HH:MM:SS)
+        try:
+            time_struct = time.strptime(config.pop("token_validity", "12:00:00"), "%H:%M:%S")
+            current_app.token_duration = datetime.timedelta(hours=time_struct.tm_hour,
+                                                            minutes=time_struct.tm_min,
+                                                            seconds=time_struct.tm_sec)
+        except ValueError as v_err:
+            HRService._logger.error(" Token lifetime provided in the config "
+                                    "file has wrong format %s. Aborting.", v_err)
+            raise ValueError("Token lifetime incorrect format %s" % v_err)
 
     @staticmethod
     @export
@@ -103,7 +115,7 @@ class HRService(object):
         data.pop('date_created', None)
         data.pop('date_modified', None)
         data.pop('state', 0)
-        #user = User.from_json(json.dumps(data))
+        # user = User.from_json(json.dumps(data))
         user = User(**data)
         db = request.db
 
@@ -229,7 +241,7 @@ class HRService(object):
             abort(404)
 
         try:
-            #user.delete(db)
+            # user.delete(db)
             db.session.delete(user)
             current_app.cs_client.del_user(user_id)
             db.session.commit()
@@ -253,7 +265,18 @@ class HRService(object):
         User login procedure.
         :return: token
         """
-        data = json.loads(request.data)
+
+        # empty request ?
+        if not request.data:
+            HRService._logger.error("login request:no data supplied (emty request)")
+            abort(400)
+
+        try:
+            data = json.loads(request.data)
+        except ValueError as verror:
+            HRService._logger.error("login request exception:%s", str(verror))
+            abort(400)
+
 
         if not ('email' in data and 'passwd' in data):
             HRService._logger.error("login request:no password or email supplied")
@@ -278,8 +301,9 @@ class HRService(object):
             abort(403)
         # hashed key for CS
         cs_hashed_key = hash_pass(user.password, current_app.cs_key)
-        #plain = "User_%s" % user_id
-        plain = {'id':user_id, 'expiry':None, 'key':cs_hashed_key}
+        # plain = "User_%s" % user_id
+        expiry = datetime.datetime.utcnow() + current_app.token_duration
+        plain = {'id': user_id, 'expiry': expiry.isoformat(), 'key': cs_hashed_key}
         HRService._logger.info("login request accepted for %s", data['email'])
         token = request.token_svc.issue(plain)
         return jsonify(token)
@@ -311,10 +335,18 @@ class HRService(object):
     @staticmethod
     def check_token():
         """
-        Token validity helper
-        :return: user id from the token or None.
+        Token validity helper. Check token integrity and expiry date. Emit 403 if the check fails.
+        :return: user id from the token.
         """
+        isoformat = '%Y-%m-%dT%H:%M:%S.%f'
         if request.token_ok:
+            expiry_iso = request.token.get('expiry')
+            if not expiry_iso:
+                HRService._logger.error("Token does not contain expiry information")
+                abort(500)
+            if datetime.datetime.strptime(expiry_iso, isoformat) < datetime.datetime.utcnow():
+                HRService._logger.error("Token expired on %s", expiry_iso)
+                abort(403)
             user_id = request.token['id']
         else:
             user_id = None
