@@ -15,7 +15,7 @@ from pdm.framework.Decorators import export, export_ext, db_model, startup
 from pdm.utils.hashing import hash_pass, check_hash
 from pdm.framework.Tokens import TokenService
 import pdm.userservicedesk.models
-from pdm.cred.CredClient import CredClient
+from pdm.site.SiteClient import SiteClient
 
 
 @export_ext("/users/api/v1.0")
@@ -33,12 +33,6 @@ class HRService(object):
         """ Configure the HRService application.
             Gets the key needed to contact the Credential Service
         """
-        current_app.cs_key = config.pop("CS_secret", None)
-        if current_app.cs_key is None:
-            HRService._logger.error(" CS secret was not provided in the config file . Aborting.")
-            raise ValueError(" CS secret was not provided in the config file . Aborting.")
-        current_app.cs_client = CredClient()
-
         current_app.pwd_len = config.pop("pswd_length", 8)
         # token validity period struct (from: HH:MM:SS)
         try:
@@ -50,6 +44,9 @@ class HRService(object):
             HRService._logger.error(" Token lifetime provided in the config "
                                     "file has wrong format %s. Aborting.", v_err)
             raise ValueError("Token lifetime incorrect format %s" % v_err)
+
+        # site client
+        current_app.site_client = SiteClient()
 
     @staticmethod
     @export
@@ -108,7 +105,6 @@ class HRService(object):
                    % current_app.pwd_len, 400
 
         data['password'] = hash_pass(data['password'])
-        cs_hashed_key = hash_pass(data['password'], current_app.cs_key)
 
         User = request.db.tables.User
         data.pop('last_login', None)
@@ -124,19 +120,10 @@ class HRService(object):
             db.session.add(user)
             user_id = db.session.query(User.id).filter_by(email=data['email']).scalar()
             # add a user to the Credential Service:
-            if user_id:
-                current_app.cs_client.add_user(user_id, cs_hashed_key)
-            else:
-                HRService._logger.error(
-                    "Failed to get user id from the db for just added user:%s %s ",
-                    user.email, sys.exc_info())
-                raise Exception("Failed to get user id from the db for just added user:{0}".
-                                format(user.email))
-
             db.session.commit()
 
         except Exception:
-            HRService._logger.error("Failed to add user: %s or post to the CS", sys.exc_info())
+            HRService._logger.error("Failed to add user: %s ", sys.exc_info())
             db.session.rollback()
             abort(403)  # 500 ?
 
@@ -197,15 +184,11 @@ class HRService(object):
 
             user.password = hash_pass(newpasswd)
             user.last_login = func.current_timestamp()
-            # User update and CS update in a single transaction
+            # User update
             try:
                 db.session.add(user)
-                # user_id = db.session.query(User.id).filter_by(email=data['email']).scalar()
-                # add a user to the Credential Service:
-                cs_hashed_key = hash_pass(newpasswd, current_app.cs_key)
-                current_app.cs_client.add_user(user_id, cs_hashed_key)
                 db.session.commit()
-                HRService._logger.info("CS and password updated successfully for user %s ", email)
+                HRService._logger.info("Password updated successfully for user %s ", email)
             except Exception:
                 HRService._logger.error("Failed to change passwd: %s or post to the CS",
                                         sys.exc_info())
@@ -241,9 +224,8 @@ class HRService(object):
             abort(404)
 
         try:
-            # user.delete(db)
             db.session.delete(user)
-            current_app.cs_client.del_user(user_id)
+            current_app.site_client.del_user(user_id)
             db.session.commit()
             HRService._logger.info(" User %s deleted successfully", user_id)
         except Exception:
@@ -299,11 +281,9 @@ class HRService(object):
         if not check_hash(user.password, passwd):
             HRService._logger.info("login request for %s failed (wrong password) ", data['email'])
             abort(403)
-        # hashed key for CS
-        cs_hashed_key = hash_pass(user.password, current_app.cs_key)
         # plain = "User_%s" % user_id
         expiry = datetime.datetime.utcnow() + current_app.token_duration
-        plain = {'id': user_id, 'expiry': expiry.isoformat(), 'key': cs_hashed_key}
+        plain = {'id': user_id, 'expiry': expiry.isoformat(), 'key': None}
         HRService._logger.info("login request accepted for %s", data['email'])
         token = request.token_svc.issue(plain)
         return jsonify(token)

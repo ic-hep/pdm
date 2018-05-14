@@ -17,11 +17,10 @@ from pdm.utils.hashing import hash_pass
 
 class TestHRClient(unittest.TestCase):
 
-    @mock.patch("pdm.userservicedesk.HRService.CredClient")
-    def setUp(self, cred_mock):
-        cred_mock.return_value = MockCredClient()
+    @mock.patch("pdm.userservicedesk.HRService.SiteClient")
+    def setUp(self, site_mock):
         # Get an instance of HRService to test against
-        conf = {'CS_secret':'HJGnbfdsV'}
+        conf = {}
         self.__future_date = (datetime.timedelta(0, 600) + datetime.datetime.utcnow()).isoformat()
         self.__past_date = (-datetime.timedelta(0, 600) + datetime.datetime.utcnow()).isoformat()
         self.__service = FlaskServer("pdm.userservicedesk.HRService")
@@ -114,8 +113,9 @@ class TestHRClient(unittest.TestCase):
         the_exception = pwd_ex.exception
         assert (the_exception.code == 403)
 
-    @mock.patch('pdm.cred.CredClient.MockCredClient.del_user')
-    def test_del_user(self, mock_del):
+    #@mock.patch('pdm.cred.CredClient.MockCredClient.del_user')
+
+    def test_del_user(self):
         self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__future_date, 'key': 'unused'})
         res = self.__client.del_user()
         assert ('message' in res[0])
