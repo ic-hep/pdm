@@ -36,12 +36,12 @@ function copy_enable(list0, list1) {
 	return retval;
     }
     if (list0.listings_table == undefined) {
-        alert("Please select a file to copy.");
+        // alert("Please select a file to copy.");
 	retval = {status: false, reason : "No file selected."};
 	return retval;
     }
     if (list1.listings_table == undefined) {
-	alert("Cannot list traget dir, no copy possible");
+	// alert("Cannot list traget dir, no copy possible");
 	retval = {status: false, reason : "Target directory inaccessible, please try listing it again."};
 	return retval;
     }
@@ -49,15 +49,17 @@ function copy_enable(list0, list1) {
     console.log("count_rows");
     console.log(count);
     if (count != 1) {
-        alert("Only one file at a time can be copied, you have selected: "+count);
-	retval = {status: false, reason : "Too many files selected."};
-	
+        // alert("Only one file at a time can be copied, you have selected: "+count);
+	retval = {status: false, reason : "Wrong number of files selected."};
+	return retval;
     }
     else {
 	retval = {status: true, reason : "All peachy."};
+	// not sure this works
+	$("#copybutton").prop('disabled', false);
+	return retval;
     }
-    // not sure this works
-    $("#copybutton").prop('disabled', false);
+
     return retval;
 }
 
@@ -153,7 +155,11 @@ class Listings {
 
     // assuming success.....
     job_submission_complete(result) {
-        $("#jobnumberfield"+this.sitenumber).val(result);
+	// this breaks stuff
+        $("#jobnumberfield"+this.sitenumber).html('<div style="display:inline; color:black;">'+result+'</div>');
+	// this doesn't work, grumble
+	// var jobnumberoutput = document.getElementById("#jobnumberfield"+this.sitenumber);
+	// jobnumberoutput.style.color = "red";
 	this.jobid = result;
 	this.jobattempts = 10; 
 	console.log("Listing jobid: "+this.jobid);
@@ -242,6 +248,10 @@ class Listings {
 		"orderClasses": false,
 		"order": [[ 5, "asc" ]],
 	    });
+	    // check if copy button should be enabled
+	    var areweready = copy_enable(list0, list1);
+	    console.log("yet another test");
+	    console.log(areweready);
 	} // DONE
 	else if (jobobj.status == "FAILED") {
 	    $("#listspinner"+this.sitenumber).hide();
