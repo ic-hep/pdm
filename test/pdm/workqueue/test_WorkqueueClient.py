@@ -25,8 +25,8 @@ class test_WorkqueueClient(unittest.TestCase):
         self._patcher.stop()
 
     def test_list(self):
-        args = {'src_siteid': 12,
-                'src_filepath': '/data/somefile',
+        args = {'siteid': 12,
+                'filepath': '/data/somefile',
                 'credentials': 'somesecret'}
         listmock = mock.MagicMock()
         listmock.return_value = jsonify(args)
@@ -39,9 +39,10 @@ class test_WorkqueueClient(unittest.TestCase):
     def test_copy(self):
         args = {'src_siteid': 12,
                 'src_filepath': '/data/somefile',
+                'src_credentials': 'somesecret',
                 'dst_siteid': 15,
                 'dst_filepath': '/data/someotherfile',
-                'credentials': 'somesecret'}
+                'dst_credentials': 'someothersecret'}
         copymock = mock.MagicMock()
         copymock.return_value = jsonify(args)
         with mock.patch.dict(self._service.view_functions, {'WorkqueueService.copy': copymock}):
@@ -51,8 +52,8 @@ class test_WorkqueueClient(unittest.TestCase):
         self.assertEqual(response, args)
 
     def test_remove(self):
-        args = {'src_siteid': 12,
-                'src_filepath': '/data/somefile',
+        args = {'siteid': 12,
+                'filepath': '/data/somefile',
                 'credentials': 'somesecret'}
         removemock = mock.MagicMock()
         removemock.return_value = jsonify(args)
@@ -84,8 +85,13 @@ class test_WorkqueueClient(unittest.TestCase):
         # check the token is passed
         methodmock = mock.MagicMock()
         methodmock.return_value = jsonify({})
-        with mock.patch.dict(self._service.view_functions, {'WorkqueueService.get_status': methodmock}):
+        with mock.patch.dict(self._service.view_functions, {'WorkqueueService.get_job_status': methodmock}):
             response = self._inst.status(1)
+        self.assertTrue(methodmock.called)
+        self.assertEqual(response, {})
+        methodmock.reset_mock()
+        with mock.patch.dict(self._service.view_functions, {'WorkqueueService.get_element_status': methodmock}):
+            response = self._inst.status(1, 0)
         self.assertTrue(methodmock.called)
         self.assertEqual(response, {})
 

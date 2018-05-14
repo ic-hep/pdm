@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """ Test WorkqueueClient class. """
+import os
 import logging
 import unittest
 import mock
@@ -34,25 +35,29 @@ class test_Worker(unittest.TestCase):
             # call which calls set_test_info so we actually dont want to set them None again.
 #            RESTClientTest.__init__(self._inst, 'workqueue')
 #            self._inst._logger = logging.getLogger("Worker")
+        self._inst._n_shot = 1
 
     def tearDown(self):
         self._patcher.stop()
 
-    @unittest.expectedFailure
+#    @unittest.expectedFailure
     @mock.patch('pdm.workqueue.Worker.EndpointClient')
     def test_run(self, endpointclient_mock):
-        job = {'id': 1,
-               'user_id': 9,
-               'type': JobType.LIST,
-               'status': JobStatus.SUBMITTED,
-               'priority': 5,
-               'protocol': JobProtocol.GRIDFTP,
-               'src_siteid': 12,
-               'src_filepath': '/data/somefile',
-               'credentials': 'somesecret'}
+        workload = [{'id': 1,
+                     'user_id': 9,
+                     'type': JobType.LIST,
+                     'status': JobStatus.SUBMITTED,
+                     'priority': 5,
+                     'protocol': JobProtocol.DUMMY,
+                     'src_siteid': 12,
+                     'src_filepath': '/data/somefile',
+                     'src_credentials': 'somesecret',
+                     'dst_credentials': 'someothersecret',
+                     'extra_opts': {},
+                     'elements': []}]
         getjobmock = mock.MagicMock()
         outputmock = mock.MagicMock()
-        getjobmock.return_value = jsonify((job, str(job['id'])))
+        getjobmock.return_value = jsonify(workload)
         with mock.patch.dict(self._service.view_functions, {'WorkqueueService.get_next_job': getjobmock,
                                                             'WorkqueueService.return_output': outputmock}):
 

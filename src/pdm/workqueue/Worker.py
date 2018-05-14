@@ -4,10 +4,13 @@ import os
 import time
 import uuid
 import random
-# import json
-# import shlex
+import json
+import select
+import shlex
 import socket
+import stat
 import subprocess
+from collections import deque
 from urlparse import urlsplit, urlunsplit
 from tempfile import NamedTemporaryFile
 
@@ -22,10 +25,21 @@ from pdm.utils.config import getConfig
 from .WorkqueueDB import COMMANDMAP, PROTOCOLMAP, JobType, JobProtocol
 
 
+def is_list_part(job):
+    return len(job['elements']) == 1 and job['elements'][0]['type'] == JobType.LIST
+
+
+def listing_parser(obj):
+    files = []
+    for root, items in json.loads(obj).iteritems():
+        for name, stat_dict in items:
+            if stat.S_ISREG(int(stat_dict["st_mode"])):
+                files.append(os.path.join(root, name))
+
 class Worker(RESTClient, Daemon):
     """Worker Daemon."""
 
-    def __init__(self, debug=False, one_shot=False):
+    def __init__(self, debug=False, n_shot=None):
         """Initialisation."""
         RESTClient.__init__(self, 'workqueue')
         conf = getConfig('worker')
@@ -35,7 +49,7 @@ class Worker(RESTClient, Daemon):
                         logfile='/tmp/worker-%s.log' % self._uid,
                         target=self.run,
                         debug=debug)
-        self._one_shot = one_shot
+        self._n_shot = n_shot
         self._types = [JobType[type_.upper()] for type_ in  # pylint: disable=unsubscriptable-object
                        conf.pop('types', ('LIST', 'COPY', 'REMOVE'))]
         self._interpoll_sleep_time = conf.pop('poll_time', 2)
@@ -48,6 +62,14 @@ class Worker(RESTClient, Daemon):
         # Check for unused config options
         if conf:
             raise ValueError("Unused worker config params: '%s'" % ', '.join(conf.keys()))
+
+    @property
+    def should_run(self):
+        if self._n_shot is None:
+            return True
+        n_shot = max(self._n_shot, 0)
+        self._n_shot -= 1
+        return n_shot
 
     def terminate(self, *_):
         """Terminate worker daemon."""
@@ -71,113 +93,112 @@ class Worker(RESTClient, Daemon):
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements
     def run(self):
         """Daemon main method."""
-        cred_client = CredClient()
-        endpoint_client = EndpointClient()
-        run = True
-        while run:
-            if self._one_shot:
-                run = False
-            self._logger.info("Getting job from WorkqueueService.")
+        # remove any proxy left around as will mess up copy jobs.
+        try:
+            os.remove("/tmp/x509up_u%d" % os.getuid())
+        except OSError:
+            pass
+
+        while self.should_run:
+
+            self._logger.info("Getting workload from WorkqueueService.")
             try:
-                job, token = self.post('worker', data={'types': self._types})
+                workload = self.post('worker/jobs', data={'types': self._types})
             except Timeout:
                 self._logger.warning("Timed out contacting the WorkqueueService.")
                 continue
             except RESTException as err:
                 if err.code == 404:
-                    self._logger.info("WorkqueueService reports no jobs to be done.")
+                    self._logger.info("WorkqueueService reports no work to be done.")
                 else:
-                    self._logger.exception("Error trying to get job from WorkqueueService.")
+                    self._logger.exception("Error trying to get work from WorkqueueService.")
                 time.sleep(self._interpoll_sleep_time)
                 continue
+            self._logger.info("Workload of %d job elements acquired from WorkqueueService.",
+                              sum(len(job['elements']) for job in workload))
 
-            self._logger.info("%s job id=%d acquired from WorkqueueService.",
-                              JobType(job['type']).name,  # pylint: disable=no-member
-                              job['id'])
-            self.set_token(token)
+            for job in workload:
+                files = []
+                elements = {}
+                is_copy = False
+                for element in job['elements']:
+                    elements[element['id']] = element
+                    if element['type'] == JobType.COPY:
+                        is_copy = True
+                        files.append((element['src_filepath'], element['dst_filepath']))
+                    else:
+                        files.append(element['src_filepath'])
 
-            src_site = endpoint_client.get_site(job['src_siteid'])
-            src_endpoints = (urlsplit(site) for site
-                             in src_site['endpoints'].itervalues())
-            src = [urlunsplit(site._replace(path=job['src_filepath'])) for site in src_endpoints
-                   if site.scheme == PROTOCOLMAP[job['protocol']]]
-            if not src:
-                self._abort(job['id'], "Protocol '%s' not supported at src site '%s' with id %d"
-                            % (JobProtocol(job['protocol']).name,  # pylint: disable=no-member
-                               src_site['site_name'],
-                               job['src_siteid']))
-                continue
-            script_env = dict(os.environ,
-                              PATH=self._script_path,
-                              SRC_PATH=random.choice(src))
-            self._logger.info("Random SRC_PATH: '%s' chosen.", script_env['SRC_PATH'])
+                script_env = dict(os.environ, PATH=self._script_path)
+                with NamedTemporaryFile() as src_proxyfile, NamedTemporaryFile() as dst_proxyfile:
+                    src_proxyfile.write(job['src_credentials'])
+                    src_proxyfile.flush()
+                    os.fsync(src_proxyfile.fileno())
+                    src_proxy_env_var = 'X509_USER_PROXY'
+                    if is_copy:
+                        dst_proxyfile.write(job['dst_credentials'])
+                        dst_proxyfile.flush()
+                        os.fsync(dst_proxyfile.fileno())
+                        script_env['X509_USER_PROXY_DST'] = dst_proxyfile.name
+                        src_proxy_env_var = 'X509_USER_PROXY_SRC'
+                    script_env[src_proxy_env_var] = src_proxyfile.name
 
-            if job['type'] == JobType.COPY:
-                if job['dst_siteid'] is None:
-                    self._abort(job['id'], "No dst site id set for copy operation")
-                    continue
-                if job['dst_filepath'] is None:
-                    self._abort(job['id'], "No dst site filepath set for copy operation")
-                    continue
+                    self._logger.info("Running elements in subprocess.")
+                    self._current_process = subprocess.Popen(shlex.split(COMMANDMAP[job['type']][job['protocol']]),
+                                                             bufsize=0,
+                                                             stdin=subprocess.PIPE,
+                                                             stdout=subprocess.PIPE,
+                                                             stderr=subprocess.PIPE,
+                                                             env=script_env)
+                    print "HERE"
+#                    json.dump({'files': files, 'options': job['extra_opts']},
+#                              self._current_process.stdin)
+#                    self._current_process.stdin.flush()
+                    log = ''
+                    while True:
+                        print "HERE LOOPING"
+                        readfps, writefps, _ = select.select([self._current_process.stdout,
+                                                       self._current_process.stderr], [self._current_process.stdin], [], 1.0)
+                        if writefps:
+                            print "WRITEPFS"
+                            json.dump({'files': files, 'options': job['extra_opts']},
+                                      self._current_process.stdin)
+                            self._current_process.stdin.flush()
 
-                dst_site = endpoint_client.get_site(job['dst_siteid'])
-                dst_endpoints = (urlsplit(site) for site
-                                 in dst_site['endpoints'].itervalues())
-                dst = [urlunsplit(site._replace(path=job['dst_filepath'])) for site in dst_endpoints
-                       if site.scheme == PROTOCOLMAP[job['protocol']]]
-                if not dst:
-                    self._abort(job['id'], "Protocol '%s' not supported at dst site '%s' with id %d"
-                                % (JobProtocol(job['protocol']).name,  # pylint: disable=no-member
-                                   dst_site['site_name'],
-                                   job['dst_siteid']))
-                    continue
-                script_env['DST_PATH'] = random.choice(dst)
-                self._logger.info("Random DST_PATH: '%s' chosen.", script_env['DST_PATH'])
+                        if self._current_process.poll() is not None:
+                            print "BREAKING"
+                            break
 
-            self._logger.info("Getting user's credentials.")
-            try:
-                cert, key = cred_client.get_cred(job['credentials'])
-            except RESTException:
-                self._abort(job['id'], "Error getting user's credentials.")
-                continue
+                        if self._current_process.stderr in readfps:
+                            print "STDERR ADDING"
+                            log = '\n'.join((log, self._current_process.stderr.read()))
 
-            command = COMMANDMAP[job['type']][job['protocol']]
-            with NamedTemporaryFile() as proxyfile:
-                proxyfile.write(key)
-                proxyfile.write(cert)
-                proxyfile.flush()
-                os.fsync(proxyfile.fileno())
-                script_env['X509_USER_PROXY'] = proxyfile.name
+                        if self._current_process.stdout in readfps:
+                            print "STDOUT"
+                            try:
+                                done_element = json.load(self._current_process.stdout)
+                            except ValueError:
+                                self._logger.exception("Error json loading from child process.")
+                                continue
+                            if done_element["Code"] != 0:
+                                log = '\n'.join((log, done_element["Reason"]))
 
-                self._logger.info("Running job in subprocess.")
-                self._current_process = subprocess.Popen('(set -x && %s)' % command,
-                                                         shell=True,
-                                                         stdout=subprocess.PIPE,
-                                                         stderr=subprocess.STDOUT,
-                                                         env=script_env)
-                log, _ = self._current_process.communicate()
+                            self._logger.info("Uploading output log to WorkqueueService.")
+                            data = {'log': log,
+                                    'returncode': done_element['Code'],
+                                    'host': socket.gethostbyaddr(socket.getfqdn())}
+                            if elements[done_element['id']]['type'] == JobType.LIST:
+                                data.update(listing=done_element['Listing'])
 
-            output_logger = self._logger.info
-            returncode = self._current_process.returncode
-            if returncode:
-                output_logger = self._logger.warning
-            output_logger("Job completed with exit code %d", returncode)
-
-            self._logger.info("Uploading output log to WorkqueueService.")
-            try:
-                self.put('worker/%s' % job['id'],
-                         data={'log': log,
-                               'returncode': returncode,
-                               'host': socket.gethostbyaddr(socket.getfqdn())})
-            except RESTException:
-                self._logger.exception("Error trying to PUT back output from subcommand.")
-                continue
-            finally:
-                self.set_token(None)
-
-            if job['attempts'] >= job['max_tries'] - 1:
-                self._logger.info("Final attempt complete, deleting users credentials.")
-                try:
-                    cred_client.del_cred(job['credentials'])
-                except RESTException:
-                    self._logger.exception("Error trying to delete user credentials.")
+                            self.set_token(elements[done_element['id']]['token'])
+                            try:
+                                self.put('worker/jobs/%d/elements/%d'
+                                         % (job['id'], done_element['id']),
+                                         data=data)
+                            except RESTException:
+                                self._logger.exception("Error trying to PUT back output from subcommand.")
+                                continue
+                            finally:
+                                log = ''
+                                self.set_token(None)
+                assert False
