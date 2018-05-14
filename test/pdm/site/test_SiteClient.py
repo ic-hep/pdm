@@ -67,8 +67,9 @@ class test_SiteClient(unittest.TestCase):
         site_names = [x['site_name'] for x in res]
         self.assertIn("Test Site", site_names)
         # Check the endpoint function
-        eps = self._inst.get_endpoints(site_id)
-        self.assertIsInstance(eps, list)
+        res = self._inst.get_endpoints(site_id)
+        self.assertIsInstance(res, dict)
+        eps = res['endpoints']
         self.assertEqual(len(eps), 2)
         self.assertIn("localhost3:4", eps)
         # Try the delete function

@@ -203,10 +203,14 @@ class test_SiteService(unittest.TestCase):
         self.__service.fake_auth("CERT", "/CN=Any")
         res = self.__client.get('/site/api/v1.0/endpoint/1')
         self.assertEqual(res.status_code, 200)
-        eps = json.loads(res.data)
+        res = json.loads(res.data)
+        self.assertIsInstance(res, dict)
         # Check we got a list of two endpoints
-        self.assertIsInstance(eps, list)
-        self.assertEqual(len(eps), 2)
+        self.assertIn('endpoints', res)
+        self.assertIsInstance(res['endpoints'], list)
+        self.assertEqual(len(res['endpoints']), 2)
+        self.assertIn('cas', res)
+        self.assertIsInstance(res['cas'], list)
 
     def test_del_user(self):
         """ Test deleting all sites belonging to a given user.
