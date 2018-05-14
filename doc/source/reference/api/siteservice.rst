@@ -81,8 +81,9 @@ the site.
    Get a list of endpoints for a given site. Generally configured for
    certificate authentication.
 
-   Returns (list of str):
-     Gridftp endpoints for the site in host:port format.
+   Returns dict with keys:
+     - endpoints - List of str, gridftp endpoints host:port format.
+     - cas - (Optional) List of str, PEM encoded CAs for this endpoint.
 
 .. function:: DELETE /user/<user_id(int)>
 

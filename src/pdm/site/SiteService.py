@@ -247,7 +247,16 @@ class SiteService(object):
         endpoints = []
         for ep_info in site.endpoints:
             endpoints.append(ep_info.ep_uri)
-        return jsonify(endpoints)
+        cas = []
+        if site.user_ca_cert:
+            cas.append(site.user_ca_cert)
+        if site.service_ca_cert:
+            cas.append(site.service_ca_cert)
+        # Build response dictionary
+        res = {'endpoints': endpoints}
+        if cas:
+            res['cas'] = cas
+        return jsonify(res)
 
     @staticmethod
     @export_ext("user/<int:user_id>", ["DELETE"])
