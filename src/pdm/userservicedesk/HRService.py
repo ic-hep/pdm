@@ -274,7 +274,7 @@ class HRService(object):
         try:
             data = json.loads(request.data)
         except ValueError as verror:
-            HRService._logger.error("login request exception: str(verror)")
+            HRService._logger.error("login request exception:%s", str(verror))
             abort(400)
 
 
