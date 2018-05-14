@@ -42,6 +42,11 @@ class TestHRService(unittest.TestCase):
         :return:
         """
 
+        self.__service.fake_auth("TOKEN", {'id': 1,
+                                           'key': 'unused'})
+        res = self.__test.get('/users/api/v1.0/users/self')
+        assert (res.status_code == 500)
+
         self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__past_date,
                                            'key': 'unused'})
         res = self.__test.get('/users/api/v1.0/users/self')

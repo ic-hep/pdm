@@ -329,7 +329,10 @@ class HRService(object):
         """
         isoformat = '%Y-%m-%dT%H:%M:%S.%f'
         if request.token_ok:
-            expiry_iso = request.token['expiry']
+            expiry_iso = request.token.get('expiry')
+            if not expiry_iso:
+                HRService._logger.error("Token does not contain expiry information")
+                abort(500)
             if datetime.datetime.strptime(expiry_iso, isoformat) < datetime.datetime.utcnow():
                 HRService._logger.error("Token expired on %s", expiry_iso)
                 abort(403)
