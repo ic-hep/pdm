@@ -33,16 +33,19 @@ function copy_enable(list0, list1) {
 
     if ((copyloc.sourceSite == "droptitle") || (copyloc.targetSite == "droptitle")) {
         retval = {status: false, reason : "No source and/or target site selected"};
+	$("#copybutton").prop('disabled', true);
 	return retval;
     }
     if (list0.listings_table == undefined) {
         // alert("Please select a file to copy.");
 	retval = {status: false, reason : "No file selected."};
+	$("#copybutton").prop('disabled', true);
 	return retval;
     }
     if (list1.listings_table == undefined) {
 	// alert("Cannot list traget dir, no copy possible");
 	retval = {status: false, reason : "Target directory inaccessible, please try listing it again."};
+	$("#copybutton").prop('disabled', true);
 	return retval;
     }
     var count = list0.listings_table.rows( { selected: true } ).count();
@@ -51,6 +54,7 @@ function copy_enable(list0, list1) {
     if (count != 1) {
         // alert("Only one file at a time can be copied, you have selected: "+count);
 	retval = {status: false, reason : "Wrong number of files selected."};
+	$("#copybutton").prop('disabled', true);
 	return retval;
     }
     else {
