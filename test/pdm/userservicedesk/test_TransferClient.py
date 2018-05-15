@@ -38,7 +38,7 @@ class TestTransferClient(unittest.TestCase):
         # HR
         self.__service = FlaskServer("pdm.userservicedesk.HRService")
         self.__service.test_mode(HRService, None)  # to skip DB auto build
-        token = {'id': 1, 'expiry': self.__future_date, 'key': 'unused'}
+        token = {'id': 1, 'expiry': self.__future_date}
 
         self.__service.fake_auth("TOKEN", token)
         # database

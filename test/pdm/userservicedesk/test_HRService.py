@@ -42,13 +42,11 @@ class TestHRService(unittest.TestCase):
         :return:
         """
 
-        self.__service.fake_auth("TOKEN", {'id': 1,
-                                           'key': 'unused'})
+        self.__service.fake_auth("TOKEN", {'id': 1})
         res = self.__test.get('/users/api/v1.0/users/self')
         assert (res.status_code == 500)
 
-        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__past_date,
-                                           'key': 'unused'})
+        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__past_date})
         res = self.__test.get('/users/api/v1.0/users/self')
         assert (res.status_code == 403)  # token expired
 
@@ -64,7 +62,7 @@ class TestHRService(unittest.TestCase):
         assert (user['state'] == 0)
         assert ('password' not in user)
         #
-        self.__service.fake_auth("TOKEN", {'id': 2, 'expiry': self.__future_date, 'key': 'unused'})
+        self.__service.fake_auth("TOKEN", {'id': 2, 'expiry': self.__future_date})
         res = self.__test.get('/users/api/v1.0/users/self')
         assert (res.status_code == 404)
 
@@ -124,14 +122,13 @@ class TestHRService(unittest.TestCase):
         :return:
         """
 
-        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__past_date,
-                                           'key': 'unused'})
+        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__past_date})
         new_pass_data = {'passwd': 'very_secret', 'newpasswd': 'even_more_secret'}
         res = self.__test.put('/users/api/v1.0/passwd', data=new_pass_data)
         assert (res.status_code == 403)
 
-        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__future_date,
-                                           'key': 'unused'})  # fake auth John, which is id=1
+        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__future_date})
+        # fake auth John, which is id=1
         new_pass_data = {'passwd': 'very_secret', 'newpasswd': 'even_more_secret'}
         res = self.__test.put('/users/api/v1.0/passwd', data=new_pass_data)
         assert (res.status_code == 200)
@@ -171,7 +168,7 @@ class TestHRService(unittest.TestCase):
         res = self.__test.put('/users/api/v1.0/passwd', data=weak_pass)
         assert (res.status_code == 400)
         # non existing user
-        self.__service.fake_auth("TOKEN", {'id': 7, 'expiry': self.__future_date, 'key': 'unused'})
+        self.__service.fake_auth("TOKEN", {'id': 7, 'expiry': self.__future_date})
         res = self.__test.put('/users/api/v1.0/passwd', data=new_pass_data)
         assert (res.status_code == 403)
 
@@ -183,7 +180,7 @@ class TestHRService(unittest.TestCase):
         :return:
         """
         # not existing user:
-        self.__service.fake_auth("TOKEN", {'id': 7, 'expiry': self.__future_date, 'key': 'unused'})
+        self.__service.fake_auth("TOKEN", {'id': 7, 'expiry': self.__future_date})
         res = self.__test.delete('/users/api/v1.0/users/self')
         assert (res.status_code == 404)
         assert not self.__site_mock().del_user.called
@@ -207,8 +204,8 @@ class TestHRService(unittest.TestCase):
         :return:
         """
         # delete poor Johny ;-(
-        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__future_date,
-                                           'key': 'unused'})  # fake auth John, which is id=1
+        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__future_date})
+        # fake auth John, which is id=1
         self.__site_mock().del_user.side_effect = Exception()
         res = self.__test.delete('/users/api/v1.0/users/self')
         assert (res.status_code == 500)
@@ -220,8 +217,8 @@ class TestHRService(unittest.TestCase):
 
     @mock.patch('sqlalchemy.orm.scoping.scoped_session.delete')
     def test_deleteUser_HR_fail(self, mock_del):
-        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__future_date,
-                                           'key': 'unused'})  # fake auth John, which is id=1
+        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__future_date})
+        # fake auth John, which is id=1
         mock_del.side_effect = Exception()
         res = self.__test.delete('/users/api/v1.0/users/self')
         assert (res.status_code == 500)
@@ -271,11 +268,3 @@ class TestHRService(unittest.TestCase):
         assert (res.status_code == 200)
         res_str = json.loads(res.data)
         assert (res_str == 'User Service Desk at your service !\n')
-
-    def test_get_token_key(self):
-        key = 'hdfgdgfgfusy'
-        plain = {'id': 44, 'expiry': self.__future_date, 'key': key}
-        svc = TokenService()
-        token = svc.issue(plain)
-        ukey = HRService.get_token_key(token)
-        assert key == ukey

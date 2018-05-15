@@ -83,7 +83,7 @@ class TestHRClient(unittest.TestCase):
         assert (the_exception.code == 403)
 
     def test_change_password(self):
-        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__future_date, 'key': 'unused'})
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__future_date})
         # client takes plain passwords
         res = self.__client.change_password('very_secret', 'newpassword')
         print res
@@ -95,7 +95,7 @@ class TestHRClient(unittest.TestCase):
         the_exception = pwd_ex.exception
         assert (the_exception.code == 400)
 
-        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__past_date, 'key': 'unused'})
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__past_date})
         with self.assertRaises(Exception) as pwd_ex:
             res = self.__client.change_password('newpassword', 'evennewerpasword')
 
@@ -103,11 +103,11 @@ class TestHRClient(unittest.TestCase):
         assert (the_exception.code == 403)
 
     def test_get_user(self):
-        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__future_date, 'key': 'unused'})
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__future_date})
         res = self.__client.get_user()
         assert (res['email'] == self.__userdict['email'])
 
-        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__past_date, 'key': 'unused'})
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__past_date})
         with self.assertRaises(Exception) as pwd_ex:
             res = self.__client.get_user()
         the_exception = pwd_ex.exception
@@ -116,11 +116,11 @@ class TestHRClient(unittest.TestCase):
     #@mock.patch('pdm.cred.CredClient.MockCredClient.del_user')
 
     def test_del_user(self):
-        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__future_date, 'key': 'unused'})
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__future_date})
         res = self.__client.del_user()
         assert ('message' in res[0])
 
-        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__past_date, 'key': 'unused'})
+        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__past_date})
         with self.assertRaises(Exception) as pwd_ex:
             res = self.__client.del_user()
         the_exception = pwd_ex.exception

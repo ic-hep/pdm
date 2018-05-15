@@ -283,7 +283,7 @@ class HRService(object):
             abort(403)
         # plain = "User_%s" % user_id
         expiry = datetime.datetime.utcnow() + current_app.token_duration
-        plain = {'id': user_id, 'expiry': expiry.isoformat(), 'key': None}
+        plain = {'id': user_id, 'expiry': expiry.isoformat()}
         HRService._logger.info("login request accepted for %s", data['email'])
         token = request.token_svc.issue(plain)
         return jsonify(token)
@@ -334,21 +334,6 @@ class HRService(object):
             abort(403)
 
         return user_id
-
-    @staticmethod
-    def get_token_key(token):
-        """
-        Get the value of the 'key' part of the token to be used to contact the CS
-        The token intenally holds:
-        id: user id
-        expiry: expiry info (to be decided)
-        key: hashed key (from pdm.utils.hashing.hash_pass() )
-        :param token encrypted token
-        :return: the value of the 'key' field of the token dictionary
-        """
-        unpacked_user_token = TokenService.unpack(token)
-        cs_key = unpacked_user_token.get('key', None)
-        return cs_key
 
     @staticmethod
     def get_token_userid(token):
