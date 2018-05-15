@@ -2,10 +2,7 @@
 Client API for the file transfer management
 """
 from copy import deepcopy
-from pdm.endpoint.EndpointClient import EndpointClient
-from pdm.cred.CredClient import CredClient
-from pdm.cred.CredService import CredService
-from pdm.framework.Tokens import TokenService
+from pdm.site.SiteClient import SiteClient
 from pdm.workqueue.WorkqueueClient import WorkqueueClient
 from pdm.userservicedesk.HRService import HRService
 
@@ -27,13 +24,11 @@ class TransferClient(object):
 
         self.__user_token = user_token
         # endpoint
-        self.__endp_client = EndpointClient()
-        self.__endp_client.set_token(user_token)
-        self.__sitelist = self.__endp_client.get_sites()
-        # get user id and CS secret key
-        unpacked_user_token = TokenService.unpack(user_token)
+        self.__site_client = SiteClient()
+        self.__site_client.set_token(user_token)
+        self.__sitelist = self.__site_client.get_sites()
+        # get user id
         self.__user_id = HRService.get_token_userid(user_token)
-        self.__cs_key = unpacked_user_token['key']
         # work queue client
         self.__wq_client = WorkqueueClient()
         self.__wq_client.set_token(user_token)
@@ -51,12 +46,7 @@ class TransferClient(object):
         # sort out the site ID first:
         src_siteid = [elem['site_id'] for elem in self.__sitelist if elem['site_name'] == src_site]
         if src_siteid:
-            # list
-            cred_client = CredClient()
-            cred_client.set_token(self.__user_token)
-            credentials = cred_client.add_cred(self.__user_id, self.__cs_key,
-                                               CredService.CRED_TYPE_X509)
-            response = self.__wq_client.list(src_siteid[0], src_filepath, credentials, **kwargs)
+            response = self.__wq_client.list(src_siteid[0], src_filepath, **kwargs)
             # max_tries, priority, protocol=JobProtocol.GRIDFTP)
             return response
 
@@ -82,7 +72,7 @@ class TransferClient(object):
 
     def list_sites(self):
         """
-        Get list of lites
+        Get list of sites
         :return: list of dictionaries with all keys but 'site_id'.
         """
         filtered_sites = deepcopy(self.__sitelist)
@@ -111,13 +101,9 @@ class TransferClient(object):
         if not (src_siteid and dst_siteid):
             return None
 
-        cred_client = CredClient()
-        cred_client.set_token(self.__user_token)
-        credentials = cred_client.add_cred(self.__user_id, self.__cs_key,
-                                           CredService.CRED_TYPE_X509)
         response = self.__wq_client.copy(src_siteid[0], src_filepath, dst_siteid[0],
                                          # pylint: disable=too-many-arguments
-                                         dst_filepath, credentials, **kwargs)
+                                         dst_filepath, **kwargs)
 
         return response
 
@@ -137,11 +123,7 @@ class TransferClient(object):
         if not src_siteid:
             return None
 
-        cred_client = CredClient()
-        cred_client.set_token(self.__user_token)
-        credentials = cred_client.add_cred(self.__user_id, self.__cs_key,
-                                           CredService.CRED_TYPE_X509)
         response = self.__wq_client.remove(src_siteid[0], src_filepath,
-                                           credentials,  # pylint: disable=too-many-arguments
+                                           # pylint: disable=too-many-arguments
                                            **kwargs)
         return response
