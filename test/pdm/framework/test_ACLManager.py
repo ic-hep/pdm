@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """ ACLManager module tests. """
 
+import json
 import logging
 import unittest
 
@@ -18,7 +19,7 @@ class FakeTokenSVC(object):
     def check(self, raw_token):
         if not self.__token_ok:
             raise ValueError("Invalid Token")
-        return raw_token
+        return json.loads(raw_token)
 
 
 class TestACLManager(unittest.TestCase):
@@ -51,7 +52,7 @@ class TestACLManager(unittest.TestCase):
                     headers['Ssl-Client-Verify'] = 'FAILED'
                 headers['Ssl-Client-S-Dn'] = auth_data
             elif auth_mode == ACLManager.AUTH_MODE_TOKEN:
-                headers['X-Token'] = auth_data
+                headers['X-Token'] = json.dumps(auth_data)
             elif auth_mode == ACLManager.AUTH_MODE_SESSION:
                 enable_session = True
             with app.test_request_context(path=path, method=method,
@@ -128,9 +129,9 @@ class TestACLManager(unittest.TestCase):
            (True, False, True, False, False, True, False, )),
           (ACLManager.AUTH_MODE_X509, 'C = ZZ, OU = Other, CN = Test User3',
            (True, False, False, False, False, True, False, )),
-          (ACLManager.AUTH_MODE_TOKEN, 'TOKENTEXT',
+          (ACLManager.AUTH_MODE_TOKEN, "TOKENTEXT",
            (False, False, False, True, False, True, False, )),
-          (ACLManager.AUTH_MODE_TOKEN, 'OTHERTOKENTEXT',
+          (ACLManager.AUTH_MODE_TOKEN, "OTHERTOKENTEXT",
            (False, False, False, True, False, True, False, )),
           (ACLManager.AUTH_MODE_SESSION, None,
            (False, False, False, False, True, True, False, )),
@@ -297,3 +298,21 @@ class TestACLManager(unittest.TestCase):
         self.assertEqual(err.exception.response.location, "/login?ret=%2Ftest")
         # Whereas /test2 should return a classic 403
         self.assertRaises(Forbidden, self.__run_redir, app, "/test2")
+
+    def test_token_expiry(self):
+        """ Check that invalid tokens are correctly rejected. """
+        # Still valid
+        GOOD_TOKEN = {'id': 123, 'expiry': '2099-12-31T23:59:59.00' }
+        # Expired
+        BAD_TOKEN = {'id': 123, 'expiry': '1999-12-31T23:59:59.00' }
+        # Malformed expiry string
+        UGLY_TOKEN = {'id': 123, 'expiry': 'This is not a date.' }
+        # Prepare the endpoint
+        self.__inst.add_rule("/ep_tkn", "TOKEN")
+        # Check all tokens can still access
+        self.assertTrue(self.__gen_req('/ep_tkn', 'GET',
+                                       ACLManager.AUTH_MODE_TOKEN, GOOD_TOKEN))
+        self.assertFalse(self.__gen_req('/ep_tkn', 'GET',
+                                        ACLManager.AUTH_MODE_TOKEN, BAD_TOKEN))
+        self.assertFalse(self.__gen_req('/ep_tkn', 'GET',
+                                        ACLManager.AUTH_MODE_TOKEN, UGLY_TOKEN))
