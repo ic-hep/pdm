@@ -9,7 +9,6 @@ import datetime
 
 from pdm.userservicedesk.HRClient import HRClient
 from pdm.userservicedesk.HRService import HRService
-from pdm.cred.CredClient import MockCredClient
 from pdm.framework.FlaskWrapper import FlaskServer
 from pdm.framework.RESTClient import RESTClientTest
 from pdm.utils.hashing import hash_pass

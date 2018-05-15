@@ -1,12 +1,9 @@
 import mock
 import unittest
 import datetime
-from pdm.cred.CredClient import MockCredClient
-from pdm.endpoint.EndpointClient import MockEndpointClient
 from pdm.userservicedesk.TransferClientFacade import TransferClientFacade
 from pdm.framework.FlaskWrapper import FlaskServer
 from pdm.userservicedesk.HRService import HRService
-from pdm.cred.CredService import CredService
 from urlparse import urlparse
 
 import pdm.framework.Tokens as Tokens
