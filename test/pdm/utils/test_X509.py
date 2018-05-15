@@ -12,6 +12,7 @@ from pdm.utils.X509 import X509Utils
 # It doesn't matter that these are expired and we don't
 # have a CA.
 TESTCERT_HASH = "4ee00b4f" # OpenSSL hash for this cert
+TESTCERT_EXP = "2018-02-03T14:19:48+00:00" # Expriy time of this cert
 TESTCERT_AND_KEY = ("""-----BEGIN CERTIFICATE-----
 MIIC2DCCAcCgAwIBAgIBAjANBgkqhkiG9w0BAQsFADAfMQswCQYDVQQGEwJYWDEQ
 MA4GA1UEAwwHVGVzdCBDQTAeFw0xODAxMzAxNDE5NDhaFw0xODAyMDMxNDE5NDha
@@ -140,13 +141,10 @@ class TestX509Utils(unittest.TestCase):
     def test_get_cert_expiry(self):
         """ Test that the get_cert_expiry function works. """
         from M2Crypto import X509
-        # Just generate a CA and get its expiry time
-        test_ca = X509CA()
-        test_ca.gen_ca("/C=XX/L=YY/CN=Test CA", 1234)
-        ca_pem = test_ca.get_cert()
-        ca_obj = X509.load_cert_string(ca_pem)
-        ca_exp = ca_obj.get_not_after().get_datetime()
-        self.assertEqual(X509Utils.get_cert_expiry(ca_pem), ca_exp)
+        # Get the expiry time of the included cert
+        cert_obj = X509.load_cert_string(TESTCERT_AND_KEY[0])
+        cert_exp = cert_obj.get_not_after().get_datetime()
+        self.assertEqual(cert_exp.isoformat(), TESTCERT_EXP)
         
     @mock.patch("pdm.utils.X509.open", create=True)
     @mock.patch("pdm.utils.X509.os")
