@@ -6,6 +6,7 @@ import os
 import random
 import hashlib
 import tempfile
+from distutils import dir_util
 #pylint: disable=no-member
 from M2Crypto import m2
 from M2Crypto import ASN1, EVP, RSA, X509
@@ -138,7 +139,7 @@ class X509Utils(object):
             pol_fd.write(policy_text)
 
     @staticmethod
-    def add_ca_to_dir(ca_list, dir_path=None):
+    def add_ca_to_dir(ca_list, dir_path=None, template_dir=None):
         """ Adds a CA list to OpenSSL style hash dir.
 
             ca_list - A list of strings, each one a PEM encoded CA certificate
@@ -147,11 +148,18 @@ class X509Utils(object):
                        temporary directory will be created.
                        Note: The caller must delete the directory when they are
                              finished with it to prevent cluttering up /tmp.
+            template_dir - Template directory path (str) to use as the initial
+                           contents of the CA dir if we create it. If dir_path
+                           is not none, then this option is ignored.
+                           Set to None (default) to disable this feature.
             Returns the directory path to the CA dir.
         """
         ca_path = dir_path
         if not ca_path:
             ca_path = tempfile.mkdtemp(prefix='tmpca')
+            if template_dir:
+                dir_util.copy_tree(template_dir, ca_path,
+                                   preserve_symlinks=True)
         for ca_pem in ca_list:
             # Get the OpenSSL hash of the PEM file
             cert = crypto.load_certificate(crypto.FILETYPE_PEM, ca_pem)
