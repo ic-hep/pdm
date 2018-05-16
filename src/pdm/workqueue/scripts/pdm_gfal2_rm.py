@@ -22,25 +22,25 @@ def pdm_gfal_rm(rmdict, verbosity=logging.INFO):
     ctx = gfal2.creat_context()
 
     # files
-    file_list = rmdict.get('files', [])
-    for elem in file_list:
+    file_list = rmdict.get('files', [])  # list of dublets: (jobid, filename)
+    for jobid, elem in file_list:
         try:
             res = ctx.unlink(str(elem))
-            json.dump({'Code': res, 'Reason': 'OK'}, sys.stdout)
+            json.dump({'Code': res, 'Reason': 'OK', 'id': jobid}, sys.stdout)
             sys.stdout.flush()
         except gfal2.GError as gerror:
-            json.dump({'Code': 1, 'Reason': str(gerror)}, sys.stdout)
+            json.dump({'Code': 1, 'Reason': str(gerror), 'id': jobid}, sys.stdout)
             sys.stdout.flush()
             _logger.error(str(gerror))
 
     # directories
     dir_list = rmdict.get('dirs', [])
-    for elem in dir_list:
+    for jobid, elem in dir_list:
         try:
             ctx.rmdir(elem)
-            json.dump({'Code': res, 'Reason': 'OK'}, sys.stdout)
+            json.dump({'Code': res, 'Reason': 'OK', 'id': jobid}, sys.stdout)
         except gfal2.GError as gerror:
-            json.dump({'Code': 1, 'Reason': str(gerror)}, sys.stdout)
+            json.dump({'Code': 1, 'Reason': str(gerror), 'id': jobid}, sys.stdout)
             sys.stdout.flush()
             _logger.error(str(gerror))
 

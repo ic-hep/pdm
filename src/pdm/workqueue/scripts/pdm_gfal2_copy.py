@@ -37,8 +37,7 @@ def monitor_callback(src, dst, average, instant, transferred, elapsed):  # pylin
     sys.stderr.flush()
 
 
-def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False,
-                  # pylint: disable=too-many-arguments, too-many-locals
+def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False, # pylint: disable=too-many-arguments, too-many-locals
                   parent=True, nbstreams=1,
                   verbosity=logging.INFO):
     """
@@ -71,7 +70,7 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     if s_cred is None or t_cred is None:
         _logger.fatal("Please provide credential location: source %s, dest %s. ",
                       s_cred, t_cred)
-        json.dump({"Reason": "No credentials passed in", "Code": 1}, sys.stdout)
+        json.dump({"Reason": "No credentials passed in", "Code": 1, 'id': ''}, sys.stdout)
         sys.stdout.flush()
         return
 
@@ -85,7 +84,7 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     params.monitor_callback = monitor_callback
 
     # unzip:
-    src_l, dst_l = zip(*copy_list)
+    _, src_l, dst_l = zip(*copy_list)  # don't care about jobid
     s_root = str(os.path.dirname(os.path.commonprefix(src_l)))
     d_root = str(os.path.dirname(os.path.commonprefix(dst_l)))
 
@@ -96,13 +95,13 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     gfal2.cred_set(ctx, d_root, t_cred)
 
     # result = []
-    for file_pair in copy_list:
+    for jobid, source_file, dest_file in copy_list:
         try:
-            res = ctx.filecopy(params, str(file_pair[0]), str(file_pair[1]))
-            json.dump({'Code': res, 'Reason': 'OK'}, sys.stdout)
+            res = ctx.filecopy(params, str(source_file), str(dest_file))
+            json.dump({'Code': res, 'Reason': 'OK', 'id': jobid}, sys.stdout)
             sys.stdout.flush()
         except gfal2.GError as gerror:
-            json.dump({'Code': 1, 'Reason': str(gerror)}, sys.stdout)
+            json.dump({'Code': 1, 'Reason': str(gerror), 'id': jobid}, sys.stdout)
             sys.stdout.flush()
             _logger.error(str(gerror))
     return  # result
@@ -146,8 +145,10 @@ def json_input():
     """
 
     data = json.load(sys.stdin)
-    data['options'].setdefault('s_cred_file', os.environ.get('X509_USER_PROXY_SRC', None))
-    data['options'].setdefault('t_cred_file', os.environ.get('X509_USER_PROXY_DST', None))
+    if 'options' not in data:
+        data['options'] = {}
+        data['options'].setdefault('s_cred_file', os.environ.get('X509_USER_PROXY_SRC', None))
+        data['options'].setdefault('t_cred_file', os.environ.get('X509_USER_PROXY_DST', None))
     pdm_gfal_copy(data, **data.get('options', {}))
 
 

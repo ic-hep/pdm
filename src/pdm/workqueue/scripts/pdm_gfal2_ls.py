@@ -14,6 +14,8 @@ import gfal2
 logging.basicConfig()
 _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+ID = None
+
 
 def pdm_gfal_ls(root, max_depth=-1, verbosity=logging.INFO):
     """
@@ -34,7 +36,7 @@ def pdm_gfal_ls(root, max_depth=-1, verbosity=logging.INFO):
         stat_tup = ctx.stat(root)
     except Exception as gfal_exc:
         _logger.error("Error when obtaining ctx.stat(%s) \n %s", root, gfal_exc)
-        json.dump({'Reason': str(gfal_exc), 'Code': 1}, sys.stdout)
+        json.dump({'Reason': str(gfal_exc), 'Code': 1, 'id': ID}, sys.stdout)
         sys.stdout.flush()
         sys.exit(1)
 
@@ -81,7 +83,7 @@ def pdm_gfal_list_dir(ctx, root, result, max_depth=-1, depth=1):
         stat_tup = ((item, ctx.stat(os.path.join(root, item))) for item in ctx.listdir(root))
     except Exception as gfal_exc:
         _logger.error("Error when analysing %s \n %s", root, gfal_exc)
-        json.dump({'Reason': str(gfal_exc), 'Code': 1}, sys.stdout)
+        json.dump({'Reason': str(gfal_exc), 'Code': 1, 'id': ID}, sys.stdout)
         sys.stdout.flush()
         sys.exit(1)
 
@@ -137,7 +139,7 @@ def pdm_gfal_long_list_dir(ctx, root, result, max_depth=-1, depth=1):
         result[root] = dir_entries
     except Exception as gfal_exc:
         _logger.error("Error when analysing %s \n %s", root, gfal_exc)
-        json.dump({'Reason': str(gfal_exc), 'Code': 1}, sys.stdout)
+        json.dump({'Reason': str(gfal_exc), 'Code': 1, 'id': ID}, sys.stdout)
         sys.stdout.flush()
         sys.exit(1)
 
@@ -148,7 +150,7 @@ def pdm_gfal_long_list_dir(ctx, root, result, max_depth=-1, depth=1):
     subdirs = [elem['name'] for elem in dir_entries if stat.S_ISDIR(elem['st_mode'])]
 
     for subdir in subdirs:
-        pdm_gfal_list_dir(ctx, os.path.join(root, subdir), result, max_depth, depth=depth + 1)
+        pdm_gfal_long_list_dir(ctx, os.path.join(root, subdir), result, max_depth, depth=depth + 1)
 
 
 def main():
@@ -175,7 +177,11 @@ def json_input():
     """
 
     data = json.load(sys.stdin)
-    json.dump(pdm_gfal_ls(str(data.get('files')[0]), **data.get('options', {})), sys.stdout)
+    global ID # pylint: disable=global-statement
+    ID = data.get('files')[0][0]  # (id, file)
+    json.dump({'Reason': 'OK', 'Code': 0, 'id': ID,
+               'Listing': pdm_gfal_ls(str(data.get('files')[0][1]), **data.get('options', {}))},
+              sys.stdout)
     sys.stdout.flush()
 
 
