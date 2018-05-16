@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import mock
 import unittest
 from functools import partial
@@ -10,6 +11,7 @@ from pdm.utils.X509 import X509Utils, X509CA
 # We need a keypair for testing proxy generation
 # It doesn't matter that these are expired and we don't
 # have a CA.
+TESTCERT_HASH = "4ee00b4f" # OpenSSL hash for this cert
 TESTCERT_AND_KEY = ("""-----BEGIN CERTIFICATE-----
 MIIC2DCCAcCgAwIBAgIBAjANBgkqhkiG9w0BAQsFADAfMQswCQYDVQQGEwJYWDEQ
 MA4GA1UEAwwHVGVzdCBDQTAeFw0xODAxMzAxNDE5NDhaFw0xODAyMDMxNDE5NDha
@@ -146,6 +148,36 @@ class TestX509Utils(unittest.TestCase):
         ca_exp = ca_obj.get_not_after().get_datetime()
         self.assertEqual(X509Utils.get_cert_expiry(ca_pem), ca_exp)
         
+    @mock.patch("pdm.utils.X509.open", create=True)
+    @mock.patch("pdm.utils.X509.os")
+    @mock.patch("pdm.utils.X509.tempfile")
+    def test_add_ca_to_dir(self, temp_mock, os_mock, open_mock):
+        """ Test the add_ca_to_dir functions. """
+        os_mock.path.join.side_effect = os.path.join
+        os_mock.path.exists.return_value = False
+        cert_pem = TESTCERT_AND_KEY[0]
+        cert_hash = TESTCERT_HASH
+        # Try just writing a single CA and check it gets written to the
+        # correct name.
+        res = X509Utils.add_ca_to_dir([cert_pem], "/mydir")
+        self.assertEqual(res, "/mydir")
+        open_mock.assert_has_calls([
+            mock.call("/mydir/%s.0" % cert_hash, "w"),
+            mock.call("/mydir/%s.signing_policy" % cert_hash, "w")],
+            any_order=True)
+        # Test directory creation
+        temp_mock.mkdtemp.return_value = "/tmpca.test"
+        res = X509Utils.add_ca_to_dir([cert_pem])
+        self.assertEqual(res, "/tmpca.test")
+        # Check that duplicate CA causes an exception
+        os_mock.path.exists.return_value = True
+        self.assertRaises(Exception, X509Utils.add_ca_to_dir,
+                          [cert_pem], "/mydir")
+        def pol_exists(path):
+            return path.endswith('.signing_policy')
+        os_mock.path.exists.side_effect = pol_exists
+        self.assertRaises(Exception, X509Utils.add_ca_to_dir,
+                          [cert_pem], "/mydir")
 
 class TestX509CA(unittest.TestCase):
     """ Tests of the X509CA module. """

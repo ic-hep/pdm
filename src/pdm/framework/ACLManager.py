@@ -3,6 +3,7 @@
 
 import urllib
 from copy import deepcopy
+from datetime import datetime
 import flask
 from flask import abort, current_app, request, session
 from pdm.utils.X509 import X509Utils
@@ -115,6 +116,16 @@ class ACLManager(object):
             raw_token = request.headers['X-Token']
             try:
                 token_value = current_app.token_svc.check(raw_token)
+                # Check if this looks like a standard token with an expiry value
+                if isinstance(token_value, dict):
+                    if 'expiry' in token_value:
+                        exp_str = token_value['expiry']
+                        exp_value = datetime.strptime(exp_str, '%Y-%m-%dT%H:%M:%S.%f')
+                        if exp_value < datetime.utcnow():
+                            # Token has already expired
+                            current_app.log.info("Request %s token has expired (at %s)",
+                                                 request.uuid, exp_str)
+                            return "403 Expired Token", 403
                 request.token = token_value
                 request.token_ok = True
             except ValueError:

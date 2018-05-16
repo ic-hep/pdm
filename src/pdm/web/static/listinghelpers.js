@@ -11,6 +11,95 @@ function time_converter(UNIX_timestamp) {
     return short_date + " " + short_time;
 }
 
+function copy_loc() {
+    var sitenameFrom = undefined;
+    var sitepathFrom = undefined;
+    var sitenameTo = undefined;
+    var sitepathTo = undefined;
+    sitenameFrom = encodeURIComponent($("#Endpoints0").val());
+    sitepathFrom = encodeURIComponent($("#pathatsite0").val());
+    sitenameTo = encodeURIComponent($("#Endpoints1").val());
+    sitepathTo = encodeURIComponent($("#pathatsite1").val());
+    retval = {sourceSite: sitenameFrom, sourcePath: sitepathFrom, targetSite: sitenameTo, targetPath: sitepathTo};
+    return retval;
+}
+
+
+// check if copy is possible
+function copy_enable(list0, list1) {
+    console.log('in copy_enable');
+    var retval = {status: false, reason : "unknown"};
+    copyloc = copy_loc();
+
+    if ((copyloc.sourceSite == "droptitle") || (copyloc.targetSite == "droptitle")) {
+        retval = {status: false, reason : "No source and/or target site selected"};
+	$("#copybutton").prop('disabled', true);
+	return retval;
+    }
+    if (list0.listings_table == undefined) {
+        // alert("Please select a file to copy.");
+	retval = {status: false, reason : "No file selected."};
+	$("#copybutton").prop('disabled', true);
+	return retval;
+    }
+    if (list1.listings_table == undefined) {
+	// alert("Cannot list traget dir, no copy possible");
+	retval = {status: false, reason : "Target directory inaccessible, please try listing it again."};
+	$("#copybutton").prop('disabled', true);
+	return retval;
+    }
+    var count = list0.listings_table.rows( { selected: true } ).count();
+    console.log("count_rows");
+    console.log(count);
+    if (count != 1) {
+        // alert("Only one file at a time can be copied, you have selected: "+count);
+	retval = {status: false, reason : "Wrong number of files selected."};
+	$("#copybutton").prop('disabled', true);
+	return retval;
+    }
+    else {
+	retval = {status: true, reason : "All peachy."};
+	// not sure this works
+	$("#copybutton").prop('disabled', false);
+	return retval;
+    }
+
+    return retval;
+}
+
+function copy_me(list0, list1) {
+    var retval = copy_enable(list0, list1);
+    if (! retval.status) {
+	alert("Cannot copy: "+retval.reason);
+	return;
+    }
+    console.log("now I could do a copy");
+    copylocs = copy_loc();
+    var filename = list0.listings_table.row( { selected: true } ).data()[5];
+    var source_path = copylocs.sourcePath + encodeURIComponent("/" + filename);  
+
+    var copyendpoint = "/web/js/copy?source_site="+copylocs.sourceSite+"&source_path="+source_path
+	+"&dest_site="+copylocs.targetSite+"&dest_dir_path="+copylocs.targetPath;
+    
+    console.log(copyendpoint);
+
+    $.ajax({url: copyendpoint,
+            success: copy_submission_complete,
+            error: copy_submission_failed
+           } // dict                                                                                                            
+          ); // ajax
+} //copy_me
+
+
+function copy_submission_complete(result) {
+    alert("Copy submitted: "+result);
+}
+
+function copy_submission_failed(xhr, status, err) {
+    alert("Copy submission failed "+err);
+}
+
+// TODO: check if copy was successfull, if yes, update listing on target site.
 
 // DATATABLES
 class Listings {
@@ -19,6 +108,7 @@ class Listings {
 	this.sitenumber = sitenumber;
 	// console.log(this.sitenumber);
 	this.jobid = undefined;
+	this.listings_table = undefined;
     }
 
     // updates the directory entry in the list field
@@ -59,7 +149,7 @@ class Listings {
 	// make spinner visible
 	$("#listspinner"+sitenumber).show();
 	$('#tableDiv'+this.sitenumber).html("");
-
+	this.listings_table = undefined; // forget any previously made tables
 	$.ajax({url: fullpath, 
 		success: $.proxy(this.job_submission_complete, this), 
 		error: $.proxy(this.job_submission_failed, this)
@@ -69,11 +159,15 @@ class Listings {
 
     // assuming success.....
     job_submission_complete(result) {
-        $("#jobnumberfield"+this.sitenumber).val(result);
+	// this breaks stuff
+        $("#jobnumberfield"+this.sitenumber).html('<div style="display:inline; color:black;">'+result+'</div>');
+	// this doesn't work, grumble
+	// var jobnumberoutput = document.getElementById("#jobnumberfield"+this.sitenumber);
+	// jobnumberoutput.style.color = "red";
 	this.jobid = result;
 	this.jobattempts = 10; 
 	console.log("Listing jobid: "+this.jobid);
-	setTimeout($.proxy(this.get_query_status, this), 3000);
+	setTimeout($.proxy(this.get_query_status, this), 2000);
     }
 
     job_submission_failed(xhr, status, err) {
@@ -145,16 +239,24 @@ class Listings {
 	    // get the directory listing in table format
 	    var table_body = this.generate_listings_table_html(jobobj);
 	    $('#tableDiv'+this.sitenumber).html(table_body);
-	    $('#table'+this.sitenumber).DataTable({
+	    //  "orderClasses": false: do not highlight sorted column
+	    var events = $('#events');
+	    this.listings_table = $('#table'+this.sitenumber).DataTable({
 		"columnDefs": [
-                    { "type": "alt-string", targets: 0 }
+                    { "type": "alt-string", targets: 0 },
 		],
 		paging : false,
 		searching: false,
 		info: false,
-		"order": [[ 5, "asc" ]]
+		select: true,
+		"orderClasses": false,
+		"order": [[ 5, "asc" ]],
 	    });
-        } // DONE
+	    // check if copy button should be enabled
+	    var areweready = copy_enable(list0, list1);
+	    console.log("yet another test");
+	    console.log(areweready);
+	} // DONE
 	else if (jobobj.status == "FAILED") {
 	    $("#listspinner"+this.sitenumber).hide();
 	    $("#navbar"+this.sitenumber).hide();
@@ -163,7 +265,7 @@ class Listings {
 	    console.log("rescheduling");
 	    if (this.jobattempts > 0) {
 		this.jobattempts--;
-		setTimeout($.proxy(this.get_query_status, this), 3000);
+		setTimeout($.proxy(this.get_query_status, this), 2000);
 	    }
 	    else {
 		$("#listspinner"+this.sitenumber).hide();
@@ -223,5 +325,6 @@ class Listings {
 	return table_body;
 	
     } // generate_listings_table_html
+
     
 } // Listings class

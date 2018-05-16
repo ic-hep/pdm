@@ -87,12 +87,11 @@ class TestDBJson(unittest.TestCase):
         """
         class TestCls(JSONMixin):
             # Fake SQLAlchemy table structure
-            columns = (mock.Mock(), mock.Mock(), mock.Mock())
-            columns[0].name = 'A'
-            columns[1].name = 'B'
-            columns[2].name = 'C'
             __table__ = mock.Mock()
-            __table__.columns = columns
+            __table__.columns = (mock.Mock(), mock.Mock(), mock.Mock())
+            __table__.columns[0].name = 'A'
+            __table__.columns[1].name = 'B'
+            __table__.columns[2].name = 'C'
             # Try to exclude field B
             __excluded_fields__ = ('B')
             A = "TestA"
@@ -103,18 +102,17 @@ class TestDBJson(unittest.TestCase):
         json_str = obj.json()
         # Convert the json back to an object and check the fields
         ret_obj = json.loads(json_str)
+        self.assertEqual(len(obj), 2)
         self.assertDictEqual({'A': 'TestA',
                               'C': 123}, ret_obj)
-
     def test_jsonTable(self):
         """ Check that we can serialise an SQLAlchemy table class.
         """
         class TestCls(JSONMixin):
-            columns = (mock.Mock(), mock.Mock())
-            columns[0].name = 'A'
-            columns[1].name = 'B'
             __table__ = mock.Mock()
-            __table__.columns = columns
+            __table__.columns = (mock.Mock(), mock.Mock())
+            __table__.columns[0].name = 'A'
+            __table__.columns[1].name = 'B'
 
             def __init__(self, A, B):
                 self.A = A

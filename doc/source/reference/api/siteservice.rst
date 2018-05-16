@@ -1,105 +1,134 @@
-Site/Endpoint Service API
-=========================
+Site Service API
+================
 
-The site/endpoint database performs two primary functions:
-  - To keep a list of sites & endpoints for transferring files.
-  - To store mappings of service users to local users at each site.
+The site service keeps a database of site information and provides site-domain
+authentication. All functions require a user token unless otherwise stated. All
+certificates are in PEM format unless otherwise stated.
 
-All calls return usual HTTP error codes:
-  - 200 on success & object creation.
-  - 400 for a malformed request (such as missing parameters).
-  - 404 on item not found.
-  - 409 if the item already exists (in the case of duplicate
-    mappings or short site names).
-  - 500 on unexpected errors.
+The auth_type parameter currently accepts two constants:
+ - 0 - PLAIN_AUTH, Authentication is done using a vanilla user proxy.
+ - 1 - VOMS_AUTH, Authentication expects a VOMS proxy.
+
+If a site has a service CA or user CA, then those are used for all operations.
+If both are None, then the CA directory from the config is used. Failing that,
+the system level CA certificates will be used to verify connections & users at
+the site.
+
+.. function:: GET /service
+
+   Return central service information. The output keys are all optional and
+   will only be included if the server is configured to support the relevant
+   feature.
+
+   Requires no authentication.
+
+   Returns a dictionary containing:
+     - central_ca(str): PEM encoded CA certificate(s) for central services.
+     - user_ep(str): The full endpoint for the user service.
+     - vos(list): A list of strings of VO names supported by this service.
 
 .. function:: GET /site
 
-  Returns a list of all sites.
+   Returns a list of all sites that the current user can see. This will be
+   all sites owned by them and all public sites.
 
-  Returns (List of dictionaries containing):
-    - site_id(int): The unique site ID.
-    - site_name(str): The short site name.
-    - site_desc(str): Longer description for this site.
-
-.. function:: POST /site
-
-  Adds a site.
-
-  Input (POST dictionary):
-    - site_name(str): The short site name.
-    - site_desc(str): The longer site description.
-  Returns (int):
-    The new site_id.
+   Returns a list of dictonaries containing:
+     - site_id(int): The unique site ID.
+     - site_name(str): The (unique) short site name.
+     - site_desc(str): The longer site description.
+     - def_path(str): The default (starting) path to use at this site.
+     - public(bool): Set to true if this site is visible to everyone.
+     - is_owner(bool): Set to true if the user is the owner of the site.
 
 .. function:: GET /site/<site_id(int)>
 
-  Gets a description of a site, including configured endpoints.
+   Gets information on a specific site. Only works on sites which the user
+   can see (as owner or public), other sites will return 404 even if they exist.
 
-  Returns (dictionary):
-    - site_id(int): The unique site ID.
-    - site_name(str): The short side name.
-    - site_desc(str): Longer description for this site.
-    - endpoints (dict):
+   Returns a dictionary containing:
+     - site_id(int): The unique site ID.
+     - site_name(str): The site name.
+     - site_desc(str): The longer site description.
+     - user_ca_cert(str): The CA used for user certificates (or None).
+     - service_ca_cert(str): The CA used for site services (or None).
+     - auth_type(int): The authentication mode for this site.
+     - auth_uri(str): The myproxy endpoint for this site in host:port format.
+     - public(bool): If true, site is visible to all users.
+     - def_path(str): The default path to use when connecting to this site.
+     - is_owner(bool): Set to true if the current user owns this site.
+     - endpoints(list of str): List of gridftp endpoints for this site in
+                               host:port format.
 
-      - key(int): ep_id
-      - value(str): Full endpoint URI.
+.. function:: POST /site
+
+   Register a new site.
+
+   Input (POST dictionary):
+     Same as get site, but without is_owner. user_ca_cert and service_ca_cert
+     are optional and can be ommitted or set to None if unneeded.
+   Returns (int):
+     The site_id of the registered/updated site.
 
 .. function:: DELETE /site/<site_id(int)>
 
-  Deletes a site (and all endpoints & mappings for the site).
+   Deletes a site. A user can only delete sites that they are the owner of.
 
-  Returns:
-    - None
+   Returns:
+     - None.
 
-.. function:: POST /endpoint/<site_id(int)>
+.. function:: GET /endpoint/<site_id(int)>
 
-  Adds an endpoint to a site.
+   Get a list of endpoints for a given site. Generally configured for
+   certificate authentication.
 
-  Input (POST dictionary):
-    - ep_uri(str): Endpoint URI.
-  Returns (int):
-    - New ep_id.
+   Returns dict with keys:
+     - endpoints - List of str, gridftp endpoints host:port format.
+     - cas - (Optional) List of str, PEM encoded CAs for this endpoint.
 
-.. function:: DELETE /endpoint/<site_id(int)>/<ep_id(int)>
+.. function:: DELETE /user/<user_id(int)>
 
-  Deletes an endpoint from a site.
+   Deletes all data about the given user ID. A user may only delete themselves.
+   This removes all sites and cached credentials belonging to the user.
 
-  Returns:
-    - None
+.. function:: GET /session/<site_id(int)>
 
-.. function:: GET /sitemap/<site_id(int)>
+   Gets the sessions information for the current user at the given site.
+   Optional return paramters may be missing from the dict entriely.
 
-  Gets the list of all configured user mappings for the given site.
+   Returns (dictionary):
+     - ok(bool): Set to True if there is a valid credential.
+     - username(str, optional): The username for the user at this site.
+     - expiry(str-datetime, optional): The expiry time of the credential if one
+                                       is registered (may be in the past).
 
-  Returns (dictionary):
-    - key(int): user_id
-    - value(str): The local_user name for this user at this site.
+.. function:: POST /session/<site_id(int)>
 
-.. note:: JSON dict key values are generally converted to strings, so user_id
-          will be a string representation of an int.
+   Login a user at the given site. If a user is already logged on, their
+   credential will be renewed/replaced by the new one if successful.
 
-.. function:: POST /sitemap/<site_id(int)>
+   Input (POST dictionary):
+     - username(str): The site-specific username.
+     - password(str): The users' site password.
+     - lifetime(int): The time (in hours) to create the credential for.
+     - vo(str, optiona): The VO to use in the credential VOMS extension.
 
-  Adds a local user mapping to a site.
+   Returns:
+     - None
 
-  Input (POST dictionary):
-    - local_user(str): The local (to the site) user name.
-    - user_id(int): The UID for the user on this service.
-  Returns:
-    - None
+.. function:: DELETE /session/<site_id(int)>
 
-.. function:: DELETE /sitemap/<site_id(int)>/<user_id(int)>
+   Logs a user out from a site. If the user doesn't have a session
+   then nothing happens and success is still returned.
 
-  Removes a local user mapping from a site.
+   Returns:
+     - None.
 
-  Returns:
-    - None
+.. function:: GET /cred/<site_id(int)>/<user_id(int)>
 
-.. function:: DELETE /sitemap/all/<user_id(int)>
+   Get the user credential for a given site and central user ID.
+   Authentication is ususally done by cert. Returns 404 if user
+   doesn't have a credential for the given site.
 
-  Removes a local user mapping from all sites. For use when a user
-  is completely deleted.
+   Returns:
+     - PEM encoded proxy for the user.
 
-  Returns:
-    - None
