@@ -7,7 +7,7 @@ from flask import request, flash
 from pdm.framework.Decorators import export, export_ext, startup
 from pdm.framework.ACLManager import set_session_state
 from pdm.userservicedesk.HRClient import HRClient
-from pdm.endpoint.EndpointClient import EndpointClient
+from pdm.site.SiteClient import SiteClient
 from pdm.userservicedesk.TransferClient import TransferClient
 
 @export_ext("/web", redir="/web/datamover?return_to=%(return_to)s")
@@ -25,7 +25,7 @@ class WebPageService(object):
         log = flask.current_app.log
         log.info("Web interface starting")
         flask.current_app.hrclient = HRClient()
-        flask.current_app.epclient = EndpointClient()
+        flask.current_app.epclient = SiteClient()
 
 
     @staticmethod
@@ -139,6 +139,7 @@ class WebPageService(object):
         user_name = user_data['name']
         # returns a list of sites as dictionaries
         # want to sort on 'site_name'
+        flask.current_app.epclient.set_token(user_token)
         sites = flask.current_app.epclient.get_sites()
         sorted_sites = sorted(sites, key=lambda k: k['site_name'])
         return flask.render_template("dashboard.html", sites=sorted_sites, user_name=user_name)

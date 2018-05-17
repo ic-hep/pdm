@@ -177,3 +177,14 @@ class TestX509Utils(unittest.TestCase):
         self.assertRaises(Exception, X509Utils.add_ca_to_dir,
                           [cert_pem], "/mydir")
 
+    @mock.patch("pdm.utils.X509.tempfile")
+    @mock.patch("pdm.utils.X509.dir_util")
+    def test_add_ca_to_dir_template(self, dir_util_mock, temp_mock):
+        """ Test that the add_ca_to_dir template function
+            works as expected.
+        """
+        temp_mock.mkdtemp.return_value = "/new/dir"
+        res = X509Utils.add_ca_to_dir([], template_dir="/my/template")
+        self.assertEqual(res, "/new/dir")
+        dir_util_mock.copy_tree.assert_called_with("/my/template", "/new/dir",
+                                                   preserve_symlinks=True)
