@@ -2,6 +2,8 @@
 Define pdm subcommands and action functions for them:
 Example usage: pdm register -e fred@flintstones.com -n Fred -s Flintstone
 """
+import os
+import errno
 from getpass import getpass
 from time import sleep
 from datetime import datetime
@@ -28,8 +30,11 @@ class UserCommand(object):
         user_parser.add_argument('-s', '--surname', type=str)
         user_parser.set_defaults(func=self.register)
         # login
-        user_parser = subparsers.add_parser('login')
+        user_parser = subparsers.add_parser('login', help="User login procedure")
         user_parser.add_argument('-e', '--email', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help="optional token file location (default=~/.pdm/token)")
+
         user_parser.set_defaults(func=self.login)
         # change password
         user_parser = subparsers.add_parser('passwd')
@@ -124,6 +129,19 @@ class UserCommand(object):
 
         client = HRClient()
         token = client.login(args.email, password)
+
+        filename = args.token
+        try:
+            os.makedirs(os.path.dirname(filename))
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                print os.strerror(exc.errno)
+                raise
+
+        with open(filename, "w") as f:
+            os.chmod(f, 0o600)
+            f.write(token)
+
         print token
 
     def passwd(self, args):  # pylint: disable=no-self-use
@@ -327,6 +345,6 @@ class UserCommand(object):
         else:
             print "No token. Please login first"
 
-    def _get_token(self, args): # pylint: disable=no-self-use
+    def _get_token(self, args):  # pylint: disable=no-self-use
         # TODO poosible token from a file
         return args.token
