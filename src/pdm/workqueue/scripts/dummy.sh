@@ -9,7 +9,7 @@ if [ $# -eq 0 ]; then
     echo "No args!" >&2
     exit 1
 elif [ $1 = "list" ]; then
-    echo '{"Code": 0, "id": "1.0", "Listing": {"root": [{"st_size": 123, "name": "frank.txt"}]}}' | python -m json.tool
+    echo '{"Code": 0, "id": "1.0", "Listing": {"root": [{"st_size": 123, "name": "frank.txt"}]}}'
 elif [ $1 = "remove" ]; then
     echo "rm ${SRC_PATH}" >&2
 elif [ $1 = "copy" ]; then
