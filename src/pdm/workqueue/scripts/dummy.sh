@@ -1,21 +1,21 @@
 #!/bin/sh
 
-echo "Running dummy job with vars:"
-echo "Variable SRC_PATH = ${SRC_PATH}"
-echo "Variable DST_PATH = ${DST_PATH}"
+echo "Running dummy job with vars:" >&2
+echo "Variable SRC_PATH = ${SRC_PATH}" >&2
+echo "Variable DST_PATH = ${DST_PATH}" >&2
 read data
+echo "read in data: ${data}" >&2
 if [ $# -eq 0 ]; then
-    echo "No args!"
+    echo "No args!" >&2
     exit 1
 elif [ $1 = "list" ]; then
-    echo "read in data: ${data}" >&2
-    echo '{"root": [{"name": "frank.txt", "st_size": 123}]}'
+    echo '{"Code": 0, "id": "1.0", "Listing": {"root": [{"st_size": 123, "name": "frank.txt"}]}}' | python -m json.tool
 elif [ $1 = "remove" ]; then
-    echo "rm ${SRC_PATH}"
+    echo "rm ${SRC_PATH}" >&2
 elif [ $1 = "copy" ]; then
-    echo "cp ${SRC_PATH} ${DST_PATH}"
+    echo "cp ${SRC_PATH} ${DST_PATH}" >&2
 else
-    echo "Unknown job type!"
+    echo "Unknown job type!" >&2
     exit 1
 fi
 

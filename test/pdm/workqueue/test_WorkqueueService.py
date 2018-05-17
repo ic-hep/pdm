@@ -1,3 +1,4 @@
+""" Test WorkqueueService module. """
 import os
 import json
 import unittest
@@ -7,6 +8,7 @@ import mock
 from pdm.framework.FlaskWrapper import FlaskServer
 from pdm.workqueue.WorkqueueDB import JobType, JobStatus, JobProtocol
 from pdm.workqueue.WorkqueueService import WorkqueueService
+
 
 class TestWorkqueueService(unittest.TestCase):
     def setUp(self):
@@ -31,7 +33,8 @@ class TestWorkqueueService(unittest.TestCase):
         db.session.add(Job(user_id=3, src_siteid=15, src_filepath='/data/somefile3',
                            dst_siteid=16, dst_filepath='/data/newfile', type=JobType.COPY))
         db.session.commit()
-        self.__service.before_startup(conf)  # to continue startup
+        with mock.patch('pdm.workqueue.WorkqueueService.SiteClient'):
+            self.__service.before_startup(conf)  # to continue startup
         self.__test = self.__service.test_client()
 
     def test_get_next_job(self):
@@ -98,41 +101,41 @@ class TestWorkqueueService(unittest.TestCase):
 
     def test_return_output(self):
         request = self.__test.put('/workqueue/api/v1.0/worker/jobs/1/elements/2',
-                                   data={'log': 'blah blah',
-                                         'returncode': 0,
-                                         'host': 'somehost.domain'})
+                                  data={'log': 'blah blah',
+                                        'returncode': 0,
+                                        'host': 'somehost.domain'})
         self.assertEqual(request.status_code, 403)
 
         self.__service.fake_auth("TOKEN", "12")
         request = self.__test.put('/workqueue/api/v1.0/worker/jobs/1/elements/2',
-                                   data={'log': 'blah blah',
-                                         'returncode': 0,
-                                         'host': 'somehost.domain'})
+                                  data={'log': 'blah blah',
+                                        'returncode': 0,
+                                        'host': 'somehost.domain'})
         self.assertEqual(request.status_code, 403)
 
         self.__service.fake_auth("TOKEN", "1.2")
         request = self.__test.put('/workqueue/api/v1.0/worker/jobs/1/elements/2',
-                                   data={'returncode': 0,
-                                         'host': 'somehost.domain'})
+                                  data={'returncode': 0,
+                                        'host': 'somehost.domain'})
         self.assertEqual(request.status_code, 400)
 
         request = self.__test.put('/workqueue/api/v1.0/worker/jobs/1/elements/2',
-                                   data={'log': 'blah blah',
-                                         'returncode': 0,
-                                         'host': 'somehost.domain'})
+                                  data={'log': 'blah blah',
+                                        'returncode': 0,
+                                        'host': 'somehost.domain'})
         self.assertEqual(request.status_code, 404)
 
         self.__service.fake_auth("TOKEN", "1.0")
         request = self.__test.put('/workqueue/api/v1.0/worker/jobs/1/elements/0',
-                                   data={'log': 'blah blah',
-                                         'returncode': 1,
-                                         'host': 'somehost.domain'})
+                                  data={'log': 'blah blah',
+                                        'returncode': 1,
+                                        'host': 'somehost.domain'})
         self.assertEqual(request.status_code, 400)
         request = self.__test.put('/workqueue/api/v1.0/worker/jobs/1/elements/0',
-                                   data={'log': 'blah blah',
-                                         'returncode': 1,
-                                         'host': 'somehost.domain',
-                                         'listing': {'root': []}})
+                                  data={'log': 'blah blah',
+                                        'returncode': 1,
+                                        'host': 'somehost.domain',
+                                        'listing': {'root': []}})
         self.assertEqual(request.status_code, 200)
         Job = self.__service.test_db().tables.Job
         JobElement = self.__service.test_db().tables.JobElement
@@ -172,10 +175,12 @@ class TestWorkqueueService(unittest.TestCase):
             self.assertEqual(log.read(), expected_log)
         self.assertEqual(je.listing, {'root': []})
 
+    @mock.patch('pdm.workqueue.WorkqueueService.current_app')
     @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
-    def test_post_job(self, mock_hrservice):
+    def test_post_job(self, mock_hrservice, mock_siteclient):
         Job = self.__service.test_db().tables.Job
 
+        mock_siteclient.site_client.get_cred = mock.MagicMock(return_value="somesecret")
         mock_hrservice.return_value = 10
         request = self.__test.post('/workqueue/api/v1.0/jobs',
                                    data={'blah': 12})
@@ -196,6 +201,7 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(job.type, JobType.LIST)
         self.assertEqual(returned_job['type'], 'LIST')
         self.assertEqual(job.priority, 5)
+        self.assertEqual(job.src_credentials, 'somesecret')
         self.assertEqual(job.protocol, JobProtocol.GRIDFTP)
         self.assertEqual(returned_job['protocol'], 'GRIDFTP')
         self.assertIsInstance(job.log_uid, basestring)
@@ -215,15 +221,15 @@ class TestWorkqueueService(unittest.TestCase):
                                          'dst_siteid': 15})
         self.assertEqual(request.status_code, 400)
 
+        mock_siteclient.site_client.get_cred = mock.MagicMock(side_effect=["somesecret", "someothersecret"])
+#        mock_siteclient().get_cred = mock.MagicMock(side_effect=["somesecret", "someothersecret"])
         request = self.__test.post('/workqueue/api/v1.0/jobs',
                                    data={'type': JobType.COPY,
                                          'src_siteid': 12,
                                          'src_filepath': '/data/somefile',
-                                         'src_credentials': 'somesecret',
                                          'dst_siteid': 15,
                                          'dst_filepath': '/data/someotherfile',
-                                         'dst_credentials': 'someothersecret',
-                                         'extra_opts': 'blah',
+                                         'extra_opts': {},
                                          'attempts': 30,
                                          'max_tries': 3,
                                          'priority': 2,
@@ -239,6 +245,8 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(job.type, JobType.COPY)
         self.assertEqual(returned_job['type'], 'COPY')
         self.assertEqual(job.priority, 2)
+        self.assertEqual(job.src_credentials, "somesecret")
+        self.assertEqual(job.dst_credentials, "someothersecret")
         self.assertEqual(job.protocol, JobProtocol.SSH)
         self.assertEqual(returned_job['protocol'], 'SSH')
         self.assertIsInstance(job.log_uid, basestring)
@@ -252,10 +260,14 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(element.max_tries, 3)
 
 #    @mock.patch.object(HRService.HRService, 'check_token')
+#    @mock.patch('pdm.workqueue.WorkqueueService.SiteClient')
+    @mock.patch('pdm.workqueue.WorkqueueService.current_app')
     @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
-    def test_list(self, mock_hrservice):
+    def test_list(self, mock_hrservice, mock_siteclient):
         Job = self.__service.test_db().tables.Job
 
+        mock_siteclient.site_client.get_cred = mock.MagicMock(return_value="somesecret")
+#        mock_siteclient().get_cred = mock.MagicMock(return_value="somesecret")
         mock_hrservice.return_value = 10
         request = self.__test.post('/workqueue/api/v1.0/list',
                                    data={'type': JobType.COPY,
@@ -269,10 +281,14 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(job.type, JobType.LIST)
         self.assertEqual(returned_job['type'], 'LIST')
 
+#    @mock.patch('pdm.workqueue.WorkqueueService.SiteClient')
+    @mock.patch('pdm.workqueue.WorkqueueService.current_app')
     @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
-    def test_copy(self, mock_hrservice):
+    def test_copy(self, mock_hrservice, mock_siteclient):
         Job = self.__service.test_db().tables.Job
 
+        mock_siteclient.site_client.get_cred = mock.MagicMock(side_effect=["somesecret", "someothersecret"])
+#        mock_siteclient().get_cred = mock.MagicMock(side_effect=["somesecret", "someothersecret"])
         mock_hrservice.return_value = 10
         request = self.__test.post('/workqueue/api/v1.0/copy',
                                    data={'type': JobType.LIST,
@@ -288,10 +304,14 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(job.type, JobType.COPY)
         self.assertEqual(returned_job['type'], 'COPY')
 
+#    @mock.patch('pdm.workqueue.WorkqueueService.SiteClient')
+    @mock.patch('pdm.workqueue.WorkqueueService.current_app')
     @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
-    def test_remove(self, mock_hrservice):
+    def test_remove(self, mock_hrservice, mock_siteclient):
         Job = self.__service.test_db().tables.Job
 
+        mock_siteclient.site_client.get_cred = mock.MagicMock(return_value="somesecret")
+#        mock_siteclient().get_cred = mock.MagicMock(return_value="somesecret")
         mock_hrservice.return_value = 10
         request = self.__test.post('/workqueue/api/v1.0/remove',
                                    data={'type': JobType.COPY,

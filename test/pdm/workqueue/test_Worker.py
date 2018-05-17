@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-""" Test WorkqueueClient class. """
-import os
+""" Test Worker module. """
 import logging
 import unittest
 import mock
@@ -11,12 +10,13 @@ from pdm.workqueue.WorkqueueService import WorkqueueService
 from pdm.workqueue.Worker import Worker
 from pdm.workqueue.WorkqueueDB import JobType, JobStatus, JobProtocol
 
+
 class test_Worker(unittest.TestCase):
 
-#    @mock.patch('pdm.workqueue.WorkqueueService.WorkqueueService')
     def setUp(self):
         self._service = FlaskServer("pdm.workqueue.WorkqueueService")
-        self._service.test_mode(WorkqueueService, {}, with_test=False)
+        with mock.patch('pdm.workqueue.WorkqueueService.SiteClient'):
+            self._service.test_mode(WorkqueueService, {}, with_test=False)
         self._service.fake_auth("ALL")
         self._test = self._service.test_client()
 
@@ -40,9 +40,7 @@ class test_Worker(unittest.TestCase):
     def tearDown(self):
         self._patcher.stop()
 
-#    @unittest.expectedFailure
-    @mock.patch('pdm.workqueue.Worker.EndpointClient')
-    def test_run(self, endpointclient_mock):
+    def test_run(self):
         workload = [{'id': 1,
                      'user_id': 9,
                      'type': JobType.LIST,
@@ -54,13 +52,26 @@ class test_Worker(unittest.TestCase):
                      'src_credentials': 'somesecret',
                      'dst_credentials': 'someothersecret',
                      'extra_opts': {},
-                     'elements': []}]
+                     'elements': [{"id": 0,
+                                   "job_id": 1,
+                                   "type": JobType.LIST,
+                                   "src_filepath": "/some/file",
+                                   "token": 'secret_token'}]}]
         getjobmock = mock.MagicMock()
         outputmock = mock.MagicMock()
         getjobmock.return_value = jsonify(workload)
+        outputmock.return_value = '', 200
         with mock.patch.dict(self._service.view_functions, {'WorkqueueService.get_next_job': getjobmock,
-                                                            'WorkqueueService.return_output': outputmock}):
+                                                            'WorkqueueService.return_output': outputmock}),\
+             mock.patch.object(self._inst._site_client, 'get_endpoints') as mock_get_endpoints,\
+                mock.patch('pdm.workqueue.Worker.X509Utils.add_ca_to_dir') as mock_ca2dir:
+            mock_get_endpoints.return_value = {'endpoints': ['blah1', 'blah2', 'blah3'],
+                                               'cas': ['blah blah', 'la la']}
+            mock_ca2dir.return_value = '/tmp/somecadir'
 
             self._inst.run()
         self.assertTrue(getjobmock.called)
         self.assertTrue(outputmock.called)
+        self.assertTrue(mock_get_endpoints.called)
+        self.assertEqual(mock_get_endpoints.call_count, 1)
+        self.assertTrue(mock_ca2dir.called)

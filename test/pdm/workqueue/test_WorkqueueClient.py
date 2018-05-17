@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""" Test WorkqueueClient class. """
+""" Test WorkqueueClient module. """
 import unittest
 import mock
 
@@ -11,23 +11,22 @@ from pdm.workqueue.WorkqueueClient import WorkqueueClient
 
 class test_WorkqueueClient(unittest.TestCase):
 
-#    @mock.patch('pdm.workqueue.WorkqueueService.WorkqueueService')
     def setUp(self):
         self._service = FlaskServer("pdm.workqueue.WorkqueueService")
-        self._service.test_mode(WorkqueueService, {}, with_test=False)
+        with mock.patch('pdm.workqueue.WorkqueueService.SiteClient'):
+            self._service.test_mode(WorkqueueService, {}, with_test=False)
         self._service.fake_auth("ALL")
         self._test = self._service.test_client()
         self._patcher, self._inst = RESTClientTest.patch_client(WorkqueueClient,
-                                                    self._test,
-                                                    '/workqueue/api/v1.0')
+                                                                self._test,
+                                                                '/workqueue/api/v1.0')
 
     def tearDown(self):
         self._patcher.stop()
 
     def test_list(self):
         args = {'siteid': 12,
-                'filepath': '/data/somefile',
-                'credentials': 'somesecret'}
+                'filepath': '/data/somefile'}
         listmock = mock.MagicMock()
         listmock.return_value = jsonify(args)
         with mock.patch.dict(self._service.view_functions, {'WorkqueueService.list': listmock}):
@@ -39,10 +38,8 @@ class test_WorkqueueClient(unittest.TestCase):
     def test_copy(self):
         args = {'src_siteid': 12,
                 'src_filepath': '/data/somefile',
-                'src_credentials': 'somesecret',
                 'dst_siteid': 15,
-                'dst_filepath': '/data/someotherfile',
-                'dst_credentials': 'someothersecret'}
+                'dst_filepath': '/data/someotherfile'}
         copymock = mock.MagicMock()
         copymock.return_value = jsonify(args)
         with mock.patch.dict(self._service.view_functions, {'WorkqueueService.copy': copymock}):
@@ -53,8 +50,7 @@ class test_WorkqueueClient(unittest.TestCase):
 
     def test_remove(self):
         args = {'siteid': 12,
-                'filepath': '/data/somefile',
-                'credentials': 'somesecret'}
+                'filepath': '/data/somefile'}
         removemock = mock.MagicMock()
         removemock.return_value = jsonify(args)
         with mock.patch.dict(self._service.view_functions, {'WorkqueueService.remove': removemock}):

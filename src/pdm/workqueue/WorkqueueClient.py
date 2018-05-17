@@ -155,15 +155,15 @@ class WorkqueueClient(RESTClient):
 
         Args:
             job_id (int): The id number of the job to fetch output from.
-            element_id (int): The id number of the job element to fetch output from. (default: None = first)
+            element_id (int): The id number of the job element to fetch output from.
+                              (default: None = first)
             attempt (int): The attempt number to get the output from. (default: None = latest)
 
         Returns:
             dict: Representation of the output with keys (jobid, elementid, type, log).
-                  log is the contents of the job elements log file. If the job element in question was a LIST type
-                  job then there will be the additional key "listing" which will be a JSON encoded
-                  list of files/directories each as a dict containing the following keys:
-                  (permissions, nlinks, userid, groupid, size, datestamp, name, is_directory).
+                  log is the contents of the job elements log file. If the job element in question
+                  was a LIST type job then there will be the additional key "listing" which will be
+                  a JSON encoded list of files/directories each as a dict.
         """
         if element_id is None:
             return self.get('jobs/%s/output' % job_id)
