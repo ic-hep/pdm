@@ -130,7 +130,7 @@ class UserCommand(object):
         client = HRClient()
         token = client.login(args.email, password)
 
-        filename = args.token
+        filename = os.path.expanduser(args.token)
         try:
             os.makedirs(os.path.dirname(filename))
         except OSError as exc:
@@ -139,7 +139,7 @@ class UserCommand(object):
                 raise
 
         with open(filename, "w") as f:
-            os.chmod(f, 0o600)
+            os.chmod(filename, 0o600)
             f.write(token)
 
         print token
@@ -147,7 +147,7 @@ class UserCommand(object):
     def passwd(self, args):  # pylint: disable=no-self-use
         """ Change user password """
 
-        token = args.token
+        token = UserCommand._get_token(args.token)
 
         password = getpass(prompt='Old Password: ')
         newpassword = getpass(prompt='New Password: ')
@@ -167,7 +167,8 @@ class UserCommand(object):
         get users own data
         """
 
-        token = args.token
+        token = UserCommand._get_token(args.token)
+
         client = HRClient()
         client.set_token(token)
         ret = client.get_user()
@@ -183,7 +184,7 @@ class UserCommand(object):
         nap = 0.2
         count = 1
         #
-        token = self._get_token(args)
+        token = UserCommand._get_token(args.token)
         if token:
             client = TransferClientFacade(token)
             # remove None values, position args, func and toke from the kwargs:
@@ -221,7 +222,7 @@ class UserCommand(object):
         :param args: carry a user token
         :return: None
         """
-        token = self._get_token(args)
+        token = UserCommand._get_token(args.token)
         if token:
             client = TransferClientFacade(token)
             sites = client.list_sites()
@@ -257,7 +258,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = self._get_token(args)
+        token = UserCommand._get_token(args.token)
         block = args.block
         job_id = int(args.job)
         if token:
@@ -290,7 +291,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = self._get_token(args)
+        token = UserCommand._get_token(args.token)
         if token:
             client = TransferClientFacade(token)
             # remove None values, position args, func and token from the kwargs:
@@ -308,7 +309,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = self._get_token(args)
+        token = UserCommand._get_token(args.token)
         if token:
             client = TransferClientFacade(token)
             src_site = args.src_site
@@ -329,7 +330,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = self._get_token(args)
+        token = UserCommand._get_token(args.token)
         if token:
             job_id = int(args.job)
             client = TransferClientFacade(token)
@@ -345,6 +346,9 @@ class UserCommand(object):
         else:
             print "No token. Please login first"
 
-    def _get_token(self, args):  # pylint: disable=no-self-use
-        # TODO poosible token from a file
-        return args.token
+    @staticmethod
+    def _get_token(tokenfile):
+
+        with open(os.path.expanduser(tokenfile)) as f:
+            token  = f.read()
+            return token
