@@ -282,9 +282,9 @@ class Worker(RESTClient, Daemon):
                 # run job in subprocess with temporary proxy files and ca dir
                 with temporary_proxy_files(*credentials) as proxy_env_vars,\
                         temporary_ca_dir(cas, template_dir=template_ca_dir) as ca_dir:
-                    script_env = dict(os.environ, X509_CERT_DIR=ca_dir,
-                                      PATH=self._script_path, **proxy_env_vars)
+                    script_env = dict(os.environ, X509_CERT_DIR=ca_dir, **proxy_env_vars)
                     command = shlex.split(COMMANDMAP[job['type']][job['protocol']])
+                    command[0] = os.path.join(self._script_path, command[0])
                     self._logger.info("Running elements in subprocess.")
                     self._current_process = subprocess.Popen(command,
                                                              bufsize=0,
