@@ -286,7 +286,7 @@ class Worker(RESTClient, Daemon):
                     command = shlex.split(COMMANDMAP[job['type']][job['protocol']])
                     command[0] = os.path.join(self._script_path, command[0])
                     self._logger.info("Running elements in subprocess.")
-                    self._current_process = subprocess.Popen(command,
+                    self._current_process = subprocess.Popen(['/bin/bash']+command,
                                                              bufsize=0,
                                                              stdin=subprocess.PIPE,
                                                              stdout=subprocess.PIPE,
