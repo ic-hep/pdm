@@ -2,7 +2,6 @@ import json
 import unittest
 import mock
 import datetime
-import time
 
 from pdm.userservicedesk.HRService import HRService
 from pdm.cred.CredClient import MockCredClient
