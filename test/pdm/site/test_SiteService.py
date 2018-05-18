@@ -50,7 +50,7 @@ class test_SiteService(unittest.TestCase):
         """ Configure the basic service in test mode.
         """
         logging.basicConfig(level=logging.DEBUG)
-        self.__service = FlaskServer("pdm.endpoint.SiteService")
+        self.__service = FlaskServer("pdm.site.SiteService")
         self.__service.test_mode(SiteService, )
         self.set_user_token(1000)
         self.__client = self.__service.test_client()

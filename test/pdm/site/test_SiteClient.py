@@ -30,7 +30,7 @@ class test_SiteClient(unittest.TestCase):
 
     def setUp(self):
         logging.basicConfig(level=logging.DEBUG)
-        self._service = FlaskServer("pdm.endpoint.SiteService")
+        self._service = FlaskServer("pdm.site.SiteService")
         self._service.test_mode(SiteService, {}, with_test=False)
         self.set_user_token(1000)
         self._test = self._service.test_client()

@@ -9,10 +9,10 @@ from pdm.framework.FlaskWrapper import FlaskServer
 class TestWebPageService(unittest.TestCase):
     
     @mock.patch("pdm.web.WebPageService.HRClient")
-    @mock.patch("pdm.web.WebPageService.EndpointClient")
+    @mock.patch("pdm.web.WebPageService.SiteClient")
     def setUp(self, hr_mock, ep_mock):
         hr_mock.return_value = object() # no MockHRClient available
-        ep_mock.return_value = object() # TODO: set mock endpoint client
+        ep_mock.return_value = object() # no MockSiteClient available
         conf = { }
         self.__service = FlaskServer("pdm.web.WebPageService")
         self.__service.test_mode(WebPageService, conf, with_test=True)

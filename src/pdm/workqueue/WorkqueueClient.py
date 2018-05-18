@@ -12,15 +12,14 @@ class WorkqueueClient(RESTClient):
         """Load config & configure client."""
         super(WorkqueueClient, self).__init__('workqueue')
 
-    def list(self, src_siteid, src_filepath, credentials,  # pylint: disable=too-many-arguments
+    def list(self, siteid, filepath,  # pylint: disable=too-many-arguments
              max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
         """
         List a given path.
 
         Args:
-            src_siteid (int): The id of the site containing the path to be listed.
-            src_filepath (str): The path to list.
-            credentials (str): Token allowing access to the users credentials from the cred service.
+            siteid (int): The id of the site containing the path to be listed.
+            filepath (str): The path to list.
             max_tries (int): The maximum number of times to attempt the listing. (default: 2)
             priority (int): The DIRAC priority (0-9) of the job. (default: 5)
             protocol (JobProtocol): The protocol type to use. (default: GRIDFTP)
@@ -28,15 +27,14 @@ class WorkqueueClient(RESTClient):
         Returns:
             dict: The job object as stored in the workqueue database.
         """
-        return self.post('list', data={'src_siteid': src_siteid,
-                                       'src_filepath': src_filepath,
-                                       'credentials': credentials,
+        return self.post('list', data={'src_siteid': siteid,
+                                       'src_filepath': filepath,
                                        'max_tries': max_tries,
                                        'priority':  priority,
                                        'protocol': protocol})
 
     def copy(self, src_siteid, src_filepath, dst_siteid,  # pylint: disable=too-many-arguments
-             dst_filepath, credentials, max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
+             dst_filepath, max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
         """
         Copy a one path to another.
 
@@ -45,7 +43,6 @@ class WorkqueueClient(RESTClient):
             src_filepath (str): The path to copy from.
             dst_siteid (int): The id of the site containing the path to be copied to.
             dst_filepath (str): The path to copy to.
-            credentials (str): Token allowing access to the users credentials from the cred service.
             max_tries (int): The maximum number of times to attempt the listing. (default: 2)
             priority (int): The DIRAC priority (0-9) of the job. (default: 5)
             protocol (JobProtocol): The protocol type to use. (default: GRIDFTP)
@@ -57,19 +54,18 @@ class WorkqueueClient(RESTClient):
                                        'src_filepath': src_filepath,
                                        'dst_siteid': dst_siteid,
                                        'dst_filepath': dst_filepath,
-                                       'credentials': credentials,
                                        'max_tries': max_tries,
                                        'priority':  priority,
                                        'protocol': protocol})
 
-    def remove(self, src_siteid, src_filepath, credentials,  # pylint: disable=too-many-arguments
+    def remove(self, siteid, filepath,  # pylint: disable=too-many-arguments
                max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
         """
         Remove a given path.
 
         Args:
-            src_siteid (int): The id of the site containing the path to be removed.
-            src_filepath (str): The path to remove.
+            siteid (int): The id of the site containing the path to be removed.
+            filepath (str): The path to remove.
             credentials (str): Token allowing access to the users credentials from the cred service.
             max_tries (int): The maximum number of times to attempt the listing. (default: 2)
             priority (int): The DIRAC priority (0-9) of the job. (default: 5)
@@ -78,9 +74,8 @@ class WorkqueueClient(RESTClient):
         Returns:
             dict: The job object as stored in the workqueue database.
         """
-        return self.post('remove', data={'src_siteid': src_siteid,
-                                         'src_filepath': src_filepath,
-                                         'credentials': credentials,
+        return self.post('remove', data={'src_siteid': siteid,
+                                         'src_filepath': filepath,
                                          'max_tries': max_tries,
                                          'priority':  priority,
                                          'protocol': protocol})
@@ -106,7 +101,32 @@ class WorkqueueClient(RESTClient):
         """
         return self.get('jobs/%s' % job_id)
 
-    def status(self, job_id):
+    def elements(self, job_id):
+        """
+        Get a job elements for job with given id.
+
+        Args:
+            job_id (int): The id number of the job containing elements to get.
+
+        Returns:
+            dict: the jobs elements as dicts.
+        """
+        return self.get('jobs/%s/elements' % job_id)
+
+    def element(self, job_id, element_id):
+        """
+        Get a job element by id.
+
+        Args:
+            job_id (int): The id number of the job to get.
+            element_id (int): The id number of the job element to get.
+
+        Returns:
+            dict: Representation of job element.
+        """
+        return self.get('jobs/%s/elements/%s' % (job_id, element_id))
+
+    def status(self, job_id, element_id=None):
         """
         Get a jobs status.
 
@@ -116,31 +136,37 @@ class WorkqueueClient(RESTClient):
 
         Args:
             job_id (int): The id number of the job to query.
+            element_id (int): The id number of the job element to query.
 
         Returns:
-            dict: Representation of the status with keys (jobid, status, attempts)
+            dict: Representation of the status with keys (jobid, status, attempts(element only) )
         """
-        return self.get('jobs/%s/status' % job_id)
+        if element_id is None:
+            return self.get('jobs/%s/status' % job_id)
+        return self.get('jobs/%s/elements/%s/status' % (job_id, element_id))
 
-    def output(self, job_id, attempt=None):
+    def output(self, job_id, element_id=None, attempt=None):
         """
         Get job output.
 
-        Gets the output for the given job if it's ready. The optional parameter attempt
+        Gets the output for the given job element if it's ready. The optional parameter attempt
         allows the user to get the output for a given attempt. If this parameter is None
         (the default) then the latest attempts output is retrieved.
 
         Args:
             job_id (int): The id number of the job to fetch output from.
+            element_id (int): The id number of the job element to fetch output from.
+                              (default: None = first)
             attempt (int): The attempt number to get the output from. (default: None = latest)
 
         Returns:
-            dict: Representation of the output with keys (jobid, log).
-                  log is the contents of the job log file. If the job in question was a LIST type
-                  job then there will be the additional key "listing" which will be a JSON encoded
-                  list of files/directories each as a dict containing the following keys:
-                  (permissions, nlinks, userid, groupid, size, datestamp, name, is_directory).
+            dict: Representation of the output with keys (jobid, elementid, type, log).
+                  log is the contents of the job elements log file. If the job element in question
+                  was a LIST type job then there will be the additional key "listing" which will be
+                  a JSON encoded list of files/directories each as a dict.
         """
-        if attempt is None:
+        if element_id is None:
             return self.get('jobs/%s/output' % job_id)
-        return self.get('jobs/%s/output/%s' % (job_id, attempt))
+        if attempt is None:
+            return self.get('jobs/%s/elements/%s/output' % (job_id, element_id))
+        return self.get('jobs/%s/elements/%s/output/%s' % (job_id, element_id, attempt))

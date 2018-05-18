@@ -4,50 +4,199 @@ import os
 import time
 import uuid
 import random
-# import json
-# import shlex
+import json
+import shlex
 import socket
 import subprocess
-from urlparse import urlsplit, urlunsplit
+import shutil
+import asyncore
+import logging
+from contextlib import contextmanager
+from urlparse import urlunsplit
 from tempfile import NamedTemporaryFile
 
 from requests.exceptions import Timeout
 
 from pdm.framework.RESTClient import RESTClient, RESTException
-from pdm.cred.CredClient import CredClient
-from pdm.endpoint.EndpointClient import EndpointClient
+from pdm.site.SiteClient import SiteClient
+from pdm.utils.X509 import X509Utils
 from pdm.utils.daemon import Daemon
 from pdm.utils.config import getConfig
 
-from .WorkqueueDB import COMMANDMAP, PROTOCOLMAP, JobType, JobProtocol
+from .WorkqueueDB import COMMANDMAP, PROTOCOLMAP, JobType
+
+
+@contextmanager
+def temporary_ca_dir(cas, dir_path=None, template_dir=None):
+    """
+    Context for creating a temporary CA directory.
+
+    Temporary directory is automatically removed when exiting context.
+
+    Args:
+        cas (list): List of CA certs in string form.
+        dir_path (str): Path to use for temporary ca directory. If None (default) then a
+                        random dir_path is created.
+        template_dir (str): Path to a directory to use as a template for the temporary
+                            ca dir. All certs in this directory are duplicated in the new one.
+                            If None (default) then don't use a template directory.
+
+    Returns:
+        str: The temporary ca dir.
+    """
+    ca_dir = X509Utils.add_ca_to_dir(cas,
+                                     dir_path=dir_path,
+                                     template_dir=template_dir)
+    yield ca_dir
+    shutil.rmtree(ca_dir, ignore_errors=True)
+
+
+@contextmanager
+def temporary_proxy_files(src_credentials, dst_credentials=None):
+    """
+    Context for creating temporary proxy files.
+
+    Temporary proxy files are automatically removed when exiting context.
+
+    Args:
+        src_credentials (str): The credentials for the source target as a string.
+        dst_credentials (str): The credentials for the destination target as a string.
+                               If None (default) then only source proxy file is created.
+
+    Returns:
+        dict: A dictionary containing the proxy environment variables to set which point to the
+              newly created temporary proxy files.
+    """
+    with NamedTemporaryFile() as src_proxyfile:
+        if dst_credentials is None:
+            src_proxyfile.write(src_credentials)
+            src_proxyfile.flush()
+            os.fsync(src_proxyfile.fileno())
+            yield {'X509_USER_PROXY': src_proxyfile.name}
+            return
+        with NamedTemporaryFile() as dst_proxyfile:
+            dst_proxyfile.write(dst_credentials)
+            dst_proxyfile.flush()
+            os.fsync(dst_proxyfile.fileno())
+            yield {'X509_USER_PROXY_SRC': src_proxyfile.name,
+                   'X509_USER_PROXY_DST': dst_proxyfile.name}
+
+
+class BufferingDispatcher(asyncore.file_dispatcher):
+    """
+    Asynchronous buffering dispatcher.
+
+    This dispatcher essentially buffers the output from the given fd until the buffer is read.
+    At this point the buffer is blanked and starts again.
+    """
+
+    def __init__(self, fd):
+        """Initialisation."""
+        asyncore.file_dispatcher.__init__(self, fd)
+        self._logger = logging.getLogger(self.__class__.__name__)
+        self._buffer = ''
+
+    @property
+    def buffer(self):
+        """Retrieve buffer content and reset buffer."""
+        buffer_, self._buffer = self._buffer, ''
+        return buffer_
+
+    def writable(self):
+        """Writeable status of fd."""
+        return False
+
+    def handle_read(self):
+        """Handle read events."""
+        self._buffer += self.recv(8192)
+
+
+class StdOutDispatcher(asyncore.file_dispatcher):
+    """Asynchronous dispatcher for subprocess stdout."""
+
+    def __init__(self, fd, tokens, stderr_dispatcher, callback):
+        """Initialisation."""
+        asyncore.file_dispatcher.__init__(self, fd)
+        self._fd = fd
+        self._tokens = tokens
+        self._stderr_dispatcher = stderr_dispatcher
+        self._callback = callback
+        self._logger = logging.getLogger(self.__class__.__name__)
+
+    def writable(self):
+        """Writeable status of fd."""
+        return False
+
+    def readable(self):
+        """Readable status of fd."""
+        # Note as we use self._fd directly (rather than self.recv) close is not called automatically
+        if not self._tokens:
+            self.close()
+            return False
+        return True
+
+    def handle_read(self):
+        """Handle read events."""
+        try:
+            done_element = json.load(self._fd)
+        except ValueError:
+            self.close()
+            return
+
+        data = {'log': self._stderr_dispatcher.buffer,
+                'returncode': done_element['Code'],
+                'host': socket.gethostbyaddr(socket.getfqdn())}
+        element_id = done_element['id']
+
+        if not element_id:  # whole job failure
+            for element_id, token in self._tokens.iteritems():
+                self._callback(*element_id.split('.'), token=token, data=data)
+            self._tokens.clear()  # will cause readable to close fd on next iteration.
+            return
+
+        if 'Listing' in done_element:
+            data.update(listing=done_element['Listing'])
+        token = self._tokens.pop(element_id)
+        self._callback(*element_id.split('.'), token=token, data=data)
 
 
 class Worker(RESTClient, Daemon):
     """Worker Daemon."""
 
-    def __init__(self, debug=False, one_shot=False):
+    def __init__(self, debug=False, n_shot=None):
         """Initialisation."""
         RESTClient.__init__(self, 'workqueue')
-        conf = getConfig('worker')
-        self._uid = uuid.uuid4()
+        uid = uuid.uuid4()
         Daemon.__init__(self,
-                        pidfile='/tmp/worker-%s.pid' % self._uid,
-                        logfile='/tmp/worker-%s.log' % self._uid,
+                        pidfile='/tmp/worker-%s.pid' % uid,
+                        logfile='/tmp/worker-%s.log' % uid,
                         target=self.run,
                         debug=debug)
-        self._one_shot = one_shot
+        conf = getConfig('worker')
         self._types = [JobType[type_.upper()] for type_ in  # pylint: disable=unsubscriptable-object
                        conf.pop('types', ('LIST', 'COPY', 'REMOVE'))]
         self._interpoll_sleep_time = conf.pop('poll_time', 2)
+        self._system_ca_dir = conf.pop('system_ca_dir',
+                                       os.environ.get('X509_CERT_DIR', '/etc/grid-security'))
         self._script_path = conf.pop('script_path',
                                      os.path.join(os.path.dirname(__file__), 'scripts'))
         self._script_path = os.path.abspath(self._script_path)
-        self._logger.info("Script search path is: %r", self._script_path)
+        self._site_client = SiteClient()
+        self._n_shot = n_shot
         self._current_process = None
 
         # Check for unused config options
         if conf:
             raise ValueError("Unused worker config params: '%s'" % ', '.join(conf.keys()))
+
+    @property
+    def should_run(self):
+        """Return if the daemon loop should run."""
+        if self._n_shot is None:
+            return True
+        n_shot = max(self._n_shot, 0)
+        self._n_shot -= 1
+        return n_shot
 
     def terminate(self, *_):
         """Terminate worker daemon."""
@@ -55,129 +204,99 @@ class Worker(RESTClient, Daemon):
         if self._current_process is not None:
             self._current_process.terminate()
 
-    def _abort(self, job_id, message):
-        """Abort job cycle."""
-        self._logger.error("Error with job %d: %s", job_id, message)
+    def _upload(self, job_id, element_id, token, data):
+        """Upload results to WorkqueueService."""
+        self._logger.info("Uploading output log to WorkqueueService.")
+        self.set_token(token)
         try:
-            self.put('worker/%s' % job_id,
-                     data={'log': message,
-                           'returncode': 1,
-                           'host': socket.gethostbyaddr(socket.getfqdn())})
+            self.put('worker/jobs/%s/elements/%s' % (job_id, element_id), data=data)
         except RESTException:
-            self._logger.exception("Error trying to PUT back abort message")
+            self._logger.exception("Error trying to PUT back output from subcommand.")
         finally:
             self.set_token(None)
 
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements
     def run(self):
         """Daemon main method."""
-        cred_client = CredClient()
-        endpoint_client = EndpointClient()
-        run = True
-        while run:
-            if self._one_shot:
-                run = False
-            self._logger.info("Getting job from WorkqueueService.")
+        # remove any proxy left around as will mess up copy jobs.
+        try:
+            os.remove("/tmp/x509up_u%d" % os.getuid())
+        except OSError:
+            pass
+
+        while self.should_run:
+            self._logger.info("Getting workload from WorkqueueService.")
             try:
-                job, token = self.post('worker', data={'types': self._types})
+                workload = self.post('worker/jobs', data={'types': self._types})
             except Timeout:
                 self._logger.warning("Timed out contacting the WorkqueueService.")
                 continue
             except RESTException as err:
                 if err.code == 404:
-                    self._logger.info("WorkqueueService reports no jobs to be done.")
+                    self._logger.info("WorkqueueService reports no work to be done.")
                 else:
-                    self._logger.exception("Error trying to get job from WorkqueueService.")
+                    self._logger.exception("Error trying to get work from WorkqueueService.")
                 time.sleep(self._interpoll_sleep_time)
                 continue
+            self._logger.info("Workload of %d job elements acquired from WorkqueueService.",
+                              sum(len(job['elements']) for job in workload))
 
-            self._logger.info("%s job id=%d acquired from WorkqueueService.",
-                              JobType(job['type']).name,  # pylint: disable=no-member
-                              job['id'])
-            self.set_token(token)
+            for job in workload:
+                # Get CAs and endpoints for job.
+                cas = []
+                credentials = [job['src_credentials']]
+                template_ca_dir = self._system_ca_dir
+                src_endpoint_dict = self._site_client.get_endpoints(job['src_siteid'])
+                src_endpoints = src_endpoint_dict['endpoints']
+                if 'cas' in src_endpoint_dict:
+                    cas.extend(src_endpoint_dict['cas'])
+                    template_ca_dir = None
 
-            src_site = endpoint_client.get_site(job['src_siteid'])
-            src_endpoints = (urlsplit(site) for site
-                             in src_site['endpoints'].itervalues())
-            src = [urlunsplit(site._replace(path=job['src_filepath'])) for site in src_endpoints
-                   if site.scheme == PROTOCOLMAP[job['protocol']]]
-            if not src:
-                self._abort(job['id'], "Protocol '%s' not supported at src site '%s' with id %d"
-                            % (JobProtocol(job['protocol']).name,  # pylint: disable=no-member
-                               src_site['site_name'],
-                               job['src_siteid']))
-                continue
-            script_env = dict(os.environ,
-                              PATH=self._script_path,
-                              SRC_PATH=random.choice(src))
-            self._logger.info("Random SRC_PATH: '%s' chosen.", script_env['SRC_PATH'])
+                if job['type'] == JobType.COPY:
+                    credentials.append(job['dst_credentials'])
+                    template_ca_dir = self._system_ca_dir
+                    dst_endpoint_dict = self._site_client.get_endpoints(job['dst_siteid'])
+                    dst_endpoints = dst_endpoint_dict['endpoints']
+                    if 'cas' in dst_endpoint_dict:
+                        cas.extend(dst_endpoint_dict['cas'])
+                        template_ca_dir = None
 
-            if job['type'] == JobType.COPY:
-                if job['dst_siteid'] is None:
-                    self._abort(job['id'], "No dst site id set for copy operation")
-                    continue
-                if job['dst_filepath'] is None:
-                    self._abort(job['id'], "No dst site filepath set for copy operation")
-                    continue
+                # Set up element id/token map and job stdin data
+                token_map = {}
+                data = {'options': job['extra_opts'],
+                        'files': []}
+                protocol = PROTOCOLMAP[job['protocol']]
+                for element in job['elements']:
+                    element_id = "%d.%d" % (job['id'], element['id'])
+                    token_map[element_id] = element['token']
+                    src = (element_id,
+                           urlunsplit((protocol,
+                                       random.choice(src_endpoints),
+                                       element['src_filepath'], '', '')))
+                    if element['type'] == JobType.COPY:
+                        data['files'].append(src + (urlunsplit((protocol,
+                                                                random.choice(dst_endpoints),
+                                                                element['dst_filepath'], '', '')),))
+                    else:
+                        data['files'].append(src)
 
-                dst_site = endpoint_client.get_site(job['dst_siteid'])
-                dst_endpoints = (urlsplit(site) for site
-                                 in dst_site['endpoints'].itervalues())
-                dst = [urlunsplit(site._replace(path=job['dst_filepath'])) for site in dst_endpoints
-                       if site.scheme == PROTOCOLMAP[job['protocol']]]
-                if not dst:
-                    self._abort(job['id'], "Protocol '%s' not supported at dst site '%s' with id %d"
-                                % (JobProtocol(job['protocol']).name,  # pylint: disable=no-member
-                                   dst_site['site_name'],
-                                   job['dst_siteid']))
-                    continue
-                script_env['DST_PATH'] = random.choice(dst)
-                self._logger.info("Random DST_PATH: '%s' chosen.", script_env['DST_PATH'])
-
-            self._logger.info("Getting user's credentials.")
-            try:
-                cert, key = cred_client.get_cred(job['credentials'])
-            except RESTException:
-                self._abort(job['id'], "Error getting user's credentials.")
-                continue
-
-            command = COMMANDMAP[job['type']][job['protocol']]
-            with NamedTemporaryFile() as proxyfile:
-                proxyfile.write(key)
-                proxyfile.write(cert)
-                proxyfile.flush()
-                os.fsync(proxyfile.fileno())
-                script_env['X509_USER_PROXY'] = proxyfile.name
-
-                self._logger.info("Running job in subprocess.")
-                self._current_process = subprocess.Popen('(set -x && %s)' % command,
-                                                         shell=True,
-                                                         stdout=subprocess.PIPE,
-                                                         stderr=subprocess.STDOUT,
-                                                         env=script_env)
-                log, _ = self._current_process.communicate()
-
-            output_logger = self._logger.info
-            returncode = self._current_process.returncode
-            if returncode:
-                output_logger = self._logger.warning
-            output_logger("Job completed with exit code %d", returncode)
-
-            self._logger.info("Uploading output log to WorkqueueService.")
-            try:
-                self.put('worker/%s' % job['id'],
-                         data={'log': log,
-                               'returncode': returncode,
-                               'host': socket.gethostbyaddr(socket.getfqdn())})
-            except RESTException:
-                self._logger.exception("Error trying to PUT back output from subcommand.")
-                continue
-            finally:
-                self.set_token(None)
-
-            if job['attempts'] >= job['max_tries'] - 1:
-                self._logger.info("Final attempt complete, deleting users credentials.")
-                try:
-                    cred_client.del_cred(job['credentials'])
-                except RESTException:
-                    self._logger.exception("Error trying to delete user credentials.")
+                # run job in subprocess with temporary proxy files and ca dir
+                with temporary_proxy_files(*credentials) as proxy_env_vars,\
+                        temporary_ca_dir(cas, template_dir=template_ca_dir) as ca_dir:
+                    script_env = dict(os.environ, X509_CERT_DIR=ca_dir, **proxy_env_vars)
+                    command = shlex.split(COMMANDMAP[job['type']][job['protocol']])
+                    command[0] = os.path.join(self._script_path, command[0])
+                    self._logger.info("Running elements in subprocess.")
+                    self._current_process = subprocess.Popen(['/bin/bash', '-x'] + command,
+                                                             bufsize=0,
+                                                             stdin=subprocess.PIPE,
+                                                             stdout=subprocess.PIPE,
+                                                             stderr=subprocess.PIPE,
+                                                             env=script_env)
+                    json.dump(data, self._current_process.stdin)
+                    self._current_process.stdin.write('\n')
+                    self._current_process.stdin.flush()
+                    stderr_dispatcher = BufferingDispatcher(self._current_process.stderr)
+                    StdOutDispatcher(self._current_process.stdout, token_map,
+                                     stderr_dispatcher, self._upload)
+                    asyncore.loop(timeout=2)
