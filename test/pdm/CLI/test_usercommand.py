@@ -1,6 +1,7 @@
 import mock
 import unittest
 import argparse
+import tempfile
 from pdm.CLI.user_subcommand import UserCommand
 
 
@@ -17,6 +18,12 @@ class TestUsercommand(unittest.TestCase):
         self._parser = argparse.ArgumentParser()
         subparsers = self._parser.add_subparsers()
         UserCommand(subparsers)
+        self._tmp_file =  tempfile.NamedTemporaryFile(dir='/tmp')
+        self._tmp_file.write("Fake_token")
+        self._tmp_file.flush()
+
+    def tearDown(self):
+        self._tmp_file.close()
 
     @mock.patch('pdm.CLI.user_subcommand.sleep')
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
@@ -29,7 +36,7 @@ class TestUsercommand(unittest.TestCase):
         mocked_facade.return_value.status = mock.MagicMock()
         mocked_facade.return_value.status.return_value = {'status':'DONE', 'id': 1}
 
-        args = self._parser.parse_args('copy source dest -m 3 -t gfsdgfhsgdfh'.split())
+        args = self._parser.parse_args('copy source dest -m 3 -t {}'.format(self._tmp_file.name).split())
         args.func(args)
 
         mock_copy.assert_called_with('source', 'dest', max_tries=3)
@@ -61,7 +68,7 @@ class TestUsercommand(unittest.TestCase):
         mock_list.return_value={'status':'DONE', 'id': 1}
         mocked_facade.return_value.status.return_value = {'status':'DONE', 'id': 1}
         mock_output.return_value = {'listing':list_dicts}
-        args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
+        args = self._parser.parse_args('list source  -m 3 -t  {}'.format(self._tmp_file.name).split())
         args.func(args)
         mock_output.assert_called_with(1)
         mock_list.assert_called_with('source', max_tries=3)
@@ -69,7 +76,7 @@ class TestUsercommand(unittest.TestCase):
         mock_output.reset_mock()
         mock_list.reset_mock()
         mock_list.return_value={'status':'NEW', 'id': 1}
-        args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
+        args = self._parser.parse_args('list source  -m 3 -t {}'.format(self._tmp_file.name).split())
         args.func(args)
         assert mock_list.call_count == 1
         assert mocked_facade.return_value.status.call_count == 2 # one at the beginning and then get the 'DONE'
@@ -78,7 +85,7 @@ class TestUsercommand(unittest.TestCase):
         mock_output.reset_mock()
         mock_list.reset_mock()
         mock_list.return_value = None
-        args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
+        args = self._parser.parse_args('list source  -m 3 -t {}'.format(self._tmp_file.name).split())
         args.func(args)
         assert mock_list.call_count == 1  # immediate failure, no such site
         assert not mock_output.called
@@ -90,7 +97,7 @@ class TestUsercommand(unittest.TestCase):
         status_list = [{'status':'NEW', 'id': 1}]*50
         mocked_facade.return_value.status.side_effect = status_list
         # keep list return value, timeout the status
-        args = self._parser.parse_args('list source  -m 3 -t gfsdgfhsgdfh'.split())
+        args = self._parser.parse_args('list source  -m 3 -t {}'.format(self._tmp_file.name).split())
         args.func(args)
         assert mock_list.call_count == 1
         assert mocked_facade.return_value.status.call_count == 50
@@ -107,7 +114,7 @@ class TestUsercommand(unittest.TestCase):
         mocked_facade.return_value.status = mock.MagicMock()
         mocked_facade.return_value.status.return_value = {'status':'DONE', 'id': 1}
         # protocol swittch is -s !!!
-        args = self._parser.parse_args('remove source -s gsiftp -m 3 -t gfsdgfhsgdfh'.split())
+        args = self._parser.parse_args('remove source -s gsiftp -m 3 -t {}'.format(self._tmp_file.name).split())
         args.func(args)
 
         mock_remove.assert_called_with('source', max_tries=3, protocol='gsiftp')
@@ -122,9 +129,6 @@ class TestUsercommand(unittest.TestCase):
         mocked_facade.return_value.status.reset_mock()
         status_list = [{'status':'NEW', 'id': 1}]*50
         mocked_facade.return_value.status.side_effect = status_list
-        args = self._parser.parse_args('remove source  -m 3 -b -t gfsdgfhsgdfh'.split())
+        args = self._parser.parse_args('remove source  -m 3 -b -t {}'.format(self._tmp_file.name).split())
         args.func(args)
         assert mocked_facade.return_value.status.call_count == 50
-
-    def tearDown(self):
-        pass
