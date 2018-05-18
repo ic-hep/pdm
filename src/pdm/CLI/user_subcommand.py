@@ -2,6 +2,8 @@
 Define pdm subcommands and action functions for them:
 Example usage: pdm register -e fred@flintstones.com -n Fred -s Flintstone
 """
+import os
+import errno
 from getpass import getpass
 from time import sleep
 from datetime import datetime
@@ -28,20 +30,26 @@ class UserCommand(object):
         user_parser.add_argument('-s', '--surname', type=str)
         user_parser.set_defaults(func=self.register)
         # login
-        user_parser = subparsers.add_parser('login')
+        user_parser = subparsers.add_parser('login', help="User login procedure")
         user_parser.add_argument('-e', '--email', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help="optional token file location (default=~/.pdm/token)")
+
         user_parser.set_defaults(func=self.login)
         # change password
         user_parser = subparsers.add_parser('passwd')
-        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         user_parser.set_defaults(func=self.passwd)
         # whoami
         user_parser = subparsers.add_parser('whoami')
-        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         user_parser.set_defaults(func=self.whoami)
         # list
         user_parser = subparsers.add_parser('list', help="List remote site.")
-        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('site', type=str)
         user_parser.add_argument('-m', '--max_tries', type=int, help='max tries')
         user_parser.add_argument('-p', '--priority', type=int, help='priority')
@@ -49,7 +57,8 @@ class UserCommand(object):
         user_parser.set_defaults(func=self.list)
         # remove
         user_parser = subparsers.add_parser('remove', help="remove files from remote site.")
-        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('site', type=str)
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
@@ -59,7 +68,8 @@ class UserCommand(object):
         # copy
         user_parser = subparsers.add_parser('copy',
                                             help="copy files from source to destination site.")
-        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('src_site', type=str)
         user_parser.add_argument('dst_site', type=str)
         user_parser.add_argument('-m', '--max_tries', type=int)
@@ -70,21 +80,24 @@ class UserCommand(object):
         # site list
         user_parser = subparsers.add_parser('sites',
                                             help="list available sites")
-        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         user_parser.set_defaults(func=self.sitelist)
         # status
         user_parser = subparsers.add_parser('status',
                                             help="get status of a job/task")
         user_parser.add_argument('job', type=str, help="job id as obtained"
                                                        " from copy or remove")
-        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         st_help = "periodically check the job status (up to %d times)" % (self.__max_iter,)
         user_parser.add_argument('-b', '--block', action='store_true', help=st_help)
         user_parser.set_defaults(func=self.status)
         # log
         user_parser = subparsers.add_parser('log',
                                             help="get log of a job/task")
-        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('job', type=int, help="job id as obtained"
                                                        " from copy, remove or list")
         user_parser.add_argument('-a', '--attempt', default=-1,
@@ -124,12 +137,25 @@ class UserCommand(object):
 
         client = HRClient()
         token = client.login(args.email, password)
+
+        filename = os.path.expanduser(args.token)
+        try:
+            os.makedirs(os.path.dirname(filename))
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                print os.strerror(exc.errno)
+                raise
+
+        with open(filename, "w") as f:
+            os.chmod(filename, 0o600)
+            f.write(token)
+
         print token
 
     def passwd(self, args):  # pylint: disable=no-self-use
         """ Change user password """
 
-        token = args.token
+        token = UserCommand._get_token(args.token)
 
         password = getpass(prompt='Old Password: ')
         newpassword = getpass(prompt='New Password: ')
@@ -149,7 +175,8 @@ class UserCommand(object):
         get users own data
         """
 
-        token = args.token
+        token = UserCommand._get_token(args.token)
+
         client = HRClient()
         client.set_token(token)
         ret = client.get_user()
@@ -165,7 +192,7 @@ class UserCommand(object):
         nap = 0.2
         count = 1
         #
-        token = self._get_token(args)
+        token = UserCommand._get_token(args.token)
         if token:
             client = TransferClientFacade(token)
             # remove None values, position args, func and toke from the kwargs:
@@ -203,7 +230,7 @@ class UserCommand(object):
         :param args: carry a user token
         :return: None
         """
-        token = self._get_token(args)
+        token = UserCommand._get_token(args.token)
         if token:
             client = TransferClientFacade(token)
             sites = client.list_sites()
@@ -239,7 +266,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = self._get_token(args)
+        token = UserCommand._get_token(args.token)
         block = args.block
         job_id = int(args.job)
         if token:
@@ -272,7 +299,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = self._get_token(args)
+        token = UserCommand._get_token(args.token)
         if token:
             client = TransferClientFacade(token)
             # remove None values, position args, func and token from the kwargs:
@@ -290,7 +317,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = self._get_token(args)
+        token = UserCommand._get_token(args.token)
         if token:
             client = TransferClientFacade(token)
             src_site = args.src_site
@@ -311,7 +338,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = self._get_token(args)
+        token = UserCommand._get_token(args.token)
         if token:
             job_id = int(args.job)
             client = TransferClientFacade(token)
@@ -327,6 +354,9 @@ class UserCommand(object):
         else:
             print "No token. Please login first"
 
-    def _get_token(self, args): # pylint: disable=no-self-use
-        # TODO poosible token from a file
-        return args.token
+    @staticmethod
+    def _get_token(tokenfile):
+
+        with open(os.path.expanduser(tokenfile)) as f:
+            token = f.read()
+            return token
