@@ -140,6 +140,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
         try:
             done_element = json.load(self._fd)
         except ValueError:
+            self.close()
             return
 
         data = {'log': self._stderr_dispatcher.buffer,
@@ -298,4 +299,4 @@ class Worker(RESTClient, Daemon):
                     stderr_dispatcher = BufferingDispatcher(self._current_process.stderr)
                     StdOutDispatcher(self._current_process.stdout, token_map,
                                      stderr_dispatcher, self._upload)
-                    asyncore.loop()
+                    asyncore.loop(timeout=2)
