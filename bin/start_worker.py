@@ -16,10 +16,10 @@ if __name__ == '__main__':
     parser.add_argument("conf", help="Worker config file.")
     parser.add_argument("-d", "--debug", action='store_true', default=False,
                                help="Debug mode: Interactive output, don't fork!")
-    parser.add_argument("-o", "--one-shot", action='store_true', default=False,
-                               help="One shot mode: Worker will perform one job before dying.")
+    parser.add_argument("-n", "--n-shot", type=int, default=None,
+                               help="N shot mode: Worker will perform n jobs before dying.")
 
     args = parser.parse_args()
     ConfigSystem.get_instance()\
                 .setup(os.path.abspath(os.path.expandvars(os.path.expanduser(args.conf))))
-    Worker(debug=args.debug, one_shot=args.one_shot).start()
+    Worker(debug=args.debug, n_shot=args.n_shot).start()
