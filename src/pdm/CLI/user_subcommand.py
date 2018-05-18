@@ -38,15 +38,18 @@ class UserCommand(object):
         user_parser.set_defaults(func=self.login)
         # change password
         user_parser = subparsers.add_parser('passwd')
-        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         user_parser.set_defaults(func=self.passwd)
         # whoami
         user_parser = subparsers.add_parser('whoami')
-        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         user_parser.set_defaults(func=self.whoami)
         # list
         user_parser = subparsers.add_parser('list', help="List remote site.")
-        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('site', type=str)
         user_parser.add_argument('-m', '--max_tries', type=int, help='max tries')
         user_parser.add_argument('-p', '--priority', type=int, help='priority')
@@ -54,7 +57,8 @@ class UserCommand(object):
         user_parser.set_defaults(func=self.list)
         # remove
         user_parser = subparsers.add_parser('remove', help="remove files from remote site.")
-        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('site', type=str)
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
@@ -64,7 +68,8 @@ class UserCommand(object):
         # copy
         user_parser = subparsers.add_parser('copy',
                                             help="copy files from source to destination site.")
-        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('src_site', type=str)
         user_parser.add_argument('dst_site', type=str)
         user_parser.add_argument('-m', '--max_tries', type=int)
@@ -75,21 +80,24 @@ class UserCommand(object):
         # site list
         user_parser = subparsers.add_parser('sites',
                                             help="list available sites")
-        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         user_parser.set_defaults(func=self.sitelist)
         # status
         user_parser = subparsers.add_parser('status',
                                             help="get status of a job/task")
         user_parser.add_argument('job', type=str, help="job id as obtained"
                                                        " from copy or remove")
-        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         st_help = "periodically check the job status (up to %d times)" % (self.__max_iter,)
         user_parser.add_argument('-b', '--block', action='store_true', help=st_help)
         user_parser.set_defaults(func=self.status)
         # log
         user_parser = subparsers.add_parser('log',
                                             help="get log of a job/task")
-        user_parser.add_argument('-t', '--token', type=str, required=True)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('job', type=int, help="job id as obtained"
                                                        " from copy, remove or list")
         user_parser.add_argument('-a', '--attempt', default=-1,
@@ -350,5 +358,5 @@ class UserCommand(object):
     def _get_token(tokenfile):
 
         with open(os.path.expanduser(tokenfile)) as f:
-            token  = f.read()
+            token = f.read()
             return token
