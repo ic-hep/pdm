@@ -1,15 +1,21 @@
 """Workqueue SQL DB Module."""
 import uuid
-import json
+import re
 from datetime import datetime
 
 from enum import unique, IntEnum
 from flask import current_app
-from sqlalchemy import (Column, Integer, SmallInteger,
-                        String, TEXT, TIMESTAMP, CheckConstraint)
+from sqlalchemy.orm import relationship
+from sqlalchemy import (Column, Integer, SmallInteger, ForeignKey,
+                        String, TEXT, TIMESTAMP, CheckConstraint, PickleType)
 
-from pdm.framework.Database import JSONMixin, JSONTableEncoder
+from pdm.framework.Database import JSONMixin
 from pdm.utils.db import managed_session
+
+
+def subdict(dct, keys):
+    """Create a sub dictionary."""
+    return {k: dct[k] for k in keys if k in dct}
 
 
 class EnumBase(IntEnum):
@@ -24,15 +30,28 @@ class EnumBase(IntEnum):
         """Return tuple of all possible enum values."""
         return tuple(enu.value for enu in cls)
 
+    @classmethod
+    def parse(cls, obj):
+        """Convert arg to enum."""
+        if isinstance(obj, int):
+            return cls(obj)
+        if isinstance(obj, basestring):
+            if obj.isdigit():
+                return cls(int(obj))
+            return cls[obj.upper()]
+        if not isinstance(obj, cls):
+            raise ValueError("Failed to parse '%s' to enum type '%s'" % (obj, cls.__name__))
+        return obj
+
 
 @unique
 class JobStatus(EnumBase):
     """Job status enum."""
 
     NEW = 0
-    SUBMITTED = 1
-    DONE = 2
-    FAILED = 3
+    DONE = 1
+    FAILED = 2
+    SUBMITTED = 3
 
 
 @unique
@@ -53,37 +72,65 @@ class JobProtocol(EnumBase):
     DUMMY = 2
 
 
-class WorkqueueJobEncoder(JSONTableEncoder):
-    """
-    Workqueue Job DB Table Encoder.
-
-    Will turn enums into human readable form.
-    """
-
-    # pylint: disable=method-hidden
-    def default(self, obj):
-        """Default encoding method."""
-        return_obj = super(WorkqueueJobEncoder, self).default(obj)
-        if isinstance(obj, JSONMixin):
-            return_obj['type'] = JobType(obj.type).name  # pylint: disable=no-member
-            return_obj['protocol'] = JobProtocol(obj.protocol).name  # pylint: disable=no-member
-            return_obj['status'] = JobStatus(obj.status).name  # pylint: disable=no-member
-        return return_obj
-
-
 PROTOCOLMAP = {JobProtocol.GRIDFTP: 'gsiftp',
                JobProtocol.SSH: 'ssh',
                JobProtocol.DUMMY: 'dummy'}
 
-COMMANDMAP = {JobType.LIST: {JobProtocol.GRIDFTP: 'list.sh',
+COMMANDMAP = {JobType.LIST: {JobProtocol.GRIDFTP: 'pdm-gfal2-ls.py',
                              JobProtocol.SSH: 'sftp',
                              JobProtocol.DUMMY: 'dummy.sh list'},
-              JobType.REMOVE: {JobProtocol.GRIDFTP: 'remove.sh',
+              JobType.REMOVE: {JobProtocol.GRIDFTP: 'pdm-gfal2-rm.py',
                                JobProtocol.SSH: 'sftp',
                                JobProtocol.DUMMY: 'dummy.sh remove'},
-              JobType.COPY: {JobProtocol.GRIDFTP: 'copy.sh',
+              JobType.COPY: {JobProtocol.GRIDFTP: 'pdm-gfal2-copy.py',
                              JobProtocol.SSH: 'scp',
                              JobProtocol.DUMMY: 'dummy.sh copy'}}
+SHELLPATH_REGEX = re.compile(r'^[/~][a-zA-Z0-9/_.*~-]*$')
+
+
+def shellpath_sanitise(path):
+    """Sanitise the path for use in bash shell."""
+    if SHELLPATH_REGEX.match(path) is None:
+        raise ValueError("Possible injection content in filepath '%s'" % path)
+    return path
+
+
+class SmartColumn(Column):  # pylint: disable=too-many-ancestors, abstract-method
+    """SQLAlchemy model column that knows if it is a requirement or allowed attribute."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialisation."""
+        self._required = kwargs.pop('required', False)
+        self._allowed = kwargs.pop('allowed', False)
+        super(SmartColumn, self).__init__(*args, **kwargs)
+
+    @property
+    def required(self):
+        """Return if column is a required attribute."""
+        return self._required
+
+    @property
+    def allowed(self):
+        """Return if column is an allowed attribute."""
+        return self._required or self._allowed
+
+
+class SmartColumnAwareMixin(object):
+    """Mixin class to facilitate grouping of required or allowed columns."""
+
+    @classmethod
+    def required_args(cls):
+        """Get required args."""
+        # Note use getattr(column, 'required') instead of column.required
+        # to allow use with regular columns
+        return {column.name for column in cls.__table__.columns.values()
+                if getattr(column, 'required', False)}
+
+    @classmethod
+    def allowed_args(cls):
+        """Get allowed args."""
+        return {column.name for column in cls.__table__.columns.values()
+                if getattr(column, 'allowed', False)}
 
 
 class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
@@ -91,39 +138,80 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
 
     def __init__(self, db_base):
         """Initialisation."""
-        class Job(db_base, JSONMixin):
+        class Job(db_base, JSONMixin, SmartColumnAwareMixin):
             """Jobs table."""
 
             __tablename__ = 'jobs'
             id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-            user_id = Column(Integer, nullable=False)
-            src_siteid = Column(Integer, nullable=False)
-            dst_siteid = Column(Integer)
-            src_filepath = Column(TEXT, nullable=False)
-            dst_filepath = Column(TEXT)
-            extra_opts = Column(TEXT)
-            credentials = Column(TEXT)
-            log_uid = Column(String(36), nullable=False, default=lambda: str(uuid.uuid4()))
-            max_tries = Column(SmallInteger, nullable=False, default=2)
-            attempts = Column(SmallInteger, nullable=False, default=0)
+            user_id = SmartColumn(Integer, nullable=False, allowed=True, required=True)
+            log_uid = SmartColumn(String(36), nullable=False, default=lambda: str(uuid.uuid4()))
+            src_siteid = SmartColumn(Integer, nullable=False, allowed=True, required=True)
+            dst_siteid = SmartColumn(Integer, allowed=True)
+            src_filepath = SmartColumn(TEXT, nullable=False, required=True, allowed=True)
+            dst_filepath = SmartColumn(TEXT, allowed=True)
+            extra_opts = SmartColumn(PickleType, allowed=True)
+            src_credentials = SmartColumn(TEXT, allowed=True)
+            dst_credentials = SmartColumn(TEXT, allowed=True)
             timestamp = Column(TIMESTAMP, nullable=False,
                                default=datetime.utcnow, onupdate=datetime.utcnow)
-            priority = Column(SmallInteger,
-                              CheckConstraint('priority in {0}'.format(tuple(xrange(10)))),
-                              nullable=False,
-                              default=5)
-            type = Column(SmallInteger,  # pylint: disable=invalid-name
-                          CheckConstraint('type in {0}'.format(JobType.values())),
-                          nullable=False)
-            protocol = Column(SmallInteger,
-                              CheckConstraint('protocol in {0}'.format(JobProtocol.values())),
-                              nullable=False,
-                              default=JobProtocol.GRIDFTP)
+            priority = SmartColumn(SmallInteger,
+                                   CheckConstraint('priority in {0}'.format(tuple(xrange(10)))),
+                                   nullable=False, allowed=True, default=5)
+            type = SmartColumn(SmallInteger,  # pylint: disable=invalid-name
+                               CheckConstraint('type in {0}'.format(JobType.values())),
+                               nullable=False, allowed=True, required=True)
+            protocol = SmartColumn(SmallInteger,
+                                   CheckConstraint('protocol in {0}'.format(JobProtocol.values())),
+                                   nullable=False, allowed=True, default=JobProtocol.GRIDFTP)
             status = Column(SmallInteger,
                             CheckConstraint('status in {0}'.format(JobStatus.values())),
-                            nullable=False,
-                            default=JobStatus.NEW)
-            CheckConstraint('retries <= max_tries')
+                            nullable=False, default=JobStatus.NEW)
+            elements = relationship("JobElement", back_populates="job",
+                                    cascade="all, delete-orphan")
+
+            def asdict(self):
+                """
+                Convert to a dict.
+
+                This makes use of the JSONMixin.encode_for_json() rather than just simply returning
+                dict(self) in order to get datetime.isoformat() conversions. Crucially it keeps the
+                enums in their integer form.
+                """
+                return super(Job, self).encode_for_json()
+
+            def encode_for_json(self):
+                """
+                Convert to JSON.
+
+                Conversion for sending to clients. This includes the expansion of enums into
+                human-readable names.
+                """
+                return dict(super(Job, self).encode_for_json(),
+                            type=JobType(self.type).name,  # pylint: disable=no-member
+                            protocol=JobProtocol(self.protocol).name,  # pylint: disable=no-member
+                            status=JobStatus(self.status).name)  # pylint: disable=no-member
+
+            def __init__(self, **kwargs):
+                """Initialisation."""
+                required_args = self.required_args().difference(kwargs)
+                if required_args:
+                    raise ValueError("Missing %s" % list(required_args))
+                kwargs['src_filepath'] = shellpath_sanitise(kwargs['src_filepath'])
+                kwargs['type'] = JobType.parse(kwargs['type'])
+                if 'protocol' in kwargs:
+                    kwargs['protocol'] = JobProtocol.parse(kwargs['protocol'])
+                if kwargs['type'] == JobType.COPY:
+                    required_args = {'dst_siteid', 'dst_filepath'}.difference(kwargs)
+                    if required_args:
+                        raise ValueError("Missing %s" % list(required_args))
+                    kwargs['dst_filepath'] = shellpath_sanitise(kwargs['dst_filepath'])
+
+                super(Job, self).__init__(**subdict(kwargs, self.allowed_args()))
+                element = JobElement(id=0, **kwargs)
+                # reset it afterwards so that the arg requirements for a copy job
+                # are checked by jobelement
+                element.type = JobType.LIST
+                self.elements = [element]
 
             def add(self):
                 """Add job to session."""
@@ -145,10 +233,6 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
                                      message="Error updating job",
                                      http_error_code=500) as session:
                     session.merge(self)
-
-            def enum_json(self):
-                """Dump as JSON document with enums expanded."""
-                return json.dumps(self, cls=WorkqueueJobEncoder)
 
             @staticmethod
             def get(ids=None, status=None, prioritised=True):
@@ -173,3 +257,71 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
                                      message="Error removing all jobs.",
                                      http_error_code=500) as session:
                     session.query.filter(Job.id.in_(set(ids))).delete()
+
+        class JobElement(db_base, JSONMixin, SmartColumnAwareMixin):
+            """Jobs table."""
+
+            __tablename__ = 'jobelements'
+            __table_args__ = (
+                CheckConstraint('attempts <= max_tries'),
+            )
+            # pylint: disable=invalid-name
+            id = SmartColumn(Integer, primary_key=True, required=True, allowed=True)
+            job_id = Column(Integer, ForeignKey('jobs.id'), primary_key=True)
+            job = relationship("Job", back_populates="elements")
+            src_filepath = SmartColumn(TEXT, nullable=False, required=True, allowed=True)
+            dst_filepath = SmartColumn(TEXT, allowed=True)
+            listing = Column(PickleType, nullable=True)
+            size = SmartColumn(Integer, nullable=False, default=0, allowed=True)
+            max_tries = SmartColumn(SmallInteger, nullable=False, default=2, allowed=True)
+            attempts = Column(SmallInteger, nullable=False, default=0)
+            timestamp = Column(TIMESTAMP, nullable=False,
+                               default=datetime.utcnow, onupdate=datetime.utcnow)
+            type = SmartColumn(SmallInteger,  # pylint: disable=invalid-name
+                               CheckConstraint('type in {0}'.format(JobType.values())),
+                               nullable=False, allowed=True, required=True)
+            status = Column(SmallInteger,
+                            CheckConstraint('status in {0}'.format(JobStatus.values())),
+                            nullable=False, default=JobStatus.NEW)
+
+            def asdict(self):
+                """
+                Convert to a dict.
+
+                This makes use of the JSONMixin.encode_for_json() rather than just simply returning
+                dict(self) in order to get datetime.isoformat() conversions. Crucially it keeps the
+                enums in their integer form.
+                """
+                return super(JobElement, self).encode_for_json()
+
+            def encode_for_json(self):
+                """
+                Convert to JSON.
+
+                Conversion for sending to clients. This includes the expansion of enums into
+                human-readable names.
+                """
+                return dict(super(JobElement, self).encode_for_json(),
+                            type=JobType(self.type).name,  # pylint: disable=no-member
+                            status=JobStatus(self.status).name)  # pylint: disable=no-member
+
+            def __init__(self, **kwargs):
+                """Initialisation."""
+                required_args = self.required_args().difference(kwargs)
+                if required_args:
+                    raise ValueError("Missing %s" % list(required_args))
+                kwargs['src_filepath'] = shellpath_sanitise(kwargs['src_filepath'])
+                kwargs['type'] = JobType.parse(kwargs['type'])
+                if kwargs['type'] == JobType.COPY:
+                    required_args = {'dst_filepath'}.difference(kwargs)
+                    if required_args:
+                        raise ValueError("Missing %s" % list(required_args))
+                    kwargs['dst_filepath'] = shellpath_sanitise(kwargs['dst_filepath'])
+                super(JobElement, self).__init__(**subdict(kwargs, self.allowed_args()))
+
+            def update(self):
+                """Update session with current element."""
+                with managed_session(current_app,
+                                     message="Error updating job element",
+                                     http_error_code=500) as session:
+                    session.merge(self)

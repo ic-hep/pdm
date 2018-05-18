@@ -74,12 +74,20 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 /workqueue/api/v1.0/jobs%GET = "@user"
 # Get details of a specific job ID
 /workqueue/api/v1.0/jobs/?%GET = "@user"
-# Get output for a specific job
+# Get all job elements of a specific job for the current user
+/workqueue/api/v1.0/jobs/?/elements%GET = "@user"
+# Get details of a specific job element ID of a specific job
+/workqueue/api/v1.0/jobs/?/elements/?%GET = "@user"
+# Get output for first element in specific job
 /workqueue/api/v1.0/jobs/?/output%GET = "@user"
-# Get specific attempt output for a specific job
-/workqueue/api/v1.0/jobs/?/output/?%GET = "@user"
+# Get output for specific element in specific job
+/workqueue/api/v1.0/jobs/?/elements/?/output%GET = "@user"
+# Get specific attempt output for a specific job element
+/workqueue/api/v1.0/jobs/?/elements/?/output/?%GET = "@user"
 # Get status of a specific job
 /workqueue/api/v1.0/jobs/?/status%GET = "@user"
+# Get status of a specific job element
+/workqueue/api/v1.0/jobs/?/elements/?/status%GET = "@user"
 # Add a job to the database
 /workqueue/api/v1.0/jobs%POST = "@user"
 # Add a list job
@@ -89,9 +97,9 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 # Add a remove job
 /workqueue/api/v1.0/remove%POST = "@user"
 # Get the next available job meeting criteria
-/workqueue/api/v1.0/worker%POST = "@worker"
+/workqueue/api/v1.0/worker/jobs%POST = "@worker"
 # Return job status information
-/workqueue/api/v1.0/worker/?%PUT = "@worker"
+/workqueue/api/v1.0/worker/jobs/?/elements/?%PUT = "@worker"
 
 [auth/site]
 # Get public service details
@@ -114,4 +122,3 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 /site/api/v1.0/session/?%DELETE = "@user"
 # Get the credentials for a session
 /site/api/v1.0/cred/?/?%GET = "@system"
-
