@@ -286,8 +286,8 @@ class Worker(RESTClient, Daemon):
                     script_env = dict(os.environ, X509_CERT_DIR=ca_dir, **proxy_env_vars)
                     command = shlex.split(COMMANDMAP[job['type']][job['protocol']])
                     command[0] = os.path.join(self._script_path, command[0])
-                    self._logger.info("Running elements in subprocess.")
-                    self._current_process = subprocess.Popen(['/bin/bash', '-x'] + command,
+                    self._logger.info("Running elements in subprocess (%s).", command[0])
+                    self._current_process = subprocess.Popen(command,
                                                              bufsize=0,
                                                              stdin=subprocess.PIPE,
                                                              stdout=subprocess.PIPE,
@@ -300,3 +300,6 @@ class Worker(RESTClient, Daemon):
                     StdOutDispatcher(self._current_process.stdout, token_map,
                                      stderr_dispatcher, self._upload)
                     asyncore.loop(timeout=2)
+                    if self._current_process.returncode:
+                        self._logger.error("Job %s failed", job['id'])
+                        self._logger.info("Job stderr:\n%s", stderr_dispatcher.buffer)
