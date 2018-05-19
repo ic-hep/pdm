@@ -392,6 +392,7 @@ INSTALLER_CONF = """\
 """
 
 MYPROXY_CONF = """\
+authorized_retrievers "*"
 pam "required"
 pam_id "login"
 certificate_issuer_cert %(ca_dir)s/user/ca_crt.pem
