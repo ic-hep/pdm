@@ -300,6 +300,6 @@ class Worker(RESTClient, Daemon):
                     StdOutDispatcher(self._current_process.stdout, token_map,
                                      stderr_dispatcher, self._upload)
                     asyncore.loop(timeout=2)
-                    if self._current_process.returncode:
+                    if self._current_process.wait():
                         self._logger.error("Job %s failed", job['id'])
                         self._logger.info("Job stderr:\n%s", stderr_dispatcher.buffer)
