@@ -296,6 +296,9 @@ class Worker(RESTClient, Daemon):
                     json.dump(data, self._current_process.stdin)
                     self._current_process.stdin.write('\n')
                     self._current_process.stdin.flush()
+                    # We have to close stdin to force the subprocess to handle the input
+                    # Otherwise it assumes there may be more data and hangs...
+                    self._current_process.stdin.close()
                     stderr_dispatcher = BufferingDispatcher(self._current_process.stderr)
                     StdOutDispatcher(self._current_process.stdout, token_map,
                                      stderr_dispatcher, self._upload)
