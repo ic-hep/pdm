@@ -113,7 +113,7 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 # Delete a site
 /site/api/v1.0/site/?%DELETE = "@user"
 # Get an endpoint list for any site
-/site/api/v1.0/endpoint/?%GET = "@system"
+/site/api/v1.0/endpoint/?%GET = "@worker"
 # Get session information for a site
 /site/api/v1.0/session/?%GET = "@user"
 # Logon to a site (create a session)
