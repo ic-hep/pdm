@@ -79,12 +79,14 @@ class MyProxyUtils(object):
         if proc.returncode != 0:
             # Command failed, attempt to infer the reason
             error_str = "Unknown myproxy failure"
-            if "Bad password" in stderr:
+            if "invalid password" in stderr:
                 error_str = "Incorrect password"
             elif "Unable to connect to" in stderr:
                 error_str = "Connection error"
             elif "No credentials exist for username" in stderr:
                 error_str = "Unrecognised user"
+            elif "Error in service module" in stderr:
+                error_str = "Unrecognised user/config error"
             if log:
                 log.warn("myproxy-logon command failed with code %u (%s)",
                          proc.returncode, error_str)
