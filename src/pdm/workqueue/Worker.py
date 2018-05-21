@@ -263,8 +263,10 @@ class Worker(RESTClient, Daemon):
 
                 # Set up element id/token map and job stdin data
                 token_map = {}
-                data = {'options': job['extra_opts'],
-                        'files': []}
+                data = {'files': []}
+                options = job['extra_opts']
+                if options is not None:
+                    data.update(options=options)
                 protocol = PROTOCOLMAP[job['protocol']]
                 for element in job['elements']:
                     element_id = "%d.%d" % (job['id'], element['id'])

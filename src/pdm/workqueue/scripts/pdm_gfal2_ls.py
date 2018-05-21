@@ -179,11 +179,8 @@ def json_input():
     data = json.load(sys.stdin)
     global ID # pylint: disable=global-statement
     ID = data.get('files')[0][0]  # (id, file)
-    opts = data.get('options', {})
-    if opts is None:
-        opts = {}
     json.dump({'Reason': 'OK', 'Code': 0, 'id': ID,
-               'Listing': pdm_gfal_ls(str(data.get('files')[0][1]), **opts)},
+               'Listing': pdm_gfal_ls(str(data.get('files')[0][1]), **data.get('options', {}))},
               sys.stdout)
     sys.stdout.flush()
 
