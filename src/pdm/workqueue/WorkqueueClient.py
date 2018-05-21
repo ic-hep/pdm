@@ -13,9 +13,11 @@ class WorkqueueClient(RESTClient):
         super(WorkqueueClient, self).__init__('workqueue')
 
     def list(self, siteid, filepath,  # pylint: disable=too-many-arguments
-             max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
+             max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP, **kwargs):
         """
         List a given path.
+
+        Variable keyword args are passed directly on to the worker script as extra_opts.
 
         Args:
             siteid (int): The id of the site containing the path to be listed.
@@ -31,12 +33,15 @@ class WorkqueueClient(RESTClient):
                                        'src_filepath': filepath,
                                        'max_tries': max_tries,
                                        'priority':  priority,
-                                       'protocol': protocol})
+                                       'protocol': protocol,
+                                       'extra_opts': kwargs})
 
     def copy(self, src_siteid, src_filepath, dst_siteid,  # pylint: disable=too-many-arguments
-             dst_filepath, max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
+             dst_filepath, max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP, **kwargs):
         """
         Copy a one path to another.
+
+        Variable keyword args are passed directly on to the worker script as extra_opts.
 
         Args:
             src_siteid (int): The id of the site containing the path to be copied from.
@@ -56,12 +61,15 @@ class WorkqueueClient(RESTClient):
                                        'dst_filepath': dst_filepath,
                                        'max_tries': max_tries,
                                        'priority':  priority,
-                                       'protocol': protocol})
+                                       'protocol': protocol,
+                                       'extra_opts': kwargs})
 
     def remove(self, siteid, filepath,  # pylint: disable=too-many-arguments
-               max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP):
+               max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP, **kwargs):
         """
         Remove a given path.
+
+        Variable keyword args are passed directly on to the worker script as extra_opts.
 
         Args:
             siteid (int): The id of the site containing the path to be removed.
@@ -78,7 +86,8 @@ class WorkqueueClient(RESTClient):
                                          'src_filepath': filepath,
                                          'max_tries': max_tries,
                                          'priority':  priority,
-                                         'protocol': protocol})
+                                         'protocol': protocol,
+                                         'extra_opts': kwargs})
 
     def jobs(self):
         """
