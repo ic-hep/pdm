@@ -9,6 +9,7 @@ from time import sleep
 from datetime import datetime
 from pdm.userservicedesk.HRClient import HRClient
 from pdm.userservicedesk.TransferClientFacade import TransferClientFacade
+from pdm.site.SiteClient import SiteClient
 
 
 class UserCommand(object):
@@ -77,12 +78,6 @@ class UserCommand(object):
         user_parser.add_argument('-b', '--block', action='store_true')
         user_parser.add_argument('-s', '--protocol', type=str, help='protocol')
         user_parser.set_defaults(func=self.copy)
-        # site list
-        user_parser = subparsers.add_parser('sites',
-                                            help="list available sites")
-        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
-                                 help='optional token file location (default=~/.pdm/token)')
-        user_parser.set_defaults(func=self.sitelist)
         # status
         user_parser = subparsers.add_parser('status',
                                             help="get status of a job/task")
@@ -103,6 +98,47 @@ class UserCommand(object):
         user_parser.add_argument('-a', '--attempt', default=-1,
                                  help="Attempt number, leave out for the last attempt")
         user_parser.set_defaults(func=self.log)
+        # site list
+        user_parser = subparsers.add_parser('sites',
+                                            help="list available sites")
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
+        user_parser.set_defaults(func=self.sitelist)
+        # get site information
+        user_parser = subparsers.add_parser('site', help="list site information")
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
+        user_parser.add_argument('name', type='str', help="site name")
+        user_parser.set_defaults(func=self.get_site)
+        # add a site
+        user_parser = subparsers.add_parser('addsite', help="add a site to the pdm")
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
+        user_parser.add_argument('name', type='str', help="site name", required=True)
+        user_parser.add_argument('path', type='str',
+                                 help="The default (starting) path to use at this site")
+        user_parser.add_argument('desc', type='str', help="site description")
+        user_parser.add_argument('-p', '--public', action='store_true')
+        user_parser.set_defaults(func=self.add_site)
+        # delete site
+        user_parser = subparsers.add_parser('delsite', help="delete a site from the pdm")
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
+        user_parser.add_argument('name', type='str', help="site name", required=True)
+        user_parser.set_defaults(func=self.del_site)
+        # site logon
+        user_parser = subparsers.add_parser('sitelogin', help="login to a site")
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
+        user_parser.add_argument('name', type='str', help="site name", required=True)
+        user_parser.add_argument('-u', '--user', type=str, help="site specific username")
+        user_parser.add_argument('-p', '--password', type=str, help="user site password")
+        user_parser.add_argument('-l', '--lifetime', type=int,
+                                 help="The time (in hours) to create the credential for")
+        user_parser.add_argument('-V', '--voms', type=str, default=None,
+                                 help="the VO to use in the credential VOMS extension")
+
+        user_parser.set_defaults(func=self.sitelogin)
 
         # sub-command functions
 
@@ -131,7 +167,7 @@ class UserCommand(object):
 
     def login(self, args):  # pylint: disable=no-self-use
         """
-        User login function. Prints out a token obtained from the server.
+        User login function. Stores a token obtained from the server in a file.
         """
         password = getpass()
 
@@ -150,25 +186,25 @@ class UserCommand(object):
             os.chmod(filename, 0o600)
             f.write(token)
 
-        print token
+        print "User {} logged in".format(args.email)
 
     def passwd(self, args):  # pylint: disable=no-self-use
         """ Change user password """
 
         token = UserCommand._get_token(args.token)
+        if token:
+            password = getpass(prompt='Old Password: ')
+            newpassword = getpass(prompt='New Password: ')
+            newpassword1 = getpass(prompt='Confirm New Password: ')
 
-        password = getpass(prompt='Old Password: ')
-        newpassword = getpass(prompt='New Password: ')
-        newpassword1 = getpass(prompt='Confirm New Password: ')
+            if newpassword != newpassword1:
+                print "Passwords don't match. Aborted"
+                return
 
-        if newpassword != newpassword1:
-            print "Passwords don't match. Aborted"
-            return
-
-        client = HRClient()
-        client.set_token(token)
-        ret = client.change_password(password, newpassword)
-        print ret
+            client = HRClient()
+            client.set_token(token)
+            ret = client.change_password(password, newpassword)
+            print ret
 
     def whoami(self, args):  # pylint: disable=no-self-use
         """
@@ -195,7 +231,7 @@ class UserCommand(object):
         token = UserCommand._get_token(args.token)
         if token:
             client = TransferClientFacade(token)
-            # remove None values, position args, func and toke from the kwargs:
+            # remove None values, position args, func and token from the kwargs:
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
                              value is not None and key not in ('func', 'site', 'token',
                                                                'config', 'verbosity')}
@@ -221,8 +257,6 @@ class UserCommand(object):
                           (status['status'], resp['id'])
             else:
                 print " No such site: %s ?" % (args.site,)
-        else:
-            print "No token. Please login first"
 
     def sitelist(self, args):
         """
@@ -239,8 +273,7 @@ class UserCommand(object):
             print '|' + 91 * '-' + '|'
             for elem in sites:
                 print '|{site_name:40s}|{site_desc:50s}|'.format(**elem)
-        else:
-            print "No token. Please login first"
+            print '-' + 91 * '-' + '-'
 
     def _print_formatted_listing(self, listing):  # pylint: disable=no-self-use
         """
@@ -272,8 +305,6 @@ class UserCommand(object):
         if token:
             client = TransferClientFacade(token)
             self._status(job_id, client, block=block)
-        else:
-            print "No token. Please login first"
 
     def _status(self, job_id, client, block=False):
 
@@ -308,8 +339,6 @@ class UserCommand(object):
                                                                'config', 'verbosity')}
             response = client.remove(args.site, **accepted_args)  # max_tries, priority)
             self._status(response['id'], client, block=args.block)
-        else:
-            print "No token. Please login first"
 
     def copy(self, args):  # pylint: disable=no-self-use
         """
@@ -329,8 +358,6 @@ class UserCommand(object):
                                              'config', 'verbosity')}
             response = client.copy(src_site, dst_site, **accepted_args)
             self._status(response['id'], client, block=args.block)
-        else:
-            print "No token. Please login first"
 
     def log(self, args):
         """
@@ -351,12 +378,82 @@ class UserCommand(object):
             else:
                 log_listing = client.output(job_id, args.attempt)['log']
             print log_listing
-        else:
-            print "No token. Please login first"
+
+    def get_site(self, args):
+        """
+        Get site information from the Site Service
+        :param args:
+        :return:
+        """
+        token = UserCommand._get_token(args.token)
+        if token:
+            pass
+
+    def add_site(self, args):
+        """
+        Add a site to the database
+        :param args:
+        :return:
+        """
+        token = UserCommand._get_token(args.token)
+        if token:
+            pass
+
+    def del_site(self, args):
+        """
+        Delete a site
+        :param args:
+        :return:
+        """
+        token = UserCommand._get_token(args.token)
+        if token:
+            pass
+
+    def sitelogin(self, args):
+        """
+        User site logon
+        :param args:
+        :return:
+        """
+        token = UserCommand._get_token(args.token)
+        if token:
+            if not args.user:
+                args.user = raw_input("Please enter username for site {}:".format(args.name))
+            password = getpass("Please enter password for site {}:".format(args.name))
+            helper = SiteHelper(token)
+            site_id = helper.get_site_id_by_name(args.name)
+            site_client = helper.get_site_client()
+            site_client.logon(self, site_id, args.user, password, lifetime=args.lifetime, voms=args.voms)
 
     @staticmethod
     def _get_token(tokenfile):
 
         with open(os.path.expanduser(tokenfile)) as f:
             token = f.read()
+            if not token:
+                print "No token. Please login first"
             return token
+
+class SiteHelper(object):
+    """
+    Site Helper
+    """
+
+    def __init(self, user_token):
+        self.__user_token = user_token
+        self.__site_client = SiteClient()
+        self.__site_client.set_token(user_token)
+        self.__sitelist = self.__site_client.get_sites()
+
+    def get_site_id_by_name(self, site_name):
+        if self.__user_token:
+            site_client = SiteClient()
+            site_client.set_token(self.__user_token)
+            sitelist = site_client.get_sites()
+            siteid = [elem['site_id'] for elem in sitelist if elem['site_name'] == site_name]
+            return siteid
+
+    def get_site_client(self):
+        return self.__site_client
+
+
