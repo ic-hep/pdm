@@ -136,7 +136,7 @@ class X509Utils(object):
         ca_dn = X509Utils.rfc_to_openssl(ca_raw_dn)
         policy_text = "access_id_CA   X509    '%s'\n" % ca_dn
         policy_text += "pos_rights     globus  CA:sign\n"
-        policy_text += "cond_subjects  globus  '\"/OU=Users/*\" \"/OU=Hosts/*\"'\n"
+        policy_text += "cond_subjects  globus  '\"/O=*\"'\n"
         with open(target_file, "w") as pol_fd:
             pol_fd.write(policy_text)
 
