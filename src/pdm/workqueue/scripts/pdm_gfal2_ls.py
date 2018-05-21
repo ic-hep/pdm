@@ -17,7 +17,7 @@ _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 ID = None
 
 
-def pdm_gfal_ls(root, max_depth=-1, verbosity=logging.INFO):
+def pdm_gfal_ls(root, depth=-1, verbosity=logging.INFO):
     """
     Get a directory listing of a given depth. Depth = -1 list the filesystem for all levels
     """
@@ -25,9 +25,9 @@ def pdm_gfal_ls(root, max_depth=-1, verbosity=logging.INFO):
     # _logger.addHandler(logging.StreamHandler())
     _logger.setLevel(verbosity)
 
-    _logger.info("gfal listing root: %s at max depth: %d", root, max_depth)
+    _logger.info("gfal listing root: %s at max depth: %d", root, depth)
 
-    max_depth = max(-1, max_depth)
+    max_depth = max(-1, depth)
 
     ctx = gfal2.creat_context()
     result = OrderedDict()
@@ -166,7 +166,7 @@ def main():
     parser.add_argument("-d", "--depth", default=-1, type=int, help="depth")
     args = parser.parse_args()
     json.dump(pdm_gfal_ls(args.topdir,
-                          max_depth=max(-1, args.depth), verbosity=args.verbosity), sys.stdout)
+                          depth=max(-1, args.depth), verbosity=args.verbosity), sys.stdout)
     sys.stdout.flush()
 
 

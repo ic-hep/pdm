@@ -71,7 +71,7 @@ class TestUsercommand(unittest.TestCase):
         args = self._parser.parse_args('list source  -m 3 -t  {}'.format(self._tmp_file.name).split())
         args.func(args)
         mock_output.assert_called_with(1)
-        mock_list.assert_called_with('source', max_tries=3)
+        mock_list.assert_called_with('source', max_tries=3, depth = 0)
 
         mock_output.reset_mock()
         mock_list.reset_mock()
