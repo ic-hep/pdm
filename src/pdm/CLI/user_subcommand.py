@@ -57,6 +57,8 @@ class UserCommand(object):
         user_parser.add_argument('-m', '--max_tries', type=int, help='max tries')
         user_parser.add_argument('-p', '--priority', type=int, help='priority')
         user_parser.add_argument('-s', '--protocol', type=str, help='protocol')
+        user_parser.add_argument('-d', '--depth', type=int, default=0,
+                                 help='listing depths. Default: current level')
         user_parser.set_defaults(func=self.list)
         # remove
         user_parser = subparsers.add_parser('remove', help="remove files from remote site.")
@@ -202,7 +204,7 @@ class UserCommand(object):
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
                              value is not None and key not in ('func', 'site', 'token',
                                                                'config', 'verbosity')}
-            resp = client.list(args.site, **accepted_args)  # max_tries, priority)
+            resp = client.list(args.site, **accepted_args)  # max_tries, priority, depth)
             # resp and status both carry job id:
             if resp:
                 status = client.status(resp['id'])

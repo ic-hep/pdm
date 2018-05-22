@@ -263,8 +263,10 @@ class Worker(RESTClient, Daemon):
 
                 # Set up element id/token map and job stdin data
                 token_map = {}
-                data = {'options': job['extra_opts'],
-                        'files': []}
+                data = {'files': []}
+                options = job['extra_opts']
+                if options is not None:
+                    data.update(options=options)
                 protocol = PROTOCOLMAP[job['protocol']]
                 for element in job['elements']:
                     element_id = "%d.%d" % (job['id'], element['id'])
@@ -286,8 +288,8 @@ class Worker(RESTClient, Daemon):
                     script_env = dict(os.environ, X509_CERT_DIR=ca_dir, **proxy_env_vars)
                     command = shlex.split(COMMANDMAP[job['type']][job['protocol']])
                     command[0] = os.path.join(self._script_path, command[0])
-                    self._logger.info("Running elements in subprocess.")
-                    self._current_process = subprocess.Popen(['/bin/bash', '-x'] + command,
+                    self._logger.info("Running elements in subprocess (%s).", command[0])
+                    self._current_process = subprocess.Popen(command,
                                                              bufsize=0,
                                                              stdin=subprocess.PIPE,
                                                              stdout=subprocess.PIPE,
@@ -296,7 +298,13 @@ class Worker(RESTClient, Daemon):
                     json.dump(data, self._current_process.stdin)
                     self._current_process.stdin.write('\n')
                     self._current_process.stdin.flush()
+                    # We have to close stdin to force the subprocess to handle the input
+                    # Otherwise it assumes there may be more data and hangs...
+                    self._current_process.stdin.close()
                     stderr_dispatcher = BufferingDispatcher(self._current_process.stderr)
                     StdOutDispatcher(self._current_process.stdout, token_map,
                                      stderr_dispatcher, self._upload)
                     asyncore.loop(timeout=2)
+                    if self._current_process.wait():
+                        self._logger.error("Job %s failed", job['id'])
+                        self._logger.info("Job stderr:\n%s", stderr_dispatcher.buffer)
