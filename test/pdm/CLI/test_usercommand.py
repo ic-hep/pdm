@@ -2,6 +2,8 @@ import mock
 import unittest
 import argparse
 import tempfile
+import datetime
+from pdm.framework.Tokens import TokenService
 from pdm.CLI.user_subcommand import UserCommand
 
 
@@ -19,7 +21,11 @@ class TestUsercommand(unittest.TestCase):
         subparsers = self._parser.add_subparsers()
         UserCommand(subparsers)
         self._tmp_file =  tempfile.NamedTemporaryFile(dir='/tmp')
-        self._tmp_file.write("Fake_token")
+        future_date = (datetime.timedelta(0, 600) + datetime.datetime.utcnow()).isoformat()
+        plain = {'id': 44, 'expiry': future_date}
+        svc = TokenService()
+        validtoken = svc.issue(plain)
+        self._tmp_file.write(validtoken)
         self._tmp_file.flush()
 
     def tearDown(self):

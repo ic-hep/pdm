@@ -113,29 +113,29 @@ class UserCommand(object):
         user_parser = subparsers.add_parser('site', help="list site information")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
-        user_parser.add_argument('name', type='str', help="site name")
+        user_parser.add_argument('name', type=str, help='site name')
         user_parser.set_defaults(func=self.get_site)
         # add a site
         user_parser = subparsers.add_parser('addsite', help="add a site to the pdm")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
-        user_parser.add_argument('name', type='str', help="site name", required=True)
-        user_parser.add_argument('path', type='str',
+        user_parser.add_argument('name', type=str, help="site name")
+        user_parser.add_argument('path', type=str,
                                  help="The default (starting) path to use at this site")
-        user_parser.add_argument('desc', type='str', help="site description")
+        user_parser.add_argument('desc', type=str, help="site description")
         user_parser.add_argument('-p', '--public', action='store_true')
         user_parser.set_defaults(func=self.add_site)
         # delete site
         user_parser = subparsers.add_parser('delsite', help="delete a site from the pdm")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
-        user_parser.add_argument('name', type='str', help="site name", required=True)
+        user_parser.add_argument('name', type=str, help="site name")
         user_parser.set_defaults(func=self.del_site)
         # site logon
         user_parser = subparsers.add_parser('sitelogin', help="login to a site")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
-        user_parser.add_argument('name', type='str', help="site name", required=True)
+        user_parser.add_argument('name', type=str, help="site name")
         user_parser.add_argument('-u', '--user', type=str, help="site specific username")
         user_parser.add_argument('-p', '--password', type=str, help="user site password")
         user_parser.add_argument('-l', '--lifetime', type=int,
