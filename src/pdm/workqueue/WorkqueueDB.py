@@ -76,13 +76,13 @@ PROTOCOLMAP = {JobProtocol.GRIDFTP: 'gsiftp',
                JobProtocol.SSH: 'ssh',
                JobProtocol.DUMMY: 'dummy'}
 
-COMMANDMAP = {JobType.LIST: {JobProtocol.GRIDFTP: 'pdm-gfal2-ls.py',
+COMMANDMAP = {JobType.LIST: {JobProtocol.GRIDFTP: 'pdm_gfal2_ls.py',
                              JobProtocol.SSH: 'sftp',
                              JobProtocol.DUMMY: 'dummy.sh list'},
-              JobType.REMOVE: {JobProtocol.GRIDFTP: 'pdm-gfal2-rm.py',
+              JobType.REMOVE: {JobProtocol.GRIDFTP: 'pdm_gfal2_rm.py',
                                JobProtocol.SSH: 'sftp',
                                JobProtocol.DUMMY: 'dummy.sh remove'},
-              JobType.COPY: {JobProtocol.GRIDFTP: 'pdm-gfal2-copy.py',
+              JobType.COPY: {JobProtocol.GRIDFTP: 'pdm_gfal2_copy.py',
                              JobProtocol.SSH: 'scp',
                              JobProtocol.DUMMY: 'dummy.sh copy'}}
 SHELLPATH_REGEX = re.compile(r'^[/~][a-zA-Z0-9/_.*~-]*$')

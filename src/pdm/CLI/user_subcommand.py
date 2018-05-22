@@ -4,12 +4,15 @@ Example usage: pdm register -e fred@flintstones.com -n Fred -s Flintstone
 """
 import os
 import errno
+import stat
 from getpass import getpass
 from time import sleep
 from datetime import datetime
 from pdm.userservicedesk.HRClient import HRClient
 from pdm.userservicedesk.TransferClientFacade import TransferClientFacade
 from pdm.site.SiteClient import SiteClient
+from pdm.CLI.filemode import filemode
+from pdm.userservicedesk.HRUtils import HRUtils
 
 
 class UserCommand(object):
@@ -55,6 +58,8 @@ class UserCommand(object):
         user_parser.add_argument('-m', '--max_tries', type=int, help='max tries')
         user_parser.add_argument('-p', '--priority', type=int, help='priority')
         user_parser.add_argument('-s', '--protocol', type=str, help='protocol')
+        user_parser.add_argument('-d', '--depth', type=int, default=0,
+                                 help='listing depths. Default: current level')
         user_parser.set_defaults(func=self.list)
         # remove
         user_parser = subparsers.add_parser('remove', help="remove files from remote site.")
@@ -138,7 +143,7 @@ class UserCommand(object):
         user_parser.add_argument('-V', '--voms', type=str, default=None,
                                  help="the VO to use in the credential VOMS extension")
 
-        user_parser.set_defaults(func=self.sitelogin)
+        user_parser.set_defaults(func=self.site_login)
 
         # sub-command functions
 
@@ -182,9 +187,9 @@ class UserCommand(object):
                 print os.strerror(exc.errno)
                 raise
 
-        with open(filename, "w") as f:
+        with open(filename, "w") as token_file:
             os.chmod(filename, 0o600)
-            f.write(token)
+            token_file.write(token)
 
         print "User {} logged in".format(args.email)
 
@@ -235,7 +240,7 @@ class UserCommand(object):
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
                              value is not None and key not in ('func', 'site', 'token',
                                                                'config', 'verbosity')}
-            resp = client.list(args.site, **accepted_args)  # max_tries, priority)
+            resp = client.list(args.site, **accepted_args)  # max_tries, priority, depth)
             # resp and status both carry job id:
             if resp:
                 status = client.status(resp['id'])
@@ -247,9 +252,10 @@ class UserCommand(object):
                         break
 
                 if status['status'] == 'DONE':
-                    listing_dict = client.output(resp['id'])
-                    listing = listing_dict['listing']
-                    self._print_formatted_listing(listing)
+                    listing_output = client.output(resp['id'])
+                    listing_d_value = listing_output['Listing']  # phase 2, capital 'L'
+                    root, listing = listing_d_value.items()[0]  # top root
+                    self._print_formatted_listing(root, listing_d_value)
                 elif resp['status'] == 'FAILED':
                     print " Failed to obtain a listing for job %d " % (resp['id'],)
                 else:
@@ -258,7 +264,7 @@ class UserCommand(object):
             else:
                 print " No such site: %s ?" % (args.site,)
 
-    def sitelist(self, args):
+    def sitelist(self, args):  # pylint disable-no-self-use
         """
         Print list of available sites
         :param args: carry a user token
@@ -275,23 +281,39 @@ class UserCommand(object):
                 print '|{site_name:40s}|{site_desc:50s}|'.format(**elem)
             print '-' + 91 * '-' + '-'
 
-    def _print_formatted_listing(self, listing):  # pylint: disable=no-self-use
+    def _print_formatted_listing(self, root, full_listing, level=0):  # pylint: disable=no-self-use
         """
         Print formatted file listing.
-        :param listing: listing (dictionary) to be pretty-printed a'la ls -l
+        :param listing: listing (a list dictionaries) to be pretty-printed a'la ls -l
+        for a single level listing
         :return: None
         """
-        size_len = len(str(max(d['size'] for d in listing)))
-        links_len = max(d['nlinks'] for d in listing)
-        uid_s = max(len(d['userid']) for d in listing)
-        gid_s = max(len(d['groupid']) for d in listing)
+        # level = len(getouterframes(currentframe(1)))
+        indent = 4
 
-        fmt = '{permissions:12s}{nlinks:>%dd} {userid:%ds} {groupid:%ds} ' \
-              '{size:%dd} {datestamp:20s} {name:s}' % (links_len, uid_s, gid_s, size_len)
-        # print fmt
+        listing = full_listing[root]
+
+        size_len = len(str(max(d['st_size'] for d in listing)))
+        links_len = max(d['st_nlink'] for d in listing)
+        uid_s = len(str(max(d['st_uid'] for d in listing)))
+        gid_s = len(str(max(d['st_gid'] for d in listing)))
+
+        fmt = '{st_mode:12s} {st_nlink:>%dd} {st_uid:%dd} {st_gid:%dd} ' \
+              '{st_size:%dd} {st_mtime:20s} {name:s}' % (links_len, uid_s, gid_s, size_len)
+
         for elem in listing:
-            print fmt.format(**dict(elem,
-                                    datestamp=str(datetime.utcfromtimestamp(elem['datestamp']))))
+            # filter ot bits we don't want:
+            filtered_elem = {key: value for (key, value) in elem.iteritems() if
+                             value is not None
+                             and key not in ('st_atime', 'st_ctime', 'st_ino', 'st_dev')}
+            print level * indent * ' ', fmt. \
+                format(**dict(filtered_elem,
+                              st_mode=filemode(elem['st_mode']),
+                              st_mtime=str(datetime.utcfromtimestamp(elem['st_mtime']))))
+
+            if stat.S_ISDIR(elem['st_mode']):
+                self._print_formatted_listing(os.path.join(root, elem['name']),
+                                              full_listing, level=level + 1)
 
     def status(self, args):
         """
@@ -387,7 +409,12 @@ class UserCommand(object):
         """
         token = UserCommand._get_token(args.token)
         if token:
-            pass
+            site_client = SiteClient()
+            site_client.set_token(token)
+            sitelist = site_client.get_sites()
+            siteid = [elem['site_id'] for elem in sitelist if elem['site_name'] == args.name]
+            siteinfo = site_client.get_site(siteid)
+            print siteinfo
 
     def add_site(self, args):
         """
@@ -409,7 +436,7 @@ class UserCommand(object):
         if token:
             pass
 
-    def sitelogin(self, args):
+    def site_login(self, args):
         """
         User site logon
         :param args:
@@ -420,40 +447,31 @@ class UserCommand(object):
             if not args.user:
                 args.user = raw_input("Please enter username for site {}:".format(args.name))
             password = getpass("Please enter password for site {}:".format(args.name))
-            helper = SiteHelper(token)
-            site_id = helper.get_site_id_by_name(args.name)
-            site_client = helper.get_site_client()
+            site_client = SiteClient()
+            site_client.set_token(token)
+            sitelist = site_client.get_sites()
+            site_id = [elem['site_id'] for elem in sitelist if elem['site_name'] == args.name]
             site_client.logon(self, site_id, args.user, password, lifetime=args.lifetime, voms=args.voms)
+
+    @staticmethod
+    def _get_site_id(name, token):
+        site_client = SiteClient()
+        site_client.set_token(token)
+        sitelist = site_client.get_sites()
+        site_id = [elem['site_id'] for elem in sitelist if elem['site_name'] == name]
+        return site_id
 
     @staticmethod
     def _get_token(tokenfile):
 
-        with open(os.path.expanduser(tokenfile)) as f:
-            token = f.read()
+        with open(os.path.expanduser(tokenfile)) as token_file:
+            token = token_file.read()
             if not token:
                 print "No token. Please login first"
+            if HRUtils.is_token_expired_insecure(token):
+                print "Token expired. Please log in again"
+                return None
             return token
 
-class SiteHelper(object):
-    """
-    Site Helper
-    """
-
-    def __init(self, user_token):
-        self.__user_token = user_token
-        self.__site_client = SiteClient()
-        self.__site_client.set_token(user_token)
-        self.__sitelist = self.__site_client.get_sites()
-
-    def get_site_id_by_name(self, site_name):
-        if self.__user_token:
-            site_client = SiteClient()
-            site_client.set_token(self.__user_token)
-            sitelist = site_client.get_sites()
-            siteid = [elem['site_id'] for elem in sitelist if elem['site_name'] == site_name]
-            return siteid
-
-    def get_site_client(self):
-        return self.__site_client
 
 

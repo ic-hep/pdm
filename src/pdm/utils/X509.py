@@ -129,12 +129,14 @@ class X509Utils(object):
 
             Returns None.
         """
+        if isinstance(ca_pem, unicode):
+            ca_pem = ca_pem.encode('ascii','ignore')
         cert = X509.load_cert_string(ca_pem, X509.FORMAT_PEM)
         ca_raw_dn = X509Utils.x509name_to_str(cert.get_subject())
         ca_dn = X509Utils.rfc_to_openssl(ca_raw_dn)
         policy_text = "access_id_CA   X509    '%s'\n" % ca_dn
         policy_text += "pos_rights     globus  CA:sign\n"
-        policy_text += "cond_subjects  globus  '\"/OU=Users/*\" \"/OU=Hosts/*\"'\n"
+        policy_text += "cond_subjects  globus  '\"/O=*\"'\n"
         with open(target_file, "w") as pol_fd:
             pol_fd.write(policy_text)
 
