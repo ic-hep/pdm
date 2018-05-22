@@ -4,11 +4,13 @@ Example usage: pdm register -e fred@flintstones.com -n Fred -s Flintstone
 """
 import os
 import errno
+import stat
 from getpass import getpass
 from time import sleep
 from datetime import datetime
 from pdm.userservicedesk.HRClient import HRClient
 from pdm.userservicedesk.TransferClientFacade import TransferClientFacade
+from pdm.CLI.filemode import filemode
 
 
 class UserCommand(object):
@@ -148,9 +150,9 @@ class UserCommand(object):
                 print os.strerror(exc.errno)
                 raise
 
-        with open(filename, "w") as f:
+        with open(filename, "w") as token_file:
             os.chmod(filename, 0o600)
-            f.write(token)
+            token_file.write(token)
 
         print token
 
@@ -213,9 +215,10 @@ class UserCommand(object):
                         break
 
                 if status['status'] == 'DONE':
-                    listing_dict = client.output(resp['id'])
-                    listing = listing_dict['listing']
-                    self._print_formatted_listing(listing)
+                    listing_output = client.output(resp['id'])
+                    listing_d_value = listing_output['Listing']  # phase 2, capital 'L'
+                    root, listing = listing_d_value.items()[0]  # top root
+                    self._print_formatted_listing(root, listing_d_value)
                 elif resp['status'] == 'FAILED':
                     print " Failed to obtain a listing for job %d " % (resp['id'],)
                 else:
@@ -226,7 +229,7 @@ class UserCommand(object):
         else:
             print "No token. Please login first"
 
-    def sitelist(self, args):
+    def sitelist(self, args):  # pylint disable-no-self-use
         """
         Print list of available sites
         :param args: carry a user token
@@ -244,23 +247,39 @@ class UserCommand(object):
         else:
             print "No token. Please login first"
 
-    def _print_formatted_listing(self, listing):  # pylint: disable=no-self-use
+    def _print_formatted_listing(self, root, full_listing, level=0):  # pylint: disable=no-self-use
         """
         Print formatted file listing.
-        :param listing: listing (dictionary) to be pretty-printed a'la ls -l
+        :param listing: listing (a list dictionaries) to be pretty-printed a'la ls -l
+        for a single level listing
         :return: None
         """
-        size_len = len(str(max(d['size'] for d in listing)))
-        links_len = max(d['nlinks'] for d in listing)
-        uid_s = max(len(d['userid']) for d in listing)
-        gid_s = max(len(d['groupid']) for d in listing)
+        # level = len(getouterframes(currentframe(1)))
+        indent = 4
 
-        fmt = '{permissions:12s}{nlinks:>%dd} {userid:%ds} {groupid:%ds} ' \
-              '{size:%dd} {datestamp:20s} {name:s}' % (links_len, uid_s, gid_s, size_len)
-        # print fmt
+        listing = full_listing[root]
+
+        size_len = len(str(max(d['st_size'] for d in listing)))
+        links_len = max(d['st_nlink'] for d in listing)
+        uid_s = len(str(max(d['st_uid'] for d in listing)))
+        gid_s = len(str(max(d['st_gid'] for d in listing)))
+
+        fmt = '{st_mode:12s} {st_nlink:>%dd} {st_uid:%dd} {st_gid:%dd} ' \
+              '{st_size:%dd} {st_mtime:20s} {name:s}' % (links_len, uid_s, gid_s, size_len)
+
         for elem in listing:
-            print fmt.format(**dict(elem,
-                                    datestamp=str(datetime.utcfromtimestamp(elem['datestamp']))))
+            # filter ot bits we don't want:
+            filtered_elem = {key: value for (key, value) in elem.iteritems() if
+                             value is not None
+                             and key not in ('st_atime', 'st_ctime', 'st_ino', 'st_dev')}
+            print level * indent * ' ', fmt. \
+                format(**dict(filtered_elem,
+                              st_mode=filemode(elem['st_mode']),
+                              st_mtime=str(datetime.utcfromtimestamp(elem['st_mtime']))))
+
+            if stat.S_ISDIR(elem['st_mode']):
+                self._print_formatted_listing(os.path.join(root, elem['name']),
+                                              full_listing, level=level + 1)
 
     def status(self, args):
         """
@@ -359,6 +378,6 @@ class UserCommand(object):
     @staticmethod
     def _get_token(tokenfile):
 
-        with open(os.path.expanduser(tokenfile)) as f:
-            token = f.read()
+        with open(os.path.expanduser(tokenfile)) as token_file:
+            token = token_file.read()
             return token
