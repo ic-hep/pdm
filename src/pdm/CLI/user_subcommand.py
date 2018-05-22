@@ -137,7 +137,6 @@ class UserCommand(object):
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('name', type=str, help="site name")
         user_parser.add_argument('-u', '--user', type=str, help="site specific username")
-        user_parser.add_argument('-p', '--password', type=str, help="user site password")
         user_parser.add_argument('-l', '--lifetime', type=int,
                                  help="The time (in hours) to create the credential for")
         user_parser.add_argument('-V', '--voms', type=str, default=None,
