@@ -8,7 +8,6 @@ import stat
 from getpass import getpass
 from time import sleep
 from datetime import datetime
-from inspect import getouterframes, currentframe
 from pdm.userservicedesk.HRClient import HRClient
 from pdm.userservicedesk.TransferClientFacade import TransferClientFacade
 from pdm.CLI.filemode import filemode
@@ -151,9 +150,9 @@ class UserCommand(object):
                 print os.strerror(exc.errno)
                 raise
 
-        with open(filename, "w") as f:
+        with open(filename, "w") as token_file:
             os.chmod(filename, 0o600)
-            f.write(token)
+            token_file.write(token)
 
         print token
 
@@ -217,7 +216,7 @@ class UserCommand(object):
 
                 if status['status'] == 'DONE':
                     listing_output = client.output(resp['id'])
-                    listing_d_value = listing_output['Listing'] # phase 2, capital 'L'
+                    listing_d_value = listing_output['Listing']  # phase 2, capital 'L'
                     root, listing = listing_d_value.items()[0]  # top root
                     self._print_formatted_listing(root, listing_d_value)
                 elif resp['status'] == 'FAILED':
@@ -230,7 +229,7 @@ class UserCommand(object):
         else:
             print "No token. Please login first"
 
-    def sitelist(self, args):
+    def sitelist(self, args):  # pylint disable-no-self-use
         """
         Print list of available sites
         :param args: carry a user token
@@ -255,7 +254,7 @@ class UserCommand(object):
         for a single level listing
         :return: None
         """
-        #level = len(getouterframes(currentframe(1)))
+        # level = len(getouterframes(currentframe(1)))
         indent = 4
 
         listing = full_listing[root]
@@ -273,11 +272,14 @@ class UserCommand(object):
             filtered_elem = {key: value for (key, value) in elem.iteritems() if
                              value is not None
                              and key not in ('st_atime', 'st_ctime', 'st_ino', 'st_dev')}
-            print level*indent*' ', fmt.format(**dict(filtered_elem, st_mode = filemode(elem['st_mode']),
-                                    st_mtime=str(datetime.utcfromtimestamp(elem['st_mtime']))))
+            print level * indent * ' ', fmt. \
+                format(**dict(filtered_elem,
+                              st_mode=filemode(elem['st_mode']),
+                              st_mtime=str(datetime.utcfromtimestamp(elem['st_mtime']))))
 
             if stat.S_ISDIR(elem['st_mode']):
-                self._print_formatted_listing(os.path.join(root, elem['name']), full_listing, level=level+1)
+                self._print_formatted_listing(os.path.join(root, elem['name']),
+                                              full_listing, level=level + 1)
 
     def status(self, args):
         """
@@ -376,6 +378,6 @@ class UserCommand(object):
     @staticmethod
     def _get_token(tokenfile):
 
-        with open(os.path.expanduser(tokenfile)) as f:
-            token = f.read()
+        with open(os.path.expanduser(tokenfile)) as token_file:
+            token = token_file.read()
             return token
