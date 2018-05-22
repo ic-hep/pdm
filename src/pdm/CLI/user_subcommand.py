@@ -137,7 +137,7 @@ class UserCommand(object):
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('name', type=str, help="site name")
         user_parser.add_argument('-u', '--user', type=str, help="site specific username")
-        user_parser.add_argument('-l', '--lifetime', type=int,
+        user_parser.add_argument('-l', '--lifetime', type=int, default=36,
                                  help="The time (in hours) to create the credential for")
         user_parser.add_argument('-V', '--voms', type=str, default=None,
                                  help="the VO to use in the credential VOMS extension")
@@ -411,9 +411,12 @@ class UserCommand(object):
             site_client = SiteClient()
             site_client.set_token(token)
             sitelist = site_client.get_sites()
-            siteid = [elem['site_id'] for elem in sitelist if elem['site_name'] == args.name]
-            siteinfo = site_client.get_site(siteid)
-            print siteinfo
+            site_id = [elem['site_id'] for elem in sitelist if elem['site_name'] == args.name]
+            if site_id:
+                siteinfo = site_client.get_site(site_id[0])
+                print siteinfo
+            else:
+                print "site %s not found !", args.name
 
     def add_site(self, args):
         """
@@ -450,8 +453,10 @@ class UserCommand(object):
             site_client.set_token(token)
             sitelist = site_client.get_sites()
             site_id = [elem['site_id'] for elem in sitelist if elem['site_name'] == args.name]
-            site_client.logon(self, site_id, args.user, password, lifetime=args.lifetime, voms=args.voms)
-
+            if site_id:
+                site_client.logon(site_id[0], args.user, password, lifetime=args.lifetime, voms=args.voms)
+            else:
+                print "site %s not found !", args.name
     @staticmethod
     def _get_site_id(name, token):
         site_client = SiteClient()
