@@ -137,11 +137,11 @@ class WorkqueueService(object):
         # Update job status.
         JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
         element = JobElement.query.get_or_404((element_id, job_id))
-        if element.type == JobType.LIST:
+        if element.type == JobType.LIST and request.data['returncode'] == 0:
             require_attrs('listing')
+            element.listing = request.data['listing']
         element.attempts += 1
         element.status = JobStatus.DONE if request.data['returncode'] == 0 else JobStatus.FAILED
-        element.listing = request.data['listing']
         element.update()
 
 #    Job = request.db.tables.Job
