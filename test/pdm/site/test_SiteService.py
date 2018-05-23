@@ -330,6 +330,28 @@ class test_SiteService(unittest.TestCase):
 
     @mock.patch("pdm.site.SiteService.X509Utils")
     @mock.patch("pdm.site.SiteService.MyProxyUtils")
+    def test_double_logon(self, mp_mock, x509_mock):
+        """ Check that running logon twice with same params
+            correctly overwrites the old proxy a second time.
+        """
+        mp_mock.logon.return_value = "PROXY"
+        x509_mock.get_cert_expiry.return_value = datetime.datetime.utcnow()
+        AUTH_DATA = {'username': "testuser",
+                     'password': "usersecret",
+                     'lifetime': 36}
+        res = self.__client.post('/site/api/v1.0/session/2', data=AUTH_DATA)
+        self.assertEqual(res.status_code, 200)
+        # Try it a second time, different proxy
+        mp_mock.logon.return_value = "PROXY2"
+        res = self.__client.post('/site/api/v1.0/session/2', data=AUTH_DATA)
+        self.assertEqual(res.status_code, 200)
+        # Check that the cred was overwritten
+        res = self.__client.get('/site/api/v1.0/cred/2/1000')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(json.loads(res.data), "PROXY2")
+
+    @mock.patch("pdm.site.SiteService.X509Utils")
+    @mock.patch("pdm.site.SiteService.MyProxyUtils")
     def test_logon_grid(self, mp_mock, x509_mock):
         """ Check the logon function for obtaining grid creds. """
         TEST_VOS = ["vo1", "vo2.test.vo"]
