@@ -13,6 +13,7 @@ from pdm.userservicedesk.TransferClientFacade import TransferClientFacade
 from pdm.site.SiteClient import SiteClient
 from pdm.CLI.filemode import filemode
 from pdm.userservicedesk.HRUtils import HRUtils
+from pdm.framework.RESTClient import RESTException
 
 
 class UserCommand(object):
@@ -115,6 +116,13 @@ class UserCommand(object):
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('name', type=str, help='site name')
         user_parser.set_defaults(func=self.get_site)
+        # get user session information
+        user_parser = subparsers.add_parser('session',
+                                            help="get user session info for a site")
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
+        user_parser.add_argument('name', type=str, help='site name')
+        user_parser.set_defaults(func=self.get_session)
         # add a site
         user_parser = subparsers.add_parser('addsite', help="add a site to the pdm")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
@@ -403,18 +411,35 @@ class UserCommand(object):
     def get_site(self, args):
         """
         Get site information from the Site Service
-        :param args:
-        :return:
+        :param args: parser arguments, in particular site name.
+        :return: None
         """
         token = UserCommand._get_token(args.token)
         if token:
-            site_client = SiteClient()
-            site_client.set_token(token)
-            sitelist = site_client.get_sites()
-            site_id = [elem['site_id'] for elem in sitelist if elem['site_name'] == args.name]
+            site_client, site_id = UserCommand._get_site_id(args.name, token)
             if site_id:
-                siteinfo = site_client.get_site(site_id[0])
-                print siteinfo
+                try:
+                    siteinfo = site_client.get_site(site_id)
+                    UserCommand._print_formatted_siteinfo(siteinfo)
+                    session_info = site_client.get_session_info(site_id)
+                    UserCommand._print_formatted_session_info(session_info)
+                except RESTException as res_ex:
+                    print str(res_ex)
+            else:
+                print "site %s not found !", args.name
+
+    def get_session(self, args):
+        """
+        Get user session information from the Site Service for a given site
+        :param args: parser arguments, in particular site name
+        :return: None
+        """
+        token = UserCommand._get_token(args.token)
+        if token:
+            site_client, site_id = UserCommand._get_site_id(args.name, token)
+            if site_id:
+                session_info = site_client.get_session_info(site_id)
+                UserCommand._print_formatted_session_info(session_info, attach=False)
             else:
                 print "site %s not found !", args.name
 
@@ -449,21 +474,56 @@ class UserCommand(object):
             if not args.user:
                 args.user = raw_input("Please enter username for site {}:".format(args.name))
             password = getpass("Please enter password for site {}:".format(args.name))
-            site_client = SiteClient()
-            site_client.set_token(token)
-            sitelist = site_client.get_sites()
-            site_id = [elem['site_id'] for elem in sitelist if elem['site_name'] == args.name]
+            site_client, site_id = UserCommand._get_site_id(args.name, token)
             if site_id:
-                site_client.logon(site_id[0], args.user, password, lifetime=args.lifetime, voms=args.voms)
+                try:
+                    site_client.logon(site_id, args.user, password, lifetime=args.lifetime, voms=args.voms)
+                    print " user %s logged in at site %s (valid for %d hours)" % (args.user, \
+                                                                                  args.name, args.lifetime)
+                except RESTException as res_ex:
+                    print str(res_ex)
             else:
                 print "site %s not found !", args.name
+
     @staticmethod
     def _get_site_id(name, token):
         site_client = SiteClient()
         site_client.set_token(token)
         sitelist = site_client.get_sites()
         site_id = [elem['site_id'] for elem in sitelist if elem['site_name'] == name]
-        return site_id
+        return site_client, site_id[0]
+
+    @staticmethod
+    def _print_formatted_siteinfo(siteinfo):
+        if not siteinfo:
+            print " Nothing to print"
+            return
+        print '-' + 91 * '-' + '-'
+        print '|{0:20}|{1:70}|'.format('site property:', 'value:')
+        print '|' + 91 * '-' + '|'
+        for key, value in siteinfo.iteritems():
+            if key.endswith('cert'):
+                continue
+            if type(value) is list:
+                for item in value:
+                    print '|{0:20}|{1:70}|'.format(key, str(item))
+                    key = ' '
+            else:
+                print '|{0:20}|{1:70}|'.format(key, str(value))
+        print '-' + 91 * '-' + '-'
+
+    @staticmethod
+    def _print_formatted_session_info(usersession, attach=True):
+        if not usersession:
+            print " Nothing to print"
+            return
+        if not attach:
+            print '-' + 91 * '-' + '-'
+        print '|{0:20}|{1:70}|'.format('user session:', 'value:')
+        print '|' + 91 * '-' + '|'
+        for key, value in usersession.iteritems():
+            print '|{0:20}|{1:70}|'.format(key, str(value))
+        print '-' + 91 * '-' + '-'
 
     @staticmethod
     def _get_token(tokenfile):
@@ -471,11 +531,8 @@ class UserCommand(object):
         with open(os.path.expanduser(tokenfile)) as token_file:
             token = token_file.read()
             if not token:
-                print "No token. Please login first"
+                print "No token ate requested location. Please login first"
             if HRUtils.is_token_expired_insecure(token):
                 print "Token expired. Please log in again"
                 return None
             return token
-
-
-
