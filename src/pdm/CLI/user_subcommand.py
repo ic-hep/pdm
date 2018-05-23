@@ -477,9 +477,10 @@ class UserCommand(object):
             site_client, site_id = UserCommand._get_site_id(args.name, token)
             if site_id:
                 try:
-                    site_client.logon(site_id, args.user, password, lifetime=args.lifetime, voms=args.voms)
-                    print " user %s logged in at site %s (valid for %d hours)" % (args.user, \
-                                                                                  args.name, args.lifetime)
+                    site_client.logon(site_id, args.user, password,
+                                      lifetime=args.lifetime, voms=args.voms)
+                    print " user %s logged in at site %s (valid for %d hours)"\
+                          % (args.user, args.name, args.lifetime)
                 except RESTException as res_ex:
                     print str(res_ex)
             else:
@@ -504,7 +505,7 @@ class UserCommand(object):
         for key, value in siteinfo.iteritems():
             if key.endswith('cert'):
                 continue
-            if type(value) is list:
+            if isinstance(value, list):
                 for item in value:
                     print '|{0:20}|{1:70}|'.format(key, str(item))
                     key = ' '
