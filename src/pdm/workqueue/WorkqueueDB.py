@@ -4,8 +4,9 @@ import re
 from datetime import datetime
 
 from enum import unique, IntEnum
-from flask import current_app
+from flask import current_app, abort
 from sqlalchemy.orm import relationship
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import (Column, Integer, SmallInteger, ForeignKey,
                         String, TEXT, TIMESTAMP, CheckConstraint, PickleType)
 
@@ -321,7 +322,13 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
 
             def update(self):
                 """Update session with current element."""
-                with managed_session(current_app,
-                                     message="Error updating job element",
-                                     http_error_code=500) as session:
-                    session.merge(self)
+                message = "Error updating job element"
+                try:
+                    with managed_session(current_app, message=message) as session:
+                        session.merge(self)
+                except IntegrityError as err:
+                    if 'constraint failed' in str(err):
+                        abort(400, description="Max tries reached, no more attempts allowed")
+                    abort(500, description=message)
+                except Exception:
+                    abort(500, description=message)

@@ -128,14 +128,13 @@ class TestWorkqueueService(unittest.TestCase):
         self.__service.fake_auth("TOKEN", "1.0")
         request = self.__test.put('/workqueue/api/v1.0/worker/jobs/1/elements/0',
                                   data={'log': 'blah blah',
-                                        'returncode': 1,
+                                        'returncode': 0,
                                         'host': 'somehost.domain'})
         self.assertEqual(request.status_code, 400)
         request = self.__test.put('/workqueue/api/v1.0/worker/jobs/1/elements/0',
                                   data={'log': 'blah blah',
                                         'returncode': 1,
-                                        'host': 'somehost.domain',
-                                        'listing': {'root': []}})
+                                        'host': 'somehost.domain'})
         self.assertEqual(request.status_code, 200)
         Job = self.__service.test_db().tables.Job
         JobElement = self.__service.test_db().tables.JobElement
@@ -174,6 +173,13 @@ class TestWorkqueueService(unittest.TestCase):
         with open(logfile, 'rb') as log:
             self.assertEqual(log.read(), expected_log)
         self.assertEqual(je.listing, {'root': []})
+
+        request = self.__test.put('/workqueue/api/v1.0/worker/jobs/1/elements/0',
+                                  data={'log': 'blah blah',
+                                        'returncode': 0,
+                                        'host': 'somehost.domain',
+                                        'listing': {'root': []}})
+        self.assertEqual(request.status_code, 400, 'Exceeding max tries should give 400')
 
     @mock.patch('pdm.workqueue.WorkqueueService.current_app')
     @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
