@@ -377,7 +377,7 @@ class SiteService(object):
         with managed_session(request,
                              message="Database error while storing proxy",
                              http_error_code=500) as session:
-            session.add(new_cred)
+            session.merge(new_cred)
         return ""
 
     @staticmethod
