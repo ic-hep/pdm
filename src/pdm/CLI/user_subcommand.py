@@ -532,7 +532,7 @@ class UserCommand(object):
         with open(os.path.expanduser(tokenfile)) as token_file:
             token = token_file.read()
             if not token:
-                print "No token ate requested location. Please login first"
+                print "No token at requested location. Please login first"
             if HRUtils.is_token_expired_insecure(token):
                 print "Token expired. Please log in again"
                 return None

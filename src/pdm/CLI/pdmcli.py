@@ -22,7 +22,8 @@ def main(opt_conf_file=None):  #pylint: disable=too-many-branches
     :return: None
     """
 
-    _logger = logging.getLogger(__name__)
+    #_logger = logging.getLogger(__name__)
+    _logger = logging.getLogger()
     _logger.addHandler(logging.StreamHandler())
 
     conf_files = ['~/.pdm/client.conf', '/etc/pdm/client.conf']
