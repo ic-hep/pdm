@@ -125,7 +125,7 @@ class WorkqueueService(object):
     @staticmethod
     @export_ext('worker/jobs/<int:job_id>/elements/<int:element_id>', ['PUT'])
     @decode_json_data
-    def return_output(job_id, element_id):
+    def return_output(job_id, element_id):  # pylint: disable=too-many-branches
         """Return a job."""
         if not request.token_ok:
             abort(403, description="Invalid token")
@@ -154,8 +154,8 @@ class WorkqueueService(object):
         job = element.job
         job.status = max(ele.status for ele in job.elements)
         # Expand listing for COPY or REMOVE jobs.
-        if job.type != JobType.LIST\
-                and element.type == JobType.LIST\
+        if job.type == JobType.COPY\
+            and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
             for root, items in element.listing.iteritems():
                 for i, item in enumerate(items):
@@ -174,6 +174,21 @@ class WorkqueueService(object):
                                                    max_tries=job.max_tries,
                                                    type=job.type,
                                                    size=int(item["st_size"])))  # int cast needed?
+            job.status = JobStatus.SUBMITTED
+        elif job.type == JobType.REMOVE\
+            and element.type == JobType.LIST\
+                and element.status == JobStatus.DONE:
+            for root, items in element.listing.iteritems():
+                items.sort(key=lambda x: stat.S_ISDIR(int(x['st_mode'])))
+                for i, item in enumerate(items):
+                    name = item['name']
+                    if stat.S_ISDIR(int(item['st_mode'])):
+                        name += '/'
+                    job.elements.append(JobElement(id=i + 1,
+                                                   src_filepath=os.path.join(root, name),
+                                                   max_tries=job.max_tries,
+                                                   type=job.type,
+                                                   size=int(item["st_size"])))
             job.status = JobStatus.SUBMITTED
         job.update()
 
