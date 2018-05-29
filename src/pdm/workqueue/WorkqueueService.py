@@ -25,7 +25,7 @@ def require_attrs(*attrs):
     return attrs
 
 
-def by_number(number=10):
+def by_number(limit=20):
     """Extract next n job elements."""
     Job = request.db.tables.Job  # pylint: disable=invalid-name
     JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
@@ -36,27 +36,40 @@ def by_number(number=10):
                            .order_by(Job.priority)\
                            .order_by(Job.id)\
                            .order_by(Job.status)\
-                           .limit(number)\
+                           .with_for_update()\
+                           .limit(limit)\
                            .all()
 
 
-def by_size(size=100000):
+def by_size(size=150000000, list_limit=20):
     """Extract job elements up to size."""
     Job = request.db.tables.Job  # pylint: disable=invalid-name
     JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
-    return JobElement.query.filter(JobElement.status.in_((JobStatus.NEW, JobStatus.FAILED)),
-                                   JobElement.attempts < JobElement.max_tries)\
-                           .join(JobElement.job)\
-                           .filter(Job.type.in_(request.data['types']))\
-                           .order_by(Job.priority)\
-                           .order_by(Job.id)\
-                           .order_by(Job.status)\
-                           .order_by(JobElement.size.desc())\
-                           .group_by(JobElement.id, JobElement.job_id)\
-                           .having(func.sum(JobElement.size) < size)\
-                           .all()
-#                          .limit(20)
-#                          .count()
+    elements = JobElement.query.filter(JobElement.status.in_((JobStatus.NEW, JobStatus.FAILED)),
+                                       JobElement.attempts < JobElement.max_tries)\
+                               .join(JobElement.job)\
+                               .filter(Job.type.in_(request.data['types']))\
+                               .order_by(Job.priority)\
+                               .order_by(Job.id)\
+                               .order_by(Job.status)\
+                               .order_by(JobElement.size.desc())\
+                               .with_for_update()
+#                               .limit(limit)
+#                               .all()  # without this line we have a generator.
+    list_count = 0
+    total_size = 0
+    ret = []
+    for element in elements:
+        if total_size + element.size > size:
+            continue
+        if element.type == JobType.LIST:
+            list_count += 1
+            if list_count > list_limit:
+                continue
+        total_size += element.size
+        ret.append(element)
+
+    return ret
 
 
 class Algorithm(Enum):  # pylint: disable=too-few-public-methods
