@@ -369,10 +369,13 @@ class SiteService(object):
         except Exception as err:
             log.error("Failed to login user: %s", str(err))
             return "Login failed: %s" % str(err), 400
+        # Clear the TZInfo as it should be UTC anyway and the database
+        # uses naive date-time formats.
+        cred_expiry = X509Utils.get_cert_expiry(proxy).replace(tzinfo=None)
         new_cred = Cred(cred_owner=user_id,
                         site_id=site_id,
                         cred_username=username,
-                        cred_expiry=X509Utils.get_cert_expiry(proxy),
+                        cred_expiry=cred_expiry,
                         cred_value=proxy)
         with managed_session(request,
                              message="Database error while storing proxy",

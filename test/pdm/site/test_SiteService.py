@@ -335,7 +335,20 @@ class test_SiteService(unittest.TestCase):
             correctly overwrites the old proxy a second time.
         """
         mp_mock.logon.return_value = "PROXY"
-        x509_mock.get_cert_expiry.return_value = datetime.datetime.utcnow()
+        # We have to generate a time-zone aware return for the get_cert_expiry
+        # This is like the real return from X509Utils and was originally triggering
+        # a comparison problem in the DB driver. So this also serves as the
+        # regression test for that.
+        class UTCTZ(datetime.tzinfo):
+            def utcoffset(self, dt):
+                return datetime.timedelta(0)
+            def dst(self, dt):
+                return datetime.timedelta(0)
+            def tzname(self, dt):
+                return "UTC"
+        tz_info = UTCTZ()
+        x509_mock.get_cert_expiry.return_value = datetime.datetime.now(tz_info)
+        # Now store the proxy...
         AUTH_DATA = {'username': "testuser",
                      'password': "usersecret",
                      'lifetime': 36}
