@@ -273,7 +273,7 @@ class UserCommand(object):
                 else:
                     print "Timeout. Last status is %s for job id %d" % \
                           (status['status'], resp['id'])
-            elif isinstance(resp, list) and resp is None:
+            elif isinstance(resp, list) and not resp:
                 print "No such site: %s " % (args.site,)
 
     def sitelist(self, args):  # pylint disable-no-self-use
