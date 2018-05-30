@@ -49,8 +49,7 @@ class TransferClient(object):
             response = self.__wq_client.list(src_siteid[0], src_filepath, **kwargs)
             # max_tries, priority, protocol=JobProtocol.GRIDFTP)
             return response
-
-        return None
+        return src_siteid # an empty list
 
     def output(self, job_id, attempt=None):
         """
