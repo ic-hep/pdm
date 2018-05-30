@@ -7,7 +7,6 @@ from itertools import groupby
 from operator import attrgetter
 
 from flask import request, abort, current_app
-from sqlalchemy import func
 # from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from pdm.framework.FlaskWrapper import jsonify
