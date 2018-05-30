@@ -30,8 +30,15 @@ class TestWorkqueueService(unittest.TestCase):
                                            src_filepath='/data/somefile2.%d' % i,
                                            type=JobType.REMOVE, size=10**i))
         db.session.add(job)
-        db.session.add(Job(user_id=3, src_siteid=15, src_filepath='/data/somefile3',
-                           dst_siteid=16, dst_filepath='/data/newfile', type=JobType.COPY))
+        j = Job(user_id=3, src_siteid=15, src_filepath='/data/somefile3',
+                           dst_siteid=16, dst_filepath='/data/newfile', type=JobType.COPY)
+
+        for i in xrange(1, 6):
+            j.elements.append(JobElement(id=i, job_id=3, src_siteid=12,
+                                         src_filepath='/data/somefile3.%d' % i,
+                                         dst_filepath='/data/newfile.%d' % i,
+                                         type=JobType.COPY, size=10**i))
+        db.session.add(j)
         db.session.commit()
         with mock.patch('pdm.workqueue.WorkqueueService.SiteClient'):
             self.__service.before_startup(conf)  # to continue startup
@@ -92,7 +99,7 @@ class TestWorkqueueService(unittest.TestCase):
         for i in xrange(1, 6):
             self.assertEqual(work[0]['elements'][i]['type'], JobType.REMOVE)
         self.assertEqual(work[1]['type'], JobType.COPY)
-        self.assertEqual(len(work[1]['elements']), 1)
+        self.assertEqual(len(work[1]['elements']), 6)
         # up to 10 loaded now at once
         #request = self.__test.post('/workqueue/api/v1.0/worker/jobs', data={'types': [JobType.COPY, JobType.REMOVE]})
         #self.assertEqual(request.status_code, 200, "Failed to get copy or remove job.")
