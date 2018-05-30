@@ -324,8 +324,9 @@ class UserCommand(object):
                               st_mtime=str(datetime.utcfromtimestamp(elem['st_mtime']))))
 
             if stat.S_ISDIR(elem['st_mode']):
-                self._print_formatted_listing(os.path.join(root, elem['name']),
-                                              full_listing, level=level + 1)
+                if os.path.join(root, elem['name']) in full_listing:
+                    self._print_formatted_listing(os.path.join(root, elem['name']),
+                                                  full_listing, level=level + 1)
 
     def status(self, args):
         """
