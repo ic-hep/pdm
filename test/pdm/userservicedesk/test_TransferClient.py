@@ -66,7 +66,7 @@ class TestTransferClient(unittest.TestCase):
         wrongurl = "localhost2:/root/file.txt"  # no such site,
         with mock.patch.object(self.__client._TransferClient__wq_client, 'list') as mock_list:
             mock_list.return_value = 'root/file.txt'  # event if ...
-            assert self.__client.list(wrongurl, **{'priority': 2}) == None  # we return None
+            assert self.__client.list(wrongurl, **{'priority': 2}) == []  # we return []
         assert not mock_list.called
 
     def test_sitelist(self):

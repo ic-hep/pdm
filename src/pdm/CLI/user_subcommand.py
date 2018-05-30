@@ -151,7 +151,12 @@ class UserCommand(object):
                                  help="the VO to use in the credential VOMS extension")
 
         user_parser.set_defaults(func=self.site_login)
-
+        # site logoff
+        user_parser = subparsers.add_parser('sitelogoff', help="logoff from a site")
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
+        user_parser.add_argument('name', type=str, help="site name")
+        user_parser.set_defaults(func=self.site_logoff)
         # sub-command functions
 
     def register(self, args):  # pylint: disable=no-self-use
@@ -228,7 +233,7 @@ class UserCommand(object):
         client = HRClient()
         client.set_token(token)
         ret = client.get_user()
-        print ret
+        UserCommand._print_formatted_user_info(ret)
 
     def list(self, args):  # pylint: disable=no-self-use
         """
@@ -260,7 +265,7 @@ class UserCommand(object):
 
                 if status['status'] == 'DONE':
                     listing_output = client.output(resp['id'])
-                    listing_d_value = listing_output['Listing']  # phase 2, capital 'L'
+                    listing_d_value = listing_output['listing']
                     root, listing = listing_d_value.items()[0]  # top root
                     self._print_formatted_listing(root, listing_d_value)
                 elif resp['status'] == 'FAILED':
@@ -268,8 +273,8 @@ class UserCommand(object):
                 else:
                     print "Timeout. Last status is %s for job id %d" % \
                           (status['status'], resp['id'])
-            else:
-                print " No such site: %s ?" % (args.site,)
+            elif resp == []:
+                print "No such site: %s " % (args.site,)
 
     def sitelist(self, args):  # pylint disable-no-self-use
         """
@@ -426,7 +431,7 @@ class UserCommand(object):
                 except RESTException as res_ex:
                     print str(res_ex)
             else:
-                print "site %s not found !", args.name
+                print "site %s not found !" % (args.name,)
 
     def get_session(self, args):
         """
@@ -441,7 +446,7 @@ class UserCommand(object):
                 session_info = site_client.get_session_info(site_id)
                 UserCommand._print_formatted_session_info(session_info, attach=False)
             else:
-                print "site %s not found !", args.name
+                print "site %s not found !" % (args.name,)
 
     def add_site(self, args):
         """
@@ -471,20 +476,47 @@ class UserCommand(object):
         """
         token = UserCommand._get_token(args.token)
         if token:
-            if not args.user:
-                args.user = raw_input("Please enter username for site {}:".format(args.name))
-            password = getpass("Please enter password for site {}:".format(args.name))
             site_client, site_id = UserCommand._get_site_id(args.name, token)
             if site_id:
+                session_info = site_client.get_session_info(site_id)
+                # determine the user
+                if args.user:
+                    user = args.user
+                else:
+                    user = session_info.get('username')
+                    if not user:
+                        user = raw_input("Please enter username for site {}:".format(args.name))
+
+                password = getpass("User [{}], "
+                                   "please enter password for site {}:".format(user, args.name))
+
                 try:
-                    site_client.logon(site_id, args.user, password,
+                    site_client.logon(site_id, user, password,
                                       lifetime=args.lifetime, voms=args.voms)
-                    print " user %s logged in at site %s (valid for %d hours)"\
-                          % (args.user, args.name, args.lifetime)
+                    print " user %s logged in at site %s (valid for %d hours)" \
+                          % (user, args.name, args.lifetime)
                 except RESTException as res_ex:
                     print str(res_ex)
             else:
-                print "site %s not found !", args.name
+                print "site %s not found !" % (args.name,)
+
+    def site_logoff(self, args):
+        """
+        User site logoff
+        :param args:
+        :return:
+        """
+        token = UserCommand._get_token(args.token)
+        if token:
+            site_client, site_id = UserCommand._get_site_id(args.name, token)
+            if site_id:
+                try:
+                    site_client.logoff(site_id)
+                    print "Logged out from site %s" % (args.name,)
+                except RESTException as res_ex:
+                    print str(res_ex)
+            else:
+                print "site %s not found !" % (args.name,)
 
     @staticmethod
     def _get_site_id(name, token):
@@ -492,7 +524,9 @@ class UserCommand(object):
         site_client.set_token(token)
         sitelist = site_client.get_sites()
         site_id = [elem['site_id'] for elem in sitelist if elem['site_name'] == name]
-        return site_client, site_id[0]
+        if site_id:
+            return site_client, site_id[0]
+        return site_client, None
 
     @staticmethod
     def _print_formatted_siteinfo(siteinfo):
@@ -523,6 +557,18 @@ class UserCommand(object):
         print '|{0:20}|{1:70}|'.format('user session:', 'value:')
         print '|' + 91 * '-' + '|'
         for key, value in usersession.iteritems():
+            print '|{0:20}|{1:70}|'.format(key, str(value))
+        print '-' + 91 * '-' + '-'
+
+    @staticmethod
+    def _print_formatted_user_info(userinfo):
+        if not userinfo:
+            print " Nothing to print"
+            return
+        print '-' + 91 * '-' + '-'
+        print '|{0:20}|{1:70}|'.format('user property:', 'value:')
+        print '|' + 91 * '-' + '|'
+        for key, value in userinfo.iteritems():
             print '|{0:20}|{1:70}|'.format(key, str(value))
         print '-' + 91 * '-' + '-'
 
