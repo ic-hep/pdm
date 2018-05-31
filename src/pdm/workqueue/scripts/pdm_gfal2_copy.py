@@ -147,8 +147,9 @@ def json_input():
     data = json.load(sys.stdin)
     if 'options' not in data:
         data['options'] = {}
-        data['options'].setdefault('s_cred_file', os.environ.get('X509_USER_PROXY_SRC', None))
-        data['options'].setdefault('t_cred_file', os.environ.get('X509_USER_PROXY_DST', None))
+        
+    data['options'].setdefault('s_cred_file', os.environ.get('X509_USER_PROXY_SRC', None))
+    data['options'].setdefault('t_cred_file', os.environ.get('X509_USER_PROXY_DST', None))
     pdm_gfal_copy(data, **data.get('options', {}))
 
 
