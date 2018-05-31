@@ -187,7 +187,7 @@ class WorkqueueService(object):
                     job.elements.append(JobElement(id=i + 1,
                                                    src_filepath=os.path.join(root, item['name']),
                                                    dst_filepath=dst_filepath,
-                                                   max_tries=job.max_tries,
+                                                   max_tries=element.max_tries,
                                                    type=job.type,
                                                    size=int(item["st_size"])))  # int cast needed?
             job.status = JobStatus.SUBMITTED
@@ -202,7 +202,7 @@ class WorkqueueService(object):
                         name += '/'
                     job.elements.append(JobElement(id=i + 1,
                                                    src_filepath=os.path.join(root, name),
-                                                   max_tries=job.max_tries,
+                                                   max_tries=element.max_tries,
                                                    type=job.type,
                                                    size=int(item["st_size"])))
             job.status = JobStatus.SUBMITTED
