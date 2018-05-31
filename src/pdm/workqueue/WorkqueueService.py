@@ -5,6 +5,7 @@ from enum import Enum
 from functools import partial
 from itertools import groupby
 from operator import attrgetter
+from pprint import pformat
 
 from flask import request, abort, current_app
 # from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
@@ -101,6 +102,7 @@ class WorkqueueService(object):
     @decode_json_data
     def get_next_job():
         """Get the next job."""
+        current_app.log.debug("Worker requesting job batch, request: %s", pformat(request.data))
         require_attrs('types')
 #        Job = request.db.tables.Job  # pylint: disable=invalid-name
 #        JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
@@ -132,6 +134,7 @@ class WorkqueueService(object):
             job_dict['elements'] = elements
             work.append(job_dict)
             job.update()
+        current_app.log.debug("Sending worker job batch: %s", pformat(work))
         return jsonify(work)
 
     @staticmethod
@@ -144,6 +147,7 @@ class WorkqueueService(object):
         if request.token != '%d.%d' % (job_id, element_id):
             abort(403,
                   description="Token not valid for element %d of job %d" % (element_id, job_id))
+        current_app.log.debug("Received data from worker: %s", pformat(request.data))
         require_attrs('returncode', 'host', 'log')
 
         # Update job status.

@@ -11,6 +11,8 @@ import subprocess
 import shutil
 import asyncore
 import logging
+from pprint import pformat
+from datetime import datetime
 from contextlib import contextmanager
 from urlparse import urlunsplit
 from tempfile import NamedTemporaryFile
@@ -143,10 +145,17 @@ class StdOutDispatcher(asyncore.file_dispatcher):
             self.close()
             return
 
-        data = {'log': self._stderr_dispatcher.buffer,
-                'returncode': done_element['Code'],
-                'host': socket.gethostbyaddr(socket.getfqdn())}
+        log = self._stderr_dispatcher.buffer
+        returncode = done_element['Code']
+        data = {'log': log,
+                'returncode': returncode,
+                'host': (datetime.utcnow().isoformat(),) + socket.gethostbyaddr(socket.getfqdn())}
         element_id = done_element['id']
+
+        if returncode:
+            self._logger.warning("Subprocess for job.element %s failed with exit code %s",
+                                 element_id, returncode)
+        self._logger.debug("Subprocess output for job.element %s: %s", element_id, log)
 
         if not element_id:  # whole job failure
             for element_id, token in self._tokens.iteritems():
@@ -206,7 +215,10 @@ class Worker(RESTClient, Daemon):
 
     def _upload(self, job_id, element_id, token, data):
         """Upload results to WorkqueueService."""
-        self._logger.info("Uploading output log to WorkqueueService.")
+        self._logger.info("Uploading output log for job.element %s.%s to WorkqueueService.",
+                          job_id, element_id)
+        self._logger.debug("Uploading following data for job.element %s.%s to WorkqueueService: %s",
+                           job_id, element_id, pformat(data))
         self.set_token(token)
         try:
             self.put('worker/jobs/%s/elements/%s' % (job_id, element_id), data=data)
@@ -242,6 +254,8 @@ class Worker(RESTClient, Daemon):
                               sum(len(job['elements']) for job in workload))
 
             for job in workload:
+                self._logger.info("Processing job %d", job['id'])
+                self._logger.debug("Job %d: %s", job['id'], pformat(job))
                 # Get CAs and endpoints for job.
                 cas = []
                 credentials = [job['src_credentials']]
@@ -289,9 +303,14 @@ class Worker(RESTClient, Daemon):
                 with temporary_proxy_files(*credentials) as proxy_env_vars,\
                         temporary_ca_dir(cas, template_dir=template_ca_dir) as ca_dir:
                     script_env = dict(os.environ, X509_CERT_DIR=ca_dir, **proxy_env_vars)
+                    if self._logger.isEnabledFor(logging.DEBUG):
+                        extra_env = {key: script_env[key] for key in
+                                     set(script_env.iterkeys()).difference(os.environ.iterkeys())}
+                        self._logger.debug("Extra environment variables: %s", pformat(extra_env))
                     command = shlex.split(COMMANDMAP[job['type']][job['protocol']])
                     command[0] = os.path.join(self._script_path, command[0])
                     self._logger.info("Running elements in subprocess (%s).", command[0])
+                    self._logger.debug("Sending subprocess the following data: %s", pformat(data))
                     self._current_process = subprocess.Popen(command,
                                                              bufsize=0,
                                                              stdin=subprocess.PIPE,
