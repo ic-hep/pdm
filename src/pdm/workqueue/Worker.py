@@ -16,6 +16,7 @@ from datetime import datetime
 from contextlib import contextmanager
 from urlparse import urlunsplit
 from tempfile import NamedTemporaryFile
+from urlparse import urlsplit
 
 from requests.exceptions import Timeout
 
@@ -164,7 +165,8 @@ class StdOutDispatcher(asyncore.file_dispatcher):
             return
 
         if 'Listing' in done_element:
-            data.update(listing=done_element['Listing'])
+            data.update(listing={urlsplit(root).path: listing for root, listing
+                                 in done_element['Listing'].iteritems()})
         token = self._tokens.pop(element_id)
         self._callback(*element_id.split('.'), token=token, data=data)
 
