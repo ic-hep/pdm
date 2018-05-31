@@ -109,7 +109,7 @@ class HRService(object):
         User = request.db.tables.User
         data.pop('last_login', None)
         data.pop('date_created', None)
-        data.pop('date_modified', None)
+        data.pop('date_modified', func.current_timestamp())
         data.pop('state', 0)
         # user = User.from_json(json.dumps(data))
         user = User(**data)
@@ -183,7 +183,7 @@ class HRService(object):
                 abort(400)
 
             user.password = hash_pass(newpasswd)
-            user.last_login = func.current_timestamp()
+            user.date_modified = func.current_timestamp()
             # User update
             try:
                 db.session.add(user)
@@ -270,6 +270,7 @@ class HRService(object):
             HRService._logger.error("login request:None password supplied or too weak")
             abort(400)
 
+        db = request.db
         User = request.db.tables.User
         user = User.query.filter_by(email=data['email']).first()
 
@@ -281,11 +282,21 @@ class HRService(object):
         if not check_hash(user.password, passwd):
             HRService._logger.info("login request for %s failed (wrong password) ", data['email'])
             abort(403)
-        # plain = "User_%s" % user_id
+
         expiry = datetime.datetime.utcnow() + current_app.token_duration
         plain = {'id': user_id, 'expiry': expiry.isoformat()}
         HRService._logger.info("login request accepted for %s", data['email'])
         token = request.token_svc.issue(plain)
+        try:
+            user.last_login = func.current_timestamp()
+            db.session.add(user)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            HRService._logger.error("login request:cooudn't update user %s last login field",
+                                    data['email'])
+            abort(500)
+
         return jsonify(token)
 
     # @staticmethod
