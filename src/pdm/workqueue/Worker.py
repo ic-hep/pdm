@@ -172,13 +172,14 @@ class StdOutDispatcher(asyncore.file_dispatcher):
 class Worker(RESTClient, Daemon):
     """Worker Daemon."""
 
-    def __init__(self, debug=False, n_shot=None):
+    def __init__(self, debug=False, n_shot=None, loglevel=logging.INFO):
         """Initialisation."""
         RESTClient.__init__(self, 'workqueue')
         uid = uuid.uuid4()
         Daemon.__init__(self,
                         pidfile='/tmp/worker-%s.pid' % uid,
                         logfile='/tmp/worker-%s.log' % uid,
+                        loglevel=loglevel,
                         target=self.run,
                         debug=debug)
         conf = getConfig('worker')
