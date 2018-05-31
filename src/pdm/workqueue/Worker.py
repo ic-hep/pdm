@@ -298,10 +298,18 @@ class Worker(RESTClient, Daemon):
                             and element['src_filepath'].endswith('/'):
                         data['dirs'].append(src)
                     else:
-                        # set copy/remove jobs to list if there is a single list element to ensure
-                        # we get the command correct below
-                        job['type'] = JobType.LIST
                         data['files'].append(src)
+
+                # correct command and credentials for LIST component of COPY/REMOVE jobs.
+                command = shlex.split(COMMANDMAP[job['type']][job['protocol']])
+                if job['type'] != JobType.LIST\
+                        and len(job['elements']) == 1\
+                        and job['elements'][0]['type'] == JobType.LIST:
+                    command = shlex.split(COMMANDMAP[JobType.LIST][job['protocol']])
+                    if job['type'] == JobType.COPY and len(credentials) == 2:
+                        credentials.pop()  # remove dst_creds to get correct proxy env var
+                command[0] = os.path.join(self._script_path, command[0])
+                self._logger.info("Running elements in subprocess (%s).", command[0])
 
                 # run job in subprocess with temporary proxy files and ca dir
                 with temporary_proxy_files(*credentials) as proxy_env_vars,\
@@ -311,9 +319,6 @@ class Worker(RESTClient, Daemon):
                         extra_env = {key: script_env[key] for key in
                                      set(script_env.iterkeys()).difference(os.environ.iterkeys())}
                         self._logger.debug("Extra environment variables: %s", pformat(extra_env))
-                    command = shlex.split(COMMANDMAP[job['type']][job['protocol']])
-                    command[0] = os.path.join(self._script_path, command[0])
-                    self._logger.info("Running elements in subprocess (%s).", command[0])
                     self._logger.debug("Sending subprocess the following data: %s", pformat(data))
                     self._current_process = subprocess.Popen(command,
                                                              bufsize=0,
