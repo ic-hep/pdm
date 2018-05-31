@@ -298,6 +298,9 @@ class Worker(RESTClient, Daemon):
                             and element['src_filepath'].endswith('/'):
                         data['dirs'].append(src)
                     else:
+                        # set copy/remove jobs to list if there is a single list element to ensure
+                        # we get the command correct below
+                        job['type'] = JobType.LIST
                         data['files'].append(src)
 
                 # run job in subprocess with temporary proxy files and ca dir
