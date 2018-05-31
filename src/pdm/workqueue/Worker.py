@@ -301,6 +301,7 @@ class Worker(RESTClient, Daemon):
                         # set copy/remove jobs to list if there is a single list element to ensure
                         # we get the command correct below
                         job['type'] = JobType.LIST
+                        credentials.pop()  # remove dst_creds to get correct proxy env var
                         data['files'].append(src)
 
                 # run job in subprocess with temporary proxy files and ca dir
