@@ -71,10 +71,10 @@ def temporary_proxy_files(src_credentials, dst_credentials=None):
               newly created temporary proxy files.
     """
     with NamedTemporaryFile() as src_proxyfile:
+        src_proxyfile.write(src_credentials)
+        src_proxyfile.flush()
+        os.fsync(src_proxyfile.fileno())
         if dst_credentials is None:
-            src_proxyfile.write(src_credentials)
-            src_proxyfile.flush()
-            os.fsync(src_proxyfile.fileno())
             yield {'X509_USER_PROXY': src_proxyfile.name}
             return
         with NamedTemporaryFile() as dst_proxyfile:
