@@ -304,7 +304,7 @@ class Worker(RESTClient, Daemon):
                         temporary_ca_dir(cas, template_dir=template_ca_dir) as ca_dir:
                     script_env = dict(os.environ, X509_CERT_DIR=ca_dir, **proxy_env_vars)
                     if self._logger.isEnabledFor(logging.DEBUG):
-                        extra_env = {key: script_env[key]for key in
+                        extra_env = {key: script_env[key] for key in
                                      set(script_env.iterkeys()).difference(os.environ.iterkeys())}
                         self._logger.debug("Extra environment variables: %s", pformat(extra_env))
                     command = shlex.split(COMMANDMAP[job['type']][job['protocol']])
