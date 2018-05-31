@@ -27,8 +27,8 @@ class UserModel(object):
             last_login = Column(DateTime, default=None)
             date_created = Column(DateTime, default=func.current_timestamp())
             date_modified = Column(
-                DateTime, default=func.current_timestamp(),
-                onupdate=func.current_timestamp())
+                DateTime, default=func.current_timestamp())
+                #onupdate=func.current_timestamp())
 
             @staticmethod
             def get_all():

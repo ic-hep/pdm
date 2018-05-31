@@ -29,7 +29,7 @@ class UserCommand(object):
         self.__count = 1
 
         # register
-        user_parser = subparsers.add_parser('register')
+        user_parser = subparsers.add_parser('register', help="Register a new user")
         user_parser.add_argument('-e', '--email', type=str, required=True)
         user_parser.add_argument('-n', '--name', type=str)
         user_parser.add_argument('-s', '--surname', type=str)
@@ -39,15 +39,14 @@ class UserCommand(object):
         user_parser.add_argument('-e', '--email', type=str, required=True)
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help="optional token file location (default=~/.pdm/token)")
-
         user_parser.set_defaults(func=self.login)
         # change password
-        user_parser = subparsers.add_parser('passwd')
+        user_parser = subparsers.add_parser('passwd', help="Change password")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.set_defaults(func=self.passwd)
         # whoami
-        user_parser = subparsers.add_parser('whoami')
+        user_parser = subparsers.add_parser('whoami', help="Print user information")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.set_defaults(func=self.whoami)
@@ -221,7 +220,7 @@ class UserCommand(object):
             client = HRClient()
             client.set_token(token)
             ret = client.change_password(password, newpassword)
-            print ret
+            UserCommand._print_formatted_user_info(ret)
 
     def whoami(self, args):  # pylint: disable=no-self-use
         """
