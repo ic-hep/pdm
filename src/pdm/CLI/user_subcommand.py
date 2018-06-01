@@ -29,24 +29,30 @@ class UserCommand(object):
         self.__count = 1
 
         # register
-        user_parser = subparsers.add_parser('register', help="Register a new user")
+        user_parser = subparsers.add_parser('register', help="Register a user with the PDM.")
         user_parser.add_argument('-e', '--email', type=str, required=True)
         user_parser.add_argument('-n', '--name', type=str)
         user_parser.add_argument('-s', '--surname', type=str)
         user_parser.set_defaults(func=self.register)
+        # unregister
+        user_parser = subparsers.add_parser('unregister', help="Delete a user from the PDM.")
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
+        user_parser.set_defaults(func=self.unregister)
         # login
-        user_parser = subparsers.add_parser('login', help="User login procedure")
+        user_parser = subparsers.add_parser('login', help="User login procedure.")
         user_parser.add_argument('-e', '--email', type=str, required=True)
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help="optional token file location (default=~/.pdm/token)")
+
         user_parser.set_defaults(func=self.login)
         # change password
-        user_parser = subparsers.add_parser('passwd', help="Change password")
+        user_parser = subparsers.add_parser('passwd', help="Change user password.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.set_defaults(func=self.passwd)
         # whoami
-        user_parser = subparsers.add_parser('whoami', help="Print user information")
+        user_parser = subparsers.add_parser('whoami', help='List user data.')
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.set_defaults(func=self.whoami)
@@ -85,9 +91,9 @@ class UserCommand(object):
         user_parser.set_defaults(func=self.copy)
         # status
         user_parser = subparsers.add_parser('status',
-                                            help="get status of a job/task")
+                                            help="get status of a job/task.")
         user_parser.add_argument('job', type=str, help="job id as obtained"
-                                                       " from copy or remove")
+                                                       " from copy or remove.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         st_help = "periodically check the job status (up to %d times)" % (self.__max_iter,)
@@ -95,51 +101,52 @@ class UserCommand(object):
         user_parser.set_defaults(func=self.status)
         # log
         user_parser = subparsers.add_parser('log',
-                                            help="get log of a job/task")
+                                            help="get log of a job/task.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('job', type=int, help="job id as obtained"
-                                                       " from copy, remove or list")
+                                                       " from copy, remove or list.")
         user_parser.add_argument('-a', '--attempt', default=-1,
-                                 help="Attempt number, leave out for the last attempt")
+                                 help="Attempt number, leave out for the last attempt.")
         user_parser.set_defaults(func=self.log)
         # site list
         user_parser = subparsers.add_parser('sites',
-                                            help="list available sites")
+                                            help="list available sites.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.set_defaults(func=self.sitelist)
         # get site information
-        user_parser = subparsers.add_parser('site', help="list site information")
+        user_parser = subparsers.add_parser('site', help="list site information. "
+                                                         "Includes user session info.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('name', type=str, help='site name')
         user_parser.set_defaults(func=self.get_site)
         # get user session information
         user_parser = subparsers.add_parser('session',
-                                            help="get user session info for a site")
+                                            help="get user session info for a site.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
-        user_parser.add_argument('name', type=str, help='site name')
+        user_parser.add_argument('name', type=str, help='site name.')
         user_parser.set_defaults(func=self.get_session)
         # add a site
-        user_parser = subparsers.add_parser('addsite', help="add a site to the pdm")
+        user_parser = subparsers.add_parser('addsite', help="add a site to the PDM.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('name', type=str, help="site name")
         user_parser.add_argument('path', type=str,
-                                 help="The default (starting) path to use at this site")
-        user_parser.add_argument('desc', type=str, help="site description")
+                                 help="The default (starting) path to use at this site.")
+        user_parser.add_argument('desc', type=str, help="site description.")
         user_parser.add_argument('-p', '--public', action='store_true')
         user_parser.set_defaults(func=self.add_site)
         # delete site
-        user_parser = subparsers.add_parser('delsite', help="delete a site from the pdm")
+        user_parser = subparsers.add_parser('delsite', help="delete a site from the PDM.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('name', type=str, help="site name")
         user_parser.set_defaults(func=self.del_site)
         # site logon
-        user_parser = subparsers.add_parser('sitelogin', help="login to a site")
+        user_parser = subparsers.add_parser('sitelogin', help="login to a site.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('name', type=str, help="site name")
@@ -151,7 +158,7 @@ class UserCommand(object):
 
         user_parser.set_defaults(func=self.site_login)
         # site logoff
-        user_parser = subparsers.add_parser('sitelogoff', help="logoff from a site")
+        user_parser = subparsers.add_parser('sitelogoff', help="logoff from a site.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('name', type=str, help="site name")
@@ -180,6 +187,22 @@ class UserCommand(object):
                     'email': args.email, 'password': password}
         client.add_user(userdict)
         print "User registered %s %s %s " % (args.name, args.surname, args.email)
+
+    def unregister(self, args):
+        """
+        DEletes a user from the pdm user database. A user can only delete himself.
+        :param args:
+        :return:
+        """
+        token = UserCommand._get_token(args.token)
+        if token:
+            client = HRClient()
+            client.set_token(token)
+            client.del_user()
+            os.remove(args.token)
+            print "User unregistered. Token deleted."
+        else:
+            print "Unregister operation failed."
 
     def login(self, args):  # pylint: disable=no-self-use
         """
@@ -220,7 +243,7 @@ class UserCommand(object):
             client = HRClient()
             client.set_token(token)
             ret = client.change_password(password, newpassword)
-            UserCommand._print_formatted_user_info(ret)
+            print ret
 
     def whoami(self, args):  # pylint: disable=no-self-use
         """
@@ -228,11 +251,11 @@ class UserCommand(object):
         """
 
         token = UserCommand._get_token(args.token)
-
-        client = HRClient()
-        client.set_token(token)
-        ret = client.get_user()
-        UserCommand._print_formatted_user_info(ret)
+        if token:
+            client = HRClient()
+            client.set_token(token)
+            ret = client.get_user()
+            UserCommand._print_formatted_user_info(ret)
 
     def list(self, args):  # pylint: disable=no-self-use
         """
@@ -578,8 +601,8 @@ class UserCommand(object):
         with open(os.path.expanduser(tokenfile)) as token_file:
             token = token_file.read()
             if not token:
-                print "No token at requested location. Please login first"
+                print "No token at requested location. Please login first."
             if HRUtils.is_token_expired_insecure(token):
-                print "Token expired. Please log in again"
+                print "Token expired. Please log in again."
                 return None
             return token
