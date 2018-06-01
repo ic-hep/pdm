@@ -191,7 +191,7 @@ class WorkqueueService(object):
                 if rel_path != '.':
                     dst_filepath = os.path.join(job.dst_filepath, rel_path)
                 # is int cast necessary?
-                files = [file_ for file_ in listing if stat.S_ISREG(int(file_['st_mode']))]
+                files = (file_ for file_ in listing if stat.S_ISREG(int(file_['st_mode'])))
                 for i, file_ in enumerate(files):
                     job.elements.append(JobElement(id=i + 1,
                                                    src_filepath=os.path.join(root, file_['name']),
