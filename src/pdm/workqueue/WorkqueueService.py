@@ -185,25 +185,14 @@ class WorkqueueService(object):
         if job.type == JobType.COPY\
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
-            if os.path.splitext(job.dst_filepath)[1]\
-                and len(element.listing) != 1\
-                    and len(element.listing.itervalues().next()) != 1:
-                message = "Trying to set copy destination to definite file name '%s' when "\
-                          "the listing returned multiple files to copy." % job.dst_filepath
-                current_app.log.error(message)
-                job.status = JobStatus.FAILED
-                job.update()
-                abort(500, description=message)
+            dst_filepath = job.dst_filepath
             for root, listing in element.listing.iteritems():
+                rel_path = os.path.relpath(root, job.src_filepath)
+                if rel_path != '.':
+                    dst_filepath = os.path.join(job.dst_filepath, rel_path)
                 # is int cast necessary?
-                files = (file_ for file_ in listing if stat.S_ISREG(int(file_['st_mode'])))
+                files = [file_ for file_ in listing if stat.S_ISREG(int(file_['st_mode']))]
                 for i, file_ in enumerate(files):
-                    if os.path.splitext(job.dst_filepath)[1]:
-                        dst_filepath = job.dst_filepath
-                    else:
-                        dst_filepath = os.path.join(job.dst_filepath,
-                                                    os.path.relpath(root, job.src_filepath),
-                                                    file_['name'])
                     job.elements.append(JobElement(id=i + 1,
                                                    src_filepath=os.path.join(root, file_['name']),
                                                    dst_filepath=dst_filepath,
