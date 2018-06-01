@@ -140,7 +140,7 @@ class WorkqueueService(object):
     @staticmethod
     @export_ext('worker/jobs/<int:job_id>/elements/<int:element_id>', ['PUT'])
     @decode_json_data
-    def return_output(job_id, element_id):  # pylint: disable=too-many-branches
+    def return_output(job_id, element_id):  # pylint: disable=too-many-branches, too-many-locals
         """Return a job."""
         if not request.token_ok:
             abort(403, description="Invalid token")
@@ -169,44 +169,6 @@ class WorkqueueService(object):
 #        abort(500, description="Multiple jobs with id %d found!" % job_id)
         job = element.job
         job.status = max(ele.status for ele in job.elements)
-        # Expand listing for COPY or REMOVE jobs.
-        if job.type == JobType.COPY\
-            and element.type == JobType.LIST\
-                and element.status == JobStatus.DONE:
-            for root, items in element.listing.iteritems():
-                for i, item in enumerate(items):
-                    if not stat.S_ISREG(int(item['st_mode'])):  # int cast necessary?
-                        continue
-                    if job.type == JobType.COPY and len(element.listing) == 1 and \
-                            len(items) == 1 and os.path.splitext(job.dst_filepath)[1]:
-                        dst_filepath = job.dst_filepath
-                    else:
-                        dst_filepath = os.path.join(job.dst_filepath,
-                                                    os.path.relpath(root, job.src_filepath),
-                                                    item['name'])
-                    job.elements.append(JobElement(id=i + 1,
-                                                   src_filepath=os.path.join(root, item['name']),
-                                                   dst_filepath=dst_filepath,
-                                                   max_tries=element.max_tries,
-                                                   type=job.type,
-                                                   size=int(item["st_size"])))  # int cast needed?
-            job.status = JobStatus.SUBMITTED
-        elif job.type == JobType.REMOVE\
-            and element.type == JobType.LIST\
-                and element.status == JobStatus.DONE:
-            for root, items in element.listing.iteritems():
-                items.sort(key=lambda x: stat.S_ISDIR(int(x['st_mode'])))
-                for i, item in enumerate(items):
-                    name = item['name']
-                    if stat.S_ISDIR(int(item['st_mode'])):
-                        name += '/'
-                    job.elements.append(JobElement(id=i + 1,
-                                                   src_filepath=os.path.join(root, name),
-                                                   max_tries=element.max_tries,
-                                                   type=job.type,
-                                                   size=int(item["st_size"])))
-            job.status = JobStatus.SUBMITTED
-        job.update()
 
         # Write log file.
         dir_ = os.path.join(current_app.workqueueservice_workerlogs,
@@ -218,6 +180,54 @@ class WorkqueueService(object):
         with open(os.path.join(dir_, 'attempt%i.log' % element.attempts), 'wb') as logfile:
             logfile.write("Job run on host: %s\n" % request.data['host'])
             logfile.write(request.data['log'])
+
+        # Expand listing for COPY or REMOVE jobs.
+        if job.type == JobType.COPY\
+            and element.type == JobType.LIST\
+                and element.status == JobStatus.DONE:
+            if os.path.splitext(job.dst_filepath)[1]\
+                and len(element.listing) != 1\
+                    and len(element.listing.itervalues().next()) != 1:
+                message = "Trying to set copy destination to definite file name '%s' when "\
+                          "the listing returned multiple files to copy." % job.dst_filepath
+                current_app.log.error(message)
+                job.status = JobStatus.FAILED
+                job.update()
+                abort(500, description=message)
+            for root, listing in element.listing.iteritems():
+                # is int cast necessary?
+                files = (file_ for file_ in listing if stat.S_ISREG(int(file_['st_mode'])))
+                for i, file_ in enumerate(files):
+                    if os.path.splitext(job.dst_filepath)[1]:
+                        dst_filepath = job.dst_filepath
+                    else:
+                        dst_filepath = os.path.join(job.dst_filepath,
+                                                    os.path.relpath(root, job.src_filepath),
+                                                    file_['name'])
+                    job.elements.append(JobElement(id=i + 1,
+                                                   src_filepath=os.path.join(root, file_['name']),
+                                                   dst_filepath=dst_filepath,
+                                                   max_tries=element.max_tries,
+                                                   type=job.type,
+                                                   size=int(file_["st_size"])))  # int cast needed?
+            job.status = JobStatus.SUBMITTED
+        elif job.type == JobType.REMOVE\
+            and element.type == JobType.LIST\
+                and element.status == JobStatus.DONE:
+            for root, listing in element.listing.iteritems():
+                entries = (entry for entry in listing if entry['name'] not in ('.', '..'))
+                for i, entry in enumerate(sorted(entries,
+                                                 key=lambda x: stat.S_ISDIR(int(x['st_mode'])))):
+                    name = entry['name']
+                    if stat.S_ISDIR(int(entry['st_mode'])):
+                        name += '/'
+                    job.elements.append(JobElement(id=i + 1,
+                                                   src_filepath=os.path.join(root, name),
+                                                   max_tries=element.max_tries,
+                                                   type=job.type,
+                                                   size=int(entry["st_size"])))
+            job.status = JobStatus.SUBMITTED
+        job.update()
         return '', 200
 
     @staticmethod
