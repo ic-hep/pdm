@@ -186,14 +186,18 @@ class WorkqueueService(object):
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
             dst_filepath = job.dst_filepath
+            element_counter = 0
             for root, listing in element.listing.iteritems():
-                rel_path = os.path.relpath(root, job.src_filepath)
-                if rel_path != '.':
-                    dst_filepath = os.path.join(job.dst_filepath, rel_path)
                 # is int cast necessary?
                 files = (file_ for file_ in listing if stat.S_ISREG(int(file_['st_mode'])))
-                for i, file_ in enumerate(files):
-                    job.elements.append(JobElement(id=i + 1,
+                for file_ in files:
+                    element_counter += 1
+                    dst_filepath = os.path.join(root, file_['name'])
+                    common_prefix_length = len(os.path.commonprefix((dst_filepath,
+                                                                     job.src_filepath)))
+                    dst_filepath = os.path.join(job.dst_filepath,
+                                                dst_filepath[common_prefix_length:]).rstrip('/')
+                    job.elements.append(JobElement(id=element_counter,
                                                    src_filepath=os.path.join(root, file_['name']),
                                                    dst_filepath=dst_filepath,
                                                    max_tries=element.max_tries,
@@ -203,14 +207,15 @@ class WorkqueueService(object):
         elif job.type == JobType.REMOVE\
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
+            element_counter = 0
             for root, listing in element.listing.iteritems():
                 entries = (entry for entry in listing if entry['name'] not in ('.', '..'))
-                for i, entry in enumerate(sorted(entries,
-                                                 key=lambda x: stat.S_ISDIR(int(x['st_mode'])))):
+                for entry in sorted(entries, key=lambda x: stat.S_ISDIR(int(x['st_mode']))):
+                    element_counter += 1
                     name = entry['name']
                     if stat.S_ISDIR(int(entry['st_mode'])):
                         name += '/'
-                    job.elements.append(JobElement(id=i + 1,
+                    job.elements.append(JobElement(id=element_counter,
                                                    src_filepath=os.path.join(root, name),
                                                    max_tries=element.max_tries,
                                                    type=job.type,
