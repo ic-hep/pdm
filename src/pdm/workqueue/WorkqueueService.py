@@ -185,18 +185,19 @@ class WorkqueueService(object):
         if job.type == JobType.COPY\
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
-            dst_filepath = job.dst_filepath
             element_counter = 0
             for root, listing in element.listing.iteritems():
                 # is int cast necessary?
                 files = (file_ for file_ in listing if stat.S_ISREG(int(file_['st_mode'])))
                 for file_ in files:
                     element_counter += 1
-                    dst_filepath = os.path.join(root, file_['name'])
-                    common_prefix_length = len(os.path.commonprefix((dst_filepath,
+                    src_filepath = os.path.join(root, file_['name'])
+                    common_prefix_length = len(os.path.commonprefix((src_filepath,
                                                                      job.src_filepath)))
-                    dst_filepath = os.path.join(job.dst_filepath,
-                                                dst_filepath[common_prefix_length:]).rstrip('/')
+                    rel_filepath = src_filepath[common_prefix_length:].lstrip('/')
+                    dst_filepath = job.dst_filepath
+                    if rel_filepath:
+                        dst_filepath = os.path.join(job.dst_filepath, rel_filepath)
                     job.elements.append(JobElement(id=element_counter,
                                                    src_filepath=os.path.join(root, file_['name']),
                                                    dst_filepath=dst_filepath,

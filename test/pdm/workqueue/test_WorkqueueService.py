@@ -188,6 +188,85 @@ class TestWorkqueueService(unittest.TestCase):
                                         'listing': {'root': []}})
         self.assertEqual(request.status_code, 400, 'Exceeding max tries should give 400')
 
+        # Test expansion of COPY jobs
+        db = self.__service.test_db()
+        db.session.add(Job(user_id=3, src_siteid=15, src_filepath='/site1/data/somefile',
+                           dst_siteid=16, dst_filepath='/site2/data/someotherfile', type=JobType.COPY))
+        db.session.add(Job(user_id=3, src_siteid=15, src_filepath='/site1/data/somefile',
+                           dst_siteid=16, dst_filepath='~/someotherfile', type=JobType.COPY))
+        db.session.add(Job(user_id=3, src_siteid=15, src_filepath='/site1/data',
+                           dst_siteid=16, dst_filepath='/site2/data/somedir', type=JobType.COPY))
+        j = Job.query.filter_by(id=4).one()
+        self.assertIsNotNone(j)
+        self.assertEqual(len(j.elements), 1)
+        j = Job.query.filter_by(id=5).one()
+        self.assertIsNotNone(j)
+        self.assertEqual(len(j.elements), 1)
+        j = Job.query.filter_by(id=6).one()
+        self.assertIsNotNone(j)
+        self.assertEqual(len(j.elements), 1)
+        with mock.patch('pdm.workqueue.WorkqueueService.stat.S_ISREG') as mock_isreg:
+            mock_isreg.side_effect = [True, False]
+            self.__service.fake_auth("TOKEN", "4.0")
+            request = self.__test.put('/workqueue/api/v1.0/worker/jobs/4/elements/0',
+                                      data={'log': 'blah blah',
+                                            'returncode': 0,
+                                            'host': 'somehost.domain',
+                                            'listing': {'/site1/data': [{'name': 'somefile',
+                                                                         'st_size': 100,
+                                                                         'st_mode': 0o655},
+                                                                        {'name': 'somedir',
+                                                                         'st_size': 200,
+                                                                         'st_mode': 0o655}]}})
+            self.assertEqual(request.status_code, 200)
+            j = Job.query.filter_by(id=4).one()
+            self.assertIsNotNone(j)
+            self.assertEqual(len(j.elements), 2)
+            self.assertEqual(j.elements[1].dst_filepath, '/site2/data/someotherfile')
+
+            mock_isreg.side_effect = [True, False]
+            self.__service.fake_auth("TOKEN", "5.0")
+            request = self.__test.put('/workqueue/api/v1.0/worker/jobs/5/elements/0',
+                                      data={'log': 'blah blah',
+                                            'returncode': 0,
+                                            'host': 'somehost.domain',
+                                            'listing': {'/site1/data': [{'name': 'somefile',
+                                                                         'st_size': 100,
+                                                                         'st_mode': 0o655},
+                                                                        {'name': 'somedir',
+                                                                         'st_size': 200,
+                                                                         'st_mode': 0o655}]}})
+            self.assertEqual(request.status_code, 200)
+            j = Job.query.filter_by(id=5).one()
+            self.assertIsNotNone(j)
+            self.assertEqual(len(j.elements), 2)
+            self.assertEqual(j.elements[1].dst_filepath, '~/someotherfile')
+
+            mock_isreg.side_effect = [True, False, True, False]
+            self.__service.fake_auth("TOKEN", "6.0")
+            request = self.__test.put('/workqueue/api/v1.0/worker/jobs/6/elements/0',
+                                      data={'log': 'blah blah',
+                                            'returncode': 0,
+                                            'host': 'somehost.domain',
+                                            'listing': {'/site1/data': [{'name': 'somefile',
+                                                                         'st_size': 100,
+                                                                         'st_mode': 0o655},
+                                                                        {'name': 'someotherdir',
+                                                                         'st_size': 200,
+                                                                         'st_mode': 0o655}],
+                                                        '/site1/data/someotherdir': [{'name': 'someotherfile',
+                                                                                      'st_size': 300,
+                                                                                      'st_mode': 0o655},
+                                                                                     {'name': 'somedir',
+                                                                                      'st_size': 400,
+                                                                                      'st_mode': 0o655}]}})
+            self.assertEqual(request.status_code, 200)
+            j = Job.query.filter_by(id=6).one()
+            self.assertIsNotNone(j)
+            self.assertEqual(len(j.elements), 3)
+            self.assertEqual(j.elements[1].dst_filepath, '/site2/data/somedir/somefile')
+            self.assertEqual(j.elements[2].dst_filepath, '/site2/data/somedir/someotherdir/someotherfile')
+
     @mock.patch('pdm.workqueue.WorkqueueService.current_app')
     @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
     def test_post_job(self, mock_hrservice, mock_siteclient):
