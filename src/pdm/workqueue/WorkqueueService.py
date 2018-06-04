@@ -186,7 +186,7 @@ class WorkqueueService(object):
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
             element_counter = 0
-            for root, listing in element.listing.iteritems():
+            for root, listing in sorted(element.listing.iteritems(), key=lambda item: len(item[0])):
                 # is int cast necessary?
                 files = (file_ for file_ in listing if stat.S_ISREG(int(file_['st_mode'])))
                 for file_ in files:
