@@ -209,7 +209,8 @@ class WorkqueueService(object):
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
             element_counter = 0
-            for root, listing in element.listing.iteritems():
+            for root, listing in sorted(element.listing.iteritems(),
+                                        key=lambda item: len(item[0]), reverse=True):
                 entries = (entry for entry in listing if entry['name'] not in ('.', '..'))
                 for entry in sorted(entries, key=lambda x: stat.S_ISDIR(int(x['st_mode']))):
                     element_counter += 1
