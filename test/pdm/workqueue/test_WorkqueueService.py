@@ -207,6 +207,9 @@ class TestWorkqueueService(unittest.TestCase):
         j = Job.query.filter_by(id=6).one()
         self.assertIsNotNone(j)
         self.assertEqual(len(j.elements), 1)
+        j = Job.query.filter_by(id=7).one()
+        self.assertIsNotNone(j)
+        self.assertEqual(len(j.elements), 1)
         self.__service.fake_auth("TOKEN", "4.0")
         request = self.__test.put('/workqueue/api/v1.0/worker/jobs/4/elements/0',
                                   data={'log': 'blah blah',
