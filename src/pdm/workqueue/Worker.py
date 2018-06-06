@@ -169,7 +169,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
             for root, listing in done_element['Listing'].iteritems():
                 root = urlsplit(root).path
                 if root.startswith('/~'):
-                    root.lstrip('/')
+                    root = root.lstrip('/')
                 data['listing'][root] = listing
         token = self._tokens.pop(element_id)
         self._callback(*element_id.split('.'), token=token, data=data)
