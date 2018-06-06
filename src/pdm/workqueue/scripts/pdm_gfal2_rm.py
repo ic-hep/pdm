@@ -37,7 +37,7 @@ def pdm_gfal_rm(rmdict, verbosity=logging.INFO):
     dir_list = rmdict.get('dirs', [])
     for jobid, elem in dir_list:
         try:
-            ctx.rmdir(elem)
+            res = ctx.rmdir(str(elem))
             json.dump({'Code': res, 'Reason': 'OK', 'id': jobid}, sys.stdout)
         except gfal2.GError as gerror:
             json.dump({'Code': 1, 'Reason': str(gerror), 'id': jobid}, sys.stdout)
