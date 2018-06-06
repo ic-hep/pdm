@@ -14,9 +14,8 @@ import logging
 from pprint import pformat
 from datetime import datetime
 from contextlib import contextmanager
-from urlparse import urlunsplit
+from urlparse import urlsplit, urlunsplit
 from tempfile import NamedTemporaryFile
-from urlparse import urlsplit
 
 from requests.exceptions import Timeout
 
@@ -171,7 +170,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
         self._callback(*element_id.split('.'), token=token, data=data)
 
 
-class Worker(RESTClient, Daemon):
+class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attributes
     """Worker Daemon."""
 
     def __init__(self, debug=False, n_shot=None, loglevel=logging.INFO):
@@ -187,6 +186,8 @@ class Worker(RESTClient, Daemon):
         conf = getConfig('worker')
         self._types = [JobType[type_.upper()] for type_ in  # pylint: disable=unsubscriptable-object
                        conf.pop('types', ('LIST', 'COPY', 'REMOVE'))]
+        self._alg = conf.pop('algorithm', 'BY_NUMBER').upper()
+        self._alg_args = conf.pop('algorithm.args', {})
         self._interpoll_sleep_time = conf.pop('poll_time', 2)
         self._system_ca_dir = conf.pop('system_ca_dir',
                                        os.environ.get('X509_CERT_DIR', '/etc/grid-security'))
@@ -242,7 +243,9 @@ class Worker(RESTClient, Daemon):
         while self.should_run:
             self._logger.info("Getting workload from WorkqueueService.")
             try:
-                workload = self.post('worker/jobs', data={'types': self._types})
+                workload = self.post('worker/jobs', data={'types': self._types,
+                                                          'algorithm': self._alg,
+                                                          'algorithm.args': self._alg_args})
             except Timeout:
                 self._logger.warning("Timed out contacting the WorkqueueService.")
                 continue
