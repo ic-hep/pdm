@@ -133,14 +133,23 @@ class UserCommand(object):
         user_parser = subparsers.add_parser('addsite', help="add a site to the PDM.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
-        user_parser.add_argument('name', type=str, help="site name")
-        user_parser.add_argument('path', type=str,
+        user_parser.add_argument('site_name', type=str, help="site name")
+        user_parser.add_argument('-d', '--def_path', type=str, default='/~',
                                  help="The default (starting) path to use at this site.")
-        user_parser.add_argument('desc', type=str, help="site description.")
+        user_parser.add_argument('site_desc', type=str, help="site description.")
+        user_parser.add_argument('-a', '--auth_uri', type=str,
+                                 help='myproxy endpoint host:port')
+        # auth_type == 1 : VOMS login
+        user_parser.add_argument('-m', '--auth_type', type=int, default=0,
+                                 help='The authentication mode for this site.')
+        #user_parser.add_argument('-d', '--default_path', default ='/~',
+        #                         help='The default path to use when connecting to this site')
+        user_parser.add_argument('-e', '--endpoints', nargs='+',
+                                 help='List of gridftp endpoints for this site in host:port format.')
         user_parser.add_argument('-p', '--public', action='store_true')
         user_parser.set_defaults(func=self.add_site)
         # delete site
-        user_parser = subparsers.add_parser('delsite', help="delete a site from the PDM.")
+        user_parser = subparsers.add_parser('delsite', help="Delete a site from the PDM.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('name', type=str, help="site name")
@@ -479,7 +488,13 @@ class UserCommand(object):
         """
         token = UserCommand._get_token(args.token)
         if token:
-            pass
+            site_info = {key: value for (key, value) in vars(args).iteritems() if
+                             value is not None and key not in ('func', 'token',
+                                                               'config', 'verbosity')}
+            print site_info
+            site_client = SiteClient()
+            site_client.set_token(token)
+            site_client.add_site(site_info)
 
     def del_site(self, args):
         """
@@ -489,7 +504,12 @@ class UserCommand(object):
         """
         token = UserCommand._get_token(args.token)
         if token:
-            pass
+            site_client, site_id = UserCommand._get_site_id(args.name, token)
+            if site_id:
+                site_client.del_site(site_id)
+            else:
+                print "site %s not found !" % (args.name,)
+
 
     def site_login(self, args):
         """
