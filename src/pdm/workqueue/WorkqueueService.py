@@ -212,9 +212,11 @@ class WorkqueueService(object):
             top_root = None
             for root, listing in sorted(element.listing.iteritems(),
                                         key=lambda item: len(item[0]), reverse=True):
-                top_root = root
-                entries = (entry for entry in listing if entry['name'] not in ('.', '..'))
-                for entry in sorted(entries, key=lambda x: stat.S_ISDIR(int(x['st_mode']))):
+                entries = sorted((entry for entry in listing if entry['name'] not in ('.', '..')),
+                                 key=lambda x: stat.S_ISDIR(int(x['st_mode'])))
+                if len(entries) != len(listing):  # when removing a single file this is false.
+                    top_root = root
+                for entry in entries:
                     element_counter += 1
                     name = entry['name']
                     if stat.S_ISDIR(int(entry['st_mode'])):
