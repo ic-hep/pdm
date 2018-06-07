@@ -268,13 +268,15 @@ class TestWorkqueueService(unittest.TestCase):
                                   data={'log': 'blah blah',
                                         'returncode': 0,
                                         'host': 'somehost.domain',
-                                        'listing': {'/site1/data': [{'name': 'somefile',
+                                        'listing': {'/site1/data': [{'name': '.', 'st_mode': 0o040655}, {'name': '..', 'st_mode': 0o040655},
+                                                                    {'name': 'somefile',
                                                                      'st_size': 100,
                                                                      'st_mode': 0o0100655},
                                                                     {'name': 'someotherdir',
                                                                      'st_size': 200,
                                                                      'st_mode': 0o040655}],
-                                                    '/site1/data/someotherdir': [{'name': 'someotherfile',
+                                                    '/site1/data/someotherdir': [{'name': '.', 'st_mode': 0o040655}, {'name': '..', 'st_mode': 0o040655},
+                                                                                 {'name': 'someotherfile',
                                                                                   'st_size': 300,
                                                                                   'st_mode': 0o0100655},
                                                                                  {'name': 'somedir',
@@ -284,21 +286,23 @@ class TestWorkqueueService(unittest.TestCase):
         j = Job.query.filter_by(id=7).one()
         self.assertIsNotNone(j)
         self.assertEqual(len(j.elements), 3)
-        self.assertEqual(j.elements[1].dst_filepath, '/site2/data/somedir/somefile')
-        self.assertEqual(j.elements[2].dst_filepath, '/site2/data/somedir/someotherdir/someotherfile')
+        self.assertEqual(j.elements[1].dst_filepath, '/site2/data/somedir/data/somefile')
+        self.assertEqual(j.elements[2].dst_filepath, '/site2/data/somedir/data/someotherdir/someotherfile')
 
         self.__service.fake_auth("TOKEN", "8.0")
         request = self.__test.put('/workqueue/api/v1.0/worker/jobs/8/elements/0',
                                   data={'log': 'blah blah',
                                         'returncode': 0,
                                         'host': 'somehost.domain',
-                                        'listing': {'/site1/data': [{'name': 'somefile',
+                                        'listing': {'/site1/data': [{'name': '.', 'st_mode': 0o040655}, {'name': '..', 'st_mode': 0o040655},
+                                                                    {'name': 'somefile',
                                                                      'st_size': 100,
                                                                      'st_mode': 0o0100655},
                                                                     {'name': 'someotherdir',
                                                                      'st_size': 200,
                                                                      'st_mode': 0o040655}],
-                                                    '/site1/data/someotherdir': [{'name': 'someotherfile',
+                                                    '/site1/data/someotherdir': [{'name': '.', 'st_mode': 0o040655}, {'name': '..', 'st_mode': 0o040655},
+                                                                                 {'name': 'someotherfile',
                                                                                   'st_size': 300,
                                                                                   'st_mode': 0o0100655},
                                                                                  {'name': 'somedir',
@@ -308,8 +312,8 @@ class TestWorkqueueService(unittest.TestCase):
         j = Job.query.filter_by(id=8).one()
         self.assertIsNotNone(j)
         self.assertEqual(len(j.elements), 3)
-        self.assertEqual(j.elements[1].dst_filepath, '~/somefile')
-        self.assertEqual(j.elements[2].dst_filepath, '~/someotherdir/someotherfile')
+        self.assertEqual(j.elements[1].dst_filepath, '~/data/somefile')
+        self.assertEqual(j.elements[2].dst_filepath, '~/data/someotherdir/someotherfile')
 
         # Test expansion of REMOVE jobs
         db.session.add(Job(user_id=3, src_siteid=15, src_filepath='/site1/data', type=JobType.REMOVE))

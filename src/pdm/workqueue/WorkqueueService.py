@@ -188,10 +188,13 @@ class WorkqueueService(object):
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
             element_counter = 0
+            dir_copy = False
             for root, listing in sorted(element.listing.iteritems(), key=lambda item: len(item[0])):
                 # is int cast necessary?
-                files = (file_ for file_ in listing if stat.S_ISREG(int(file_['st_mode'])) and
-                         file_['name'] not in ('.', '..'))  # gfal treats . and .. as files??!
+                files = [file_ for file_ in listing if stat.S_ISREG(int(file_['st_mode'])) and
+                         file_['name'] not in ('.', '..')]  # gfal treats . and .. as files??!
+                if len(files) != len(listing):
+                    dir_copy = True
                 for file_ in files:
                     element_counter += 1
                     src_filepath = os.path.join(root, file_['name'])
@@ -199,7 +202,11 @@ class WorkqueueService(object):
                                                                      job.src_filepath)))
                     rel_filepath = src_filepath[common_prefix_length:].lstrip('/')
                     dst_filepath = job.dst_filepath
-                    if rel_filepath:
+                    if rel_filepath and dir_copy:
+                        dst_filepath = os.path.join(job.dst_filepath,
+                                                    os.path.basename(job.src_filepath.rstrip('/')),
+                                                    rel_filepath)
+                    elif rel_filepath:
                         dst_filepath = os.path.join(job.dst_filepath, rel_filepath)
                     job.elements.append(JobElement(id=element_counter,
                                                    src_filepath=os.path.join(root, file_['name']),
