@@ -337,11 +337,12 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(request.status_code, 200)
         j = Job.query.filter_by(id=9).one()
         self.assertIsNotNone(j)
-        self.assertEqual(len(j.elements), 5)
+        self.assertEqual(len(j.elements), 6)
         self.assertEqual(j.elements[1].src_filepath, '/site1/data/someotherdir/someotherfile')
         self.assertEqual(j.elements[2].src_filepath, '/site1/data/someotherdir/somedir/')
         self.assertEqual(j.elements[3].src_filepath, '/site1/data/somefile')
         self.assertEqual(j.elements[4].src_filepath, '/site1/data/someotherdir/')
+        self.assertEqual(j.elements[5].src_filepath, '/site1/data/')
 
     @mock.patch('pdm.workqueue.WorkqueueService.current_app')
     @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
