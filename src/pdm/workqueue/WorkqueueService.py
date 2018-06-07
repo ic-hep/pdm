@@ -148,7 +148,8 @@ class WorkqueueService(object):
         if request.token != '%d.%d' % (job_id, element_id):
             abort(403,
                   description="Token not valid for element %d of job %d" % (element_id, job_id))
-        current_app.log.debug("Received data from worker: %s", pformat(request.data))
+        current_app.log.debug("Received data from worker for job.element %s.%s: %s",
+                              job_id, element_id, pformat(request.data))
         require_attrs('returncode', 'host', 'log')
 
         # Update job status.
@@ -189,7 +190,8 @@ class WorkqueueService(object):
             element_counter = 0
             for root, listing in sorted(element.listing.iteritems(), key=lambda item: len(item[0])):
                 # is int cast necessary?
-                files = (file_ for file_ in listing if stat.S_ISREG(int(file_['st_mode'])))
+                files = (file_ for file_ in listing if stat.S_ISREG(int(file_['st_mode'])) and
+                         file_['name'] not in ('.', '..'))  # gfal treats . and .. as files??!
                 for file_ in files:
                     element_counter += 1
                     src_filepath = os.path.join(root, file_['name'])
