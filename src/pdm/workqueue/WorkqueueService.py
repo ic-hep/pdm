@@ -137,10 +137,11 @@ class WorkqueueService(object):
         current_app.log.debug("Sending worker job batch: %s", pformat(work))
         return jsonify(work)
 
+    # pylint: disable=too-many-branches, too-many-locals, too-many-statements
     @staticmethod
     @export_ext('worker/jobs/<int:job_id>/elements/<int:element_id>', ['PUT'])
     @decode_json_data
-    def return_output(job_id, element_id):  # pylint: disable=too-many-branches, too-many-locals
+    def return_output(job_id, element_id):
         """Return a job."""
         if not request.token_ok:
             abort(403, description="Invalid token")
