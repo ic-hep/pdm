@@ -137,16 +137,20 @@ class UserCommand(object):
         user_parser.add_argument('-d', '--def_path', type=str, default='/~',
                                  help="The default (starting) path to use at this site.")
         user_parser.add_argument('site_desc', type=str, help="site description.")
-        user_parser.add_argument('-a', '--auth_uri', type=str,
-                                 help='myproxy endpoint host:port')
+        user_parser.add_argument('-a', '--auth_uri', type=str, required=True,
+        help = 'myproxy endpoint host:port')
         # auth_type == 1 : VOMS login
         user_parser.add_argument('-m', '--auth_type', type=int, default=0,
                                  help='The authentication mode for this site.')
-        #user_parser.add_argument('-d', '--default_path', default ='/~',
+        # user_parser.add_argument('-d', '--default_path', default ='/~',
         #                         help='The default path to use when connecting to this site')
-        user_parser.add_argument('-e', '--endpoints', nargs='+',
+        user_parser.add_argument('-e', '--endpoints', nargs='+', required=True,
                                  help='List of gridftp endpoints for this site in host:port format.')
         user_parser.add_argument('-p', '--public', action='store_true')
+        user_parser.add_argument('-u', '--user_ca_cert', help='File holding the CA '
+                                                              'used for user certificates')
+        user_parser.add_argument('-s', '--service_ca_cert', help='File holding the CA '
+                                                                 'used for site services')
         user_parser.set_defaults(func=self.add_site)
         # delete site
         user_parser = subparsers.add_parser('delsite', help="Delete a site from the PDM.")
@@ -489,8 +493,21 @@ class UserCommand(object):
         token = UserCommand._get_token(args.token)
         if token:
             site_info = {key: value for (key, value) in vars(args).iteritems() if
-                             value is not None and key not in ('func', 'token',
-                                                               'config', 'verbosity')}
+                         value is not None and key not in ('func', 'token',
+                                                           'config', 'verbosity',
+                                                           'service_ca_cert', 'user_ca_cert')}
+            if args.user_ca_cert:
+                user_cert = UserCommand._get_cert(args.user_ca_cert)
+                if user_cert:
+                    site_info['user_ca_cert'] = user_cert
+                else:
+                    return None
+            if args.service_ca_cert:
+                service_cert = UserCommand._get_cert(args.service_ca_cert)
+                if service_cert:
+                    site_info['service_ca_cert'] = service_cert
+                else:
+                    return None
             print site_info
             site_client = SiteClient()
             site_client.set_token(token)
@@ -509,7 +526,6 @@ class UserCommand(object):
                 site_client.del_site(site_id)
             else:
                 print "site %s not found !" % (args.name,)
-
 
     def site_login(self, args):
         """
@@ -626,3 +642,13 @@ class UserCommand(object):
                 print "Token expired. Please log in again."
                 return None
             return token
+
+    @staticmethod
+    def _get_cert(certfile):
+        if os.path.isfile(certfile):
+            with open(os.path.expanduser(certfile)) as cert_file:
+                cert = cert_file.read()
+                if not cert:
+                    print "No certificate at requested location. Please check and try again."
+                return cert
+        print "%s does not exist or it is not a file. Please check and try again." % (certfile,)
