@@ -137,17 +137,19 @@ class WorkqueueService(object):
         current_app.log.debug("Sending worker job batch: %s", pformat(work))
         return jsonify(work)
 
+    # pylint: disable=too-many-branches, too-many-locals, too-many-statements
     @staticmethod
     @export_ext('worker/jobs/<int:job_id>/elements/<int:element_id>', ['PUT'])
     @decode_json_data
-    def return_output(job_id, element_id):  # pylint: disable=too-many-branches, too-many-locals
+    def return_output(job_id, element_id):
         """Return a job."""
         if not request.token_ok:
             abort(403, description="Invalid token")
         if request.token != '%d.%d' % (job_id, element_id):
             abort(403,
                   description="Token not valid for element %d of job %d" % (element_id, job_id))
-        current_app.log.debug("Received data from worker: %s", pformat(request.data))
+        current_app.log.debug("Received data from worker for job.element %s.%s: %s",
+                              job_id, element_id, pformat(request.data))
         require_attrs('returncode', 'host', 'log')
 
         # Update job status.
@@ -185,18 +187,27 @@ class WorkqueueService(object):
         if job.type == JobType.COPY\
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
-            dst_filepath = job.dst_filepath
             element_counter = 0
-            for root, listing in element.listing.iteritems():
+            dir_copy = False
+            for root, listing in sorted(element.listing.iteritems(), key=lambda item: len(item[0])):
                 # is int cast necessary?
-                files = (file_ for file_ in listing if stat.S_ISREG(int(file_['st_mode'])))
+                files = [file_ for file_ in listing if stat.S_ISREG(int(file_['st_mode'])) and
+                         file_['name'] not in ('.', '..')]  # gfal treats . and .. as files??!
+                if len(files) != len(listing):
+                    dir_copy = True
                 for file_ in files:
                     element_counter += 1
-                    dst_filepath = os.path.join(root, file_['name'])
-                    common_prefix_length = len(os.path.commonprefix((dst_filepath,
+                    src_filepath = os.path.join(root, file_['name'])
+                    common_prefix_length = len(os.path.commonprefix((src_filepath,
                                                                      job.src_filepath)))
-                    dst_filepath = os.path.join(job.dst_filepath,
-                                                dst_filepath[common_prefix_length:]).rstrip('/')
+                    rel_filepath = src_filepath[common_prefix_length:].lstrip('/')
+                    dst_filepath = job.dst_filepath
+                    if rel_filepath and dir_copy:
+                        dst_filepath = os.path.join(job.dst_filepath,
+                                                    os.path.basename(job.src_filepath.rstrip('/')),
+                                                    rel_filepath)
+                    elif rel_filepath:
+                        dst_filepath = os.path.join(job.dst_filepath, rel_filepath)
                     job.elements.append(JobElement(id=element_counter,
                                                    src_filepath=os.path.join(root, file_['name']),
                                                    dst_filepath=dst_filepath,
@@ -208,9 +219,14 @@ class WorkqueueService(object):
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
             element_counter = 0
-            for root, listing in element.listing.iteritems():
-                entries = (entry for entry in listing if entry['name'] not in ('.', '..'))
-                for entry in sorted(entries, key=lambda x: stat.S_ISDIR(int(x['st_mode']))):
+            top_root = None
+            for root, listing in sorted(element.listing.iteritems(),
+                                        key=lambda item: len(item[0]), reverse=True):
+                entries = sorted((entry for entry in listing if entry['name'] not in ('.', '..')),
+                                 key=lambda x: stat.S_ISDIR(int(x['st_mode'])))
+                if len(entries) != len(listing):  # when removing a single file this is false.
+                    top_root = root
+                for entry in entries:
                     element_counter += 1
                     name = entry['name']
                     if stat.S_ISDIR(int(entry['st_mode'])):
@@ -220,6 +236,14 @@ class WorkqueueService(object):
                                                    max_tries=element.max_tries,
                                                    type=job.type,
                                                    size=int(entry["st_size"])))
+            # Need to remove top level directory
+            if top_root is not None:
+                element_counter += 1
+                job.elements.append(JobElement(id=element_counter,
+                                               src_filepath=top_root.rstrip('/') + '/',
+                                               max_tries=element.max_tries,
+                                               type=job.type,
+                                               size=0))  # work out size better
             job.status = JobStatus.SUBMITTED
         job.update()
         return '', 200

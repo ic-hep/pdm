@@ -165,8 +165,12 @@ class StdOutDispatcher(asyncore.file_dispatcher):
             return
 
         if 'Listing' in done_element:
-            data.update(listing={urlsplit(root).path: listing for root, listing
-                                 in done_element['Listing'].iteritems()})
+            data['listing'] = {}
+            for root, listing in done_element['Listing'].iteritems():
+                root = urlsplit(root).path
+                if root.startswith('/~'):
+                    root = root.lstrip('/')
+                data['listing'][root] = listing
         token = self._tokens.pop(element_id)
         self._callback(*element_id.split('.'), token=token, data=data)
 
