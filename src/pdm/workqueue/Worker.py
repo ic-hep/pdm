@@ -302,7 +302,7 @@ class Worker(RESTClient, Daemon):
                                                                 element['dst_filepath'], '', '')),))
                     elif element['type'] == JobType.REMOVE\
                             and element['src_filepath'].endswith('/'):
-                        data['dirs'].append(src)
+                        data.setdefault('dirs', []).append(src)
                     else:
                         data['files'].append(src)
 
