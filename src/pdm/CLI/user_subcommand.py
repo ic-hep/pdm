@@ -38,7 +38,9 @@ class UserCommand(object):
         user_parser = subparsers.add_parser('unregister', help="Delete a user from the PDM.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
-        user_parser.set_defaults(func=self.unregister)
+        # TODO sue to a bug in the SiteService, commented out
+        #user_parser.set_defaults(func=self.unregister)
+        user_parser.set_defaults(func=self.not_implemented)
         # login
         user_parser = subparsers.add_parser('login', help="User login procedure.")
         user_parser.add_argument('-e', '--email', type=str, required=True)
@@ -177,6 +179,15 @@ class UserCommand(object):
         user_parser.add_argument('name', type=str, help="site name")
         user_parser.set_defaults(func=self.site_logoff)
         # sub-command functions
+
+    def not_implemented(self, args):
+        """
+        Not Implemented yet placeholder
+        :param args:
+        :return:
+        """
+
+        print " Operation not implemented yet ..."
 
     def register(self, args):  # pylint: disable=no-self-use
         """
