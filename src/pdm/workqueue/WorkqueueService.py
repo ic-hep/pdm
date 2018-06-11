@@ -337,41 +337,77 @@ class WorkqueueService(object):
     @export_ext('jobs/<int:job_id>/output', ['GET'])
     @export_ext('jobs/<int:job_id>/elements/<int:element_id>/output', ['GET'])
     @export_ext('jobs/<int:job_id>/elements/<int:element_id>/output/<int:attempt>', ['GET'])
-    def get_output(job_id, element_id=0, attempt=None):
+    def get_output(job_id, element_id=None, attempt=None):  # pylint: disable=too-many-branches
         """Get job output."""
-        JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
-        element = JobElement.query.filter_by(job_id=job_id, id=element_id)\
-                                  .filter(JobElement.status.in_((JobStatus.DONE,
-                                                                 JobStatus.FAILED)))\
-                                  .join(JobElement.job)\
-                                  .filter_by(user_id=HRService.check_token())\
-                                  .first_or_404()
+        Job = request.db.tables.Job  # pylint: disable=invalid-name
+        job = Job.query.filter_by(id=job_id, user_id=HRService.check_token())\
+                       .first_or_404()
 
-        if attempt is None:
+        log_filebase = os.path.join(current_app.workqueueservice_workerlogs,
+                                    job.log_uid[:2],
+                                    job.log_uid)
+
+        if element_id is not None:
+            if element_id not in xrange(len(job.elements)):
+                abort(404, description="Job element %s.%s not found" % (job_id, element_id))
+            element = job.elements[element_id]
+            if element.status not in (JobStatus.DONE, JobStatus.FAILED):
+                abort(400, description="Job element %s.%s not yet ready" % (job_id, element_id))
             if element.attempts == 0:
-                abort(404, description="No attempts have yet been recorded for element %d of "
+                abort(400, description="No attempts have yet been recorded for element %d of "
                                        "job %d. Please try later." % (element_id, job_id))
-            attempt = element.attempts
+            if attempt is None:
+                attempt = element.attempts
+            if attempt not in xrange(1, element.attempts + 1):
+                abort(400, description="Invalid attempt '%s', job.element %s.%s has been tried %s "
+                                       "time(s)" % (attempt, job_id, element_id, element.attempts))
 
-        if attempt not in xrange(1, element.attempts + 1):
-            abort(400, description="Invalid attempt '%s', job has been tried %s time(s)"
-                  % (attempt, element.attempts))
+            log_filename = os.path.join(log_filebase, str(element_id), "attempt%i.log" % attempt)
+            if not os.path.exists(log_filename):
+                abort(500, description="log directory/file %s not found for job.element %s.%s."
+                      % (log_filename, job_id, element_id))
+            with open(log_filename, 'rb') as logfile:
+                log = logfile.read()
 
-        logfilename = os.path.join(current_app.workqueueservice_workerlogs,
-                                   element.job.log_uid[:2],
-                                   element.job.log_uid,
-                                   str(element_id),
-                                   "attempt%i.log" % attempt)
-        if not os.path.exists(logfilename):
-            abort(500, description="log directory/file not found.")
-        with open(logfilename, 'rb') as logfile:
-            log = logfile.read()
+            return_dict = {'jobid': job_id, 'elementid': element_id, 'attempt': attempt,
+                           'type': JobType(element.type).name,  # pylint: disable=no-member
+                           'status': JobStatus(element.status).name,  # pylint: disable=no-member
+                           'log': log}
+            if element.type == JobType.LIST:
+                return_dict.update(listing=element.listing)
+            return jsonify(return_dict)
 
-        return_dict = {'jobid': element.job_id, 'elementid': element.id,
-                       'type': JobType(element.type).name, 'log': log}  # pylint: disable=no-member
-        if element.type == JobType.LIST:
-            return_dict.update(listing=element.listing)
-        return jsonify(return_dict)
+        return_list = []
+        for element in job.elements:
+            if element.status not in (JobStatus.DONE, JobStatus.FAILED):
+                current_app.log.warn("Job element %s.%s not yet ready", job_id, element.id)
+                continue
+            if element.attempts == 0:
+                current_app.log.warn("No attempts have yet been recorded for element %d of "
+                                     "job %d. Please try later.", element.id, job_id)
+                continue
+            if attempt is None:
+                attempt = element.attempts
+            if attempt not in xrange(1, element.attempts + 1):
+                current_app.log.warn("Invalid attempt '%s', job.element %s.%s has been tried %s "
+                                     "time(s)", attempt, job_id, element.id, element.attempts)
+                continue
+
+            log_filename = os.path.join(log_filebase, str(element.id), "attempt%i.log" % attempt)
+            if not os.path.exists(log_filename):
+                abort(500, description="log directory/file %s not found for job.element %s.%s."
+                      % (log_filename, job_id, element.id))
+            with open(log_filename, 'rb') as logfile:
+                log = logfile.read()
+
+            return_dict = {'jobid': job_id, 'elementid': element.id, 'attempt': attempt,
+                           'type': JobType(element.type).name,  # pylint: disable=no-member
+                           'status': JobStatus(element.status).name,  # pylint: disable=no-member
+                           'log': log}
+            if element.type == JobType.LIST:
+                return_dict.update(listing=element.listing)
+            return_list.append(return_dict)
+        return jsonify(return_list)
 
     @staticmethod
     @export_ext("jobs/<int:job_id>/status", ['GET'])
