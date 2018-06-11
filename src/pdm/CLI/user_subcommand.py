@@ -5,6 +5,8 @@ Example usage: pdm register -e fred@flintstones.com -n Fred -s Flintstone
 import os
 import errno
 import stat
+import logging
+from pprint import pprint
 from getpass import getpass
 from time import sleep
 from datetime import datetime
@@ -108,8 +110,6 @@ class UserCommand(object):
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('job', type=int, help="job id as obtained"
                                                        " from copy, remove or list.")
-        user_parser.add_argument('-a', '--attempt', default=-1,
-                                 help="Attempt number, leave out for the last attempt.")
         user_parser.set_defaults(func=self.log)
         # site list
         user_parser = subparsers.add_parser('sites',
@@ -442,7 +442,7 @@ class UserCommand(object):
 
     def log(self, args):
         """
-        Get job log
+        Get job log of a complete finished job. Use -v to get complete job info.
         :param args:
         :return:
         """
@@ -451,14 +451,12 @@ class UserCommand(object):
             job_id = int(args.job)
             client = TransferClientFacade(token)
             status = self._status(job_id, client, block=True)
-            attempts = status['attempts']
-            #
-            if args.attempt == -1:
-                print "Job log - last attempt %d" % (attempts,)
-                log_listing = client.output(job_id)['log']
-            else:
-                log_listing = client.output(job_id, args.attempt)['log']
-            print log_listing
+            for element in client.output(job_id):
+                log_listing = element['log']
+                if args.verbosity == logging.DEBUG:
+                    pprint(element)
+                else:
+                    print log_listing
 
     def get_site(self, args):
         """
