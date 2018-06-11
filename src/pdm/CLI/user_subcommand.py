@@ -41,7 +41,7 @@ class UserCommand(object):
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         # TODO sue to a bug in the SiteService, commented out
-        #user_parser.set_defaults(func=self.unregister)
+        # user_parser.set_defaults(func=self.unregister)
         user_parser.set_defaults(func=self.not_implemented)
         # login
         user_parser = subparsers.add_parser('login', help="User login procedure.")
@@ -140,7 +140,7 @@ class UserCommand(object):
                                  help="The default (starting) path to use at this site.")
         user_parser.add_argument('site_desc', type=str, help="site description.")
         user_parser.add_argument('-a', '--auth_uri', type=str, required=True,
-        help = 'myproxy endpoint host:port')
+                                 help='myproxy endpoint host:port')
         # auth_type == 1 : VOMS login
         user_parser.add_argument('-m', '--auth_type', type=int, default=0,
                                  help='The authentication mode for this site.')
