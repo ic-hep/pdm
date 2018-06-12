@@ -310,7 +310,7 @@ class UserCommand(object):
                         break
 
                 if status['status'] == 'DONE':
-                    listing_output = client.output(resp['id'])
+                    listing_output = client.output(resp['id'])[0] #listing is element 0
                     listing_d_value = listing_output['listing']
                     root, listing = listing_d_value.items()[0]  # top root
                     self._print_formatted_listing(root, listing_d_value)

@@ -91,8 +91,8 @@ class TestUsercommand(unittest.TestCase):
         mock_list.return_value = {'status': 'DONE', 'id': 1}
         mocked_facade.return_value.status.return_value = {'status': 'DONE', 'id': 1}
         # top level only:
-        mock_output.return_value = {
-            'listing': list_dicts}  # ['gsiftp://gfe02.grid.hep.ph.ic.ac.uk/pnfs/hep.ph.ic.ac.uk/data/mice/martynia/test']}
+        mock_output.return_value = [{  # listing is the element 0 of the list
+            'listing': list_dicts}]  # ['gsiftp://gfe02.grid.hep.ph.ic.ac.uk/pnfs/hep.ph.ic.ac.uk/data/mice/martynia/test']}
         args = self._parser.parse_args('list source  -m 3 -t  {}'.format(self._tmp_file.name).split())
         args.func(args)
         mock_output.assert_called_with(1)
