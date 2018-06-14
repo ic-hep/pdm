@@ -102,8 +102,8 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
             sys.stdout.flush()
         except gfal2.GError as gerror:
             json.dump({'Code': 1, 'Reason': str(gerror), 'id': jobid}, sys.stdout)
-            sys.stdout.flush()
             _logger.error(str(gerror))
+            sys.stdout.flush()
     return  # result
 
 
