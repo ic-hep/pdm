@@ -10,6 +10,7 @@ import json
 import logging
 import pprint as pp
 import gfal2
+from pdm.workqueue.scripts.stdout_dump_helper import dump_and_flush
 
 logging.basicConfig()
 _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -36,9 +37,7 @@ def pdm_gfal_ls(root, depth=-1, verbosity=logging.INFO):
         stat_tup = ctx.stat(root)
     except Exception as gfal_exc:
         _logger.error("Error when obtaining ctx.stat(%s) \n %s", root, gfal_exc)
-        json.dump({'Reason': str(gfal_exc), 'Code': 1, 'id': ID}, sys.stdout)
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+        dump_and_flush({'Reason': str(gfal_exc), 'Code': 1, 'id': ID})
         sys.exit(1)
 
     stat_dict = {k: getattr(stat_tup, k)
@@ -84,9 +83,7 @@ def pdm_gfal_list_dir(ctx, root, result, max_depth=-1, depth=1):
         stat_tup = ((item, ctx.stat(os.path.join(root, item))) for item in ctx.listdir(root))
     except Exception as gfal_exc:
         _logger.error("Error when analysing %s \n %s", root, gfal_exc)
-        json.dump({'Reason': str(gfal_exc), 'Code': 1, 'id': ID}, sys.stdout)
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+        dump_and_flush({'Reason': str(gfal_exc), 'Code': 1, 'id': ID})
         sys.exit(1)
 
     stat_d_list = [dict(((k, getattr(j, k))
@@ -141,9 +138,7 @@ def pdm_gfal_long_list_dir(ctx, root, result, max_depth=-1, depth=1):
         result[root] = dir_entries
     except Exception as gfal_exc:
         _logger.error("Error when analysing %s \n %s", root, gfal_exc)
-        json.dump({'Reason': str(gfal_exc), 'Code': 1, 'id': ID}, sys.stdout)
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+        dump_and_flush({'Reason': str(gfal_exc), 'Code': 1, 'id': ID})
         sys.exit(1)
 
     if depth >= max_depth and max_depth != -1:
@@ -154,24 +149,6 @@ def pdm_gfal_long_list_dir(ctx, root, result, max_depth=-1, depth=1):
 
     for subdir in subdirs:
         pdm_gfal_long_list_dir(ctx, os.path.join(root, subdir), result, max_depth, depth=depth + 1)
-
-
-def main():
-    """
-    Directory listing with the commad line options
-    """
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("topdir", type=str, help="filename or a top directory to list")
-    parser.add_argument("-v", "--verbosity", action='store_const', const=logging.DEBUG,
-                        default=logging.INFO,
-                        help="verbosity level")
-    parser.add_argument("-d", "--depth", default=-1, type=int, help="depth")
-    args = parser.parse_args()
-    json.dump(pdm_gfal_ls(args.topdir,
-                          depth=max(-1, args.depth), verbosity=args.verbosity), sys.stdout)
-    sys.stdout.flush()
-
 
 def json_input():
     """
@@ -190,5 +167,4 @@ def json_input():
 
 
 if __name__ == "__main__":
-    # main()
     json_input()
