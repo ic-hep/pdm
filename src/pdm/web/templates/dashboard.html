@@ -1,137 +1,417 @@
-<html>
-  <head>
-    <title>Dashboard</title>
-    <!--- The order matters --->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
-    <!--- for row selection --->
-    <link rel="stylesheet" href="https://cdn.datatables.net/select/1.2.5/css/select.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="/static/dashboard.css">
-    <link rel="shortcut icon" href="/static/favicon.ico">
+<!doctype html>
+<html lang="en">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script
-         src="https://code.jquery.com/jquery-3.3.1.js"
-         integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60="
-         crossorigin="anonymous">
-    </script>
- 
-    <script src="/static/listinghelpers.js"> </script>
-    
-    <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
-    <!--- for row selection --->
-    <script src="https://cdn.datatables.net/select/1.2.5/js/dataTables.select.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <script> $(document).ready(); </script>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+    <!-- open-iconic-bootstrap (icon set for bootstrap) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <!-- fancybox -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.3.5/jquery.fancybox.min.css" />
+    <link rel="shortcut icon" type="image/ico" href="/static/favicon.ico">
+    <title>UK DataMover</title>
+    <style>
+        #identicon { width: 30px; height: 30px; }
+        #notification { position: absolute; top:0px; width: 100%; z-index: 1000}
+        .clickable { cursor: pointer }
+        .listing-window { width: 45%; height: 70%; }
+        .oi-reload { cursor: pointer }
+        .list-group {
+            max-height: 400px;
+            margin-bottom: 5px;
+            overflow:scroll;
+            -webkit-overflow-scrolling: touch;
+        }
+    </style>
+</head>
 
-    <!--- define all interactive components --->
-    <script>
-     let list0 = new Listings(0);
-     let list1 = new Listings(1);
+<body>
 
-     $(document).ready(function(){
-         $("#listbutton0").click($.proxy(list0.get_query_result, list0));
-	 $("#listbutton1").click($.proxy(list1.get_query_result, list1));
-	 $("#pathatsite0").keypress(function(event) {
-	     // 13 == enter
-	     if (event.keyCode === 13) {
-		 event.preventDefault();
-		 list0.get_query_result();
-	     }
-	 }); // keypress
-	 $("#pathatsite1").keypress(function(event) {
-             // 13 == enter
-             if (event.keyCode === 13) {
-                 event.preventDefault();
-                 list1.get_query_result();
-             }
-         }); // keypress
-	 // this syntax is wrong
-	 // $("#copybutton").click(copy_me(list0, list1));
-	 // need to work out how/when to enable it
-	 $("#copybutton").prop('disabled', true);
-	 // https://www.w3schools.com/jsref/obj_event.asp
-	 $('#tableDiv0').on('click', function() {
-	     // now it needs to do all the other checks
-	     areweready = copy_enable(list0, list1).status
-	     if (areweready) {
-		 $("#copybutton").prop('disabled', false);
-	     }
-	     else {
-		 $("#copybutton").prop('disabled', true);
-	     }
-	     
-         });
-	 
-     }); // function ready
+<div id="notification"></div>
+
+<!-- Modal -->
+<div class="modal fade" id="delete_modal" tabindex="-1" role="dialog" aria-labelledby="delete_modal_label" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="delete_modal_label">Delete?</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span class="oi oi-circle-x" aria-hidden="true"></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Really delete these files?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button id="delete_modal_ok" type="button" class="btn btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary d-flex justify-content-between">
+    <a class="navbar-brand" href="#">
+        The DataMover
+    </a>
+    <div class="text-light">
+        <h3><strong>{{ user['name'] }}'s Dashboard</strong></h3>
+    </div>
+    <div>
+        <img id="identicon" class="rounded-circle" src="https://www.gravatar.com/avatar/{{ user['email']| gravitar_hash }}?d=identicon">
+    </div>
+</nav>
+
+<p class="pb-5">
+<div class="container w-75 d-flex justify-content-around">
+    <div class="card listing-window">
+        <select id="src_site" class="card-header custom-select text-center py-1 sitelist">
+            <option value="" hidden selected>Select Site</option>
+        </select>
+        <div id="src_panel" class="card-body text-center src_droppable ui-widget-header">
+            <img src="/static/images/pdm.png"/><br>
+            Please select a site to continue
+        </div>
+        <div class="card-footer text-right">
+            <span id="src_reload" class="oi oi-reload"></span>
+        </div>
+    </div>
+
+    <div class="btn-group-vertical" role="group">
+        <button id="src_dst_copy" type="button" class="btn btn-primary">
+            <span class="oi oi-caret-right text-light"></span>
+        </button>
+        <button type="button" class="btn btn-primary">
+            <span class="oi oi-caret-left text-light"></span>
+        </button>
+        <button id="remove" type="button" class="btn btn-danger">
+            <span class="oi oi-trash text-danger text-light"></span>
+        </button>
+    </div>
+
+    <div class="card listing-window">
+        <select id="dst_site" class="card-header custom-select text-center py-1 sitelist">
+            <option value="" hidden selected>Select Site</option>
+        </select>
+        <div id="dst_panel" class="card-body text-center dst_droppable ui-widget-header">
+            <img src="/static/images/pdm.png"/><br>
+            Please select a site to continue
+        </div>
+        <div class="card-footer text-right ui-widget-header">
+            <span id="dst_reload" class="oi oi-reload"></span>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<!-- jQuery first, then Popper.js, then Bootstrap JS, then fancybox -->
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.3.5/jquery.fancybox.min.js"></script>
+<script>
+
+function bootstrap_alert(level, status, message){
+    // the below pops the notification into existence immediately
+    // hence we add the hide to allow fadeIn once filled with html
+    $("#notification").hide().html(`
+        <div class="alert alert-dismissible alert-###LEVEL### fade show" role="alert">
+            <strong>###STATUS###</strong> ###MESSAGE###.
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span class="oi oi-circle-x" aria-hidden="true"></span>
+            </button>
+        </div>`.replace("###LEVEL###", level)
+               .replace("###MESSAGE###", message)
+               .replace("###STATUS###", status)
+    );
+    $("#notification").fadeIn("slow").delay(2000).fadeOut("slow");
+};
+
+function listing(sitename, filepath, panel){
+    if (sitename == ""){
+        console.warn("Invalid site selected.");
+        return;
+    }
+    var draggable_name = panel.attr('id').replace("panel", "draggable")
+    panel.empty();
+    panel.append($("<img/>", {src:"/static/images/ajax-loader.gif", alt:"Loading..."}));  // Thanks to http://www.ajaxload.info/
+    $.ajax({
+        url: `/web/js/list`,
+        type: "POST",
+        cache: true,
+        dataType: "json",
+        data: JSON.stringify({sitename: sitename,
+                              filepath: filepath}),
+        contentType: "application/json; charset=utf-8",
+        error: function(request, status, error){
+          if (request.status != 403) {  // don't need the alert for login request.
+            console.error(`Error listing site ${sitename}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
+            bootstrap_alert("danger", "Error!", `Error listing site ${sitename}!`);
+          }
+        },
+        statusCode: {
+          403: function(xhdr){
+            console.warn(`403: Not logged in at site ${sitename}`);
+            panel.empty();
+            panel.append(xhdr.responseText);
+
+          },
+          404: function(){
+            console.warn(`404: Not Found when listing site ${sitename}`);
+            bootstrap_alert("warning", "Attention!", `404: Not Found when listing site ${sitename}`);
+          }
+        },
+        success: function(response, status, request){
+            console.log(`Successfully got listing of site ${sitename}.`);
+            var list_group = $("<ul>", {class: "list-group text-left",
+                                        directory: filepath});
+            for(var i = 0; i < response.length; i++){
+                var element = $("<li>", {class: `list-group-item ui-widget-content ${draggable_name}`});
+                element.draggable({addClasses: false, helper: "clone", iframeFix: true, zIndex: 100, appendTo: "body"});
+                if (response[i].is_dir){
+                    element.append($("<span>", {class: "oi oi-folder text-warning pr-2"}));
+                }
+                else{
+                    element.append($("<span>", {class: "oi oi-file text-primary pr-2"}));
+                }
+                element.append(response[i].name);
+                list_group.append(element);
+            }
+            panel.empty();
+            panel.append(list_group);
+        }
+    });
+}
+
+$(document).ready(function(){
+
+    $(".dst_droppable").droppable({
+        accept: ".src_draggable",
+        drop: function( event, ui ) {
+            $(`#src_panel ul.list-group li:contains(${$(ui.draggable).text()})`).toggleClass("bg-primary");
+            $("#src_dst_copy").trigger("click");
+        }
+    });
+    $(".src_droppable").droppable({
+        accept: ".dst_draggable",
+        drop: function( event, ui ) {
+            alert("copy left");
+        }
+    });
+
+    $.ajax({
+        url: "/web/js/sites",
+        type: "GET",
+        cache: true,
+        dataType: "json",
+        error: function(request, status, error){
+          console.warn(`Error getting sites!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
+          bootstrap_alert("danger", "Attention!", `Error getting sites! status: ${status},  error: ${error}`);
+        },
+        statusCode: {
+          404: function(){
+            console.warn("404: Not Found when getting sites");
+            bootstrap_alert("warning", "Attention!", "404: Not Found when getting sites");
+          }
+        },
+        success: function(response, status, request){
+            console.log("Successfully got list of sites.");
+            for(var i = 0; i < response.length; i++){
+                var option = $('<option>', {"value": response[i].site_name,
+                                            "data-toggle": "tooltip",
+                                            "data-placement": "right",
+                                            "title": response[i].site_desc});
+                option.text(response[i].site_name);
+                $(".sitelist").append(option);
+            }
+        }
+    });
+
+    $(".sitelist").change(function(){
+        listing($(this).val(), "~", $(this).next('.card-body'));
+    });
 
 
-    </script>
+    $(".card-body").on("click", "ul.list-group li", function(event){
+        $(this).toggleClass("bg-primary text-light");
+/*        if (event.ctrlKey){  // TODO
+        }
+        else if (event.shiftKey){
+        }
+        else{
+            $("li", $(this).parent()).removeClass("bg-primary text-light");
+            $(this).toggleClass("bg-primary text-light");
+        }*/
+    });
 
-  </head>
+    $(".card-body").on("click", "form button.submit", function(event){
+        event.preventDefault();
+        var form = $(this).closest("form");
+        var panel = form.closest(".card-body");
+        var site = panel.prev("select.custom-select").val();
+        var jsonified_form = {};
+        panel.empty();
+        panel.append($("<img/>", {src:"/static/images/ajax-loader.gif", alt:"Loading..."}));
+        var serialised_form = form.serializeArray();
+        for (var i=0; i < serialised_form.length; i++){
+            jsonified_form[serialised_form[i].name] = serialised_form[i].value
+        }
+        $.ajax({
+            url: `/web/sitelogin/${site}`,
+            type: "POST",
+            data: JSON.stringify(jsonified_form),
+            contentType: "application/json; charset=utf-8",
+            error: function(request, status, error){
+                console.error(`Error logging in to site ${site}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
+                bootstrap_alert("danger", "Failed!", `logging in to site ${site}`)
+                var site_selector = panel.siblings("select.custom-select");
+                site_selector.trigger("change");
+            },
+            success: function(response, status, request){
+                console.log(`Successfully logged in to site ${site}`);
+                var site_selector = panel.siblings("select.custom-select");
+                site_selector.trigger("change");
+            }
+        });
+    });
 
-  <body>
-      <p style="text-align:right;"> <a href="logout" class="logoutbutton">Logout</a></p>
-      <center>
-	  <h2 style="text-align:center;">{{ user_name }}'s Dashboard</h2>
-	  <br>
-	  
-	  <div class="outer">
-	      {% for i in range(2) %}
-	      <div id="siteid{{ i }}" class="siteid{{ i }}">
-		  <select id="Endpoints{{ i }}" class="dropdownColour{{ i }}">
-		      {% if i == 0 %}
-		      <option value="droptitle">Source Site</option>
-		      {% else %}
-		      <option value="droptitle">Target Site</option>
-		      {% endif %}
-		      {% for site in sites %}
-		      {% set sitename = site['site_name'] %}
-		      <option value="{{ sitename }}">{{ sitename }}</option>
-		      {% endfor %}
-		  </select>
-		  
-		  <br><br>
-      		  directory: <input type="text" id="pathatsite{{ i }}" value="/~"/> <br>
-		  <br>
-		  
-		  
-		  <button class="lbutton{{ i }}" id="listbutton{{ i }}">List</button>
-		  <div id="listspinner{{ i }}" class="loader"></div>
-		  
-		  <br>
-		  
-		  Job number: <div id="jobnumberfield{{ i }}" style="display:inline; color:#808080;"> No job started yet. 
-		  </div> <br>
-		  
-		  <br>
-		  Status of the last job is: <p id="reqstatus{{ i }}"> No job started yet. </p>
-		  
-		  {% if i == 0 %}
-                  <button onclick="copy_me(list0,list1)" id="copybutton">Copy</button>
-                  {% endif %}
+    $(".card-body").on("click", "div.password_toggle", function(){
+        var password = $(this).prev("input.password");
+        if (password.prop("type") === "password") {
+            password.prop("type", "text");
+        } else {
+            password.prop("type", "password");
+        }
+    });
+
+    $(".oi-reload").click(function(){
+        var site_selector = $(this).parent("div.card-footer").siblings("select.custom-select");
+        site_selector.trigger("change");
+    });
+
+    $("#src_dst_copy").click(function(){
+        var failed_items = [];
+//        var src_site = $("#src_site option:selected").val();
+//        var dst_site = $("#dst_site option:selected").val();
+        var src_site = $("#src_site").val();
+        var dst_site = $("#dst_site").val();
+        var dst_root = $("#dst_panel ul").attr("directory");
+        if ($.type(dst_root) === "undefined") {
+            console.warn("No destination directory listed")
+            bootstrap_alert("warning", "Attention!", "No destination directory listed");
+            return;
+        }
+        var listing = $("#src_panel ul");
+        var src_root = listing.attr("directory");
+        if ($.type(src_root) === "undefined") {
+            console.error("No source directory listed")
+            bootstrap_alert("danger", "Error!", "No source directory listed");
+            return;
+        }
+        var selected = $("li[class ~= bg-primary]", listing);
+        selected.each(function(){
+            var filename = $(this).text();
+            var is_dir = $(this).children("span.oi").hasClass("oi-folder")
+            console.log(`${filename}: is_dir = ${is_dir}`)
+            var dst_path = `${dst_root}/${filename}`;
+            if (is_dir){
+                dst_path = dst_root;
+            }
+            $.ajax({
+                url: "/web/js/copy",
+                type: "POST",
+                data: JSON.stringify({src_sitename: src_site,
+                                      src_filepath: `${src_root}/${filename}`,
+                                      dst_sitename: dst_site,
+                                      dst_filepath: dst_path}),
+                contentType: "application/json; charset=utf-8",
+                error: function(request, status, error){
+                    console.error(`Error registering copy job for ${filename}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
+                    failed_items.push(filename);
+                },
+                success: function(response, status, request){
+                    console.log(`Successfully registered copy job for ${filename}.`);
+                }
+            });
+        });
+        selected.toggleClass('bg-primary text-light');
+        if (failed_items.length){
+            bootstrap_alert("danger", "Error!", `Error registering copy job for: [${failed_items.join()}]`);
+        }
+        else{
+            bootstrap_alert("success", "Success!", "COPY jobs registered.");
+        }
+    });
+
+    $("#remove").click(function(){
+        var failed_items = [];
+        var selected = $("div.card-body ul li[class ~= bg-primary]");
+        selected.each(function(){
+            var filename = $(this).text();
+            var listing = $(this).parent("ul.list-group")
+            var src_root = listing.attr("directory");
+//            var src_site = $("option:selected", listing.parent("div.card-body").siblings("select")).val()
+            var src_site = listing.parent("div.card-body").prev("select.custom-select").val()
+            if ($.type(src_root) === "undefined") {
+                console.error(`No source directory listed for ${filename}`)
+                bootstrap_alert("danger", "Error!", `No source directory listed for ${filename}`);
+                return true;  // within each return false = break, true = continue
+            }
+            $.ajax({
+                url: "/web/js/remove",
+                type: "POST",
+                data: JSON.stringify({sitename: src_site,
+                                      filepath: `${src_root}/${filename}`}),
+                contentType: "application/json; charset=utf-8",
+                error: function(request, status, error){
+                    console.error(`Error registering remove job for ${filename}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
+                    failed_items.push(filename);
+                },
+                success: function(response, status, request){
+                    console.log(`Successfully registered remove job for ${filename}.`);
+                }
+            });
+        });
+        selected.toggleClass('bg-primary text-light');
+        if (failed_items.length){
+            bootstrap_alert("danger", "Error!", `Error registering remove job for: [${failed_items.join()}]`);
+        }
+        else{
+            bootstrap_alert("success", "Success!", "REMOVE jobs registered.")
+        }
+    });
+
+    $("body").keypress(function(event){
+        var backspace = 8;
+        var del = 46;
+        nselected = $(".card-body ul.list-group li[class ~= bg-primary]").length;
+        if ( nselected > 0 && (event.keyCode == backspace || event.keyCode == del) ) {
+            $("#delete_modal").modal()
+        }
+    });
+
+    $("#delete_modal_ok").click(function(){
+        $("#remove").trigger("click");
+        $("#delete_modal").modal("hide");
+    });
+
+    $(".card-body").on("dblclick", "ul.list-group li", function(){
+        element = $(this);
+        if (element.children("span.oi").hasClass("oi-folder")){  // is dir
+            var panel = element.closest("div.card-body");
+            var sitename = panel.prev("select.custom-select").val();
+            var root = element.parent("ul.list-group").attr("directory");
+            listing(sitename, `${root}/${element.text()}`, panel)
+        }
+    });
 
 
-		  <br>
-		  <table id="navbar{{ i }}">
-		      <tr><td></td>                                                                    
-			  <td onclick="javascript:list{{ i }}.go_up_one();" style="cursor:pointer;">
-			      Up one directory &nbsp;
-			      <img src="/static/images/arrow-up{{ i }}.png" alt="Arrow">
-			  </td>
-			  <td></td></tr>
-                  </table>
-		  <br>   
-
-		  <div id="tableDiv{{ i }}" style="margin-top: 1px; overflow-x: auto">
-		      <p style="color:#808080">The results will appear here.</p>
-		  </div>
-		  
-	      </div>
-	      {% endfor %}
-	  </div> 
-      </center>
-      
-  </body>
+});
+</script>
+</body>
 </html>
