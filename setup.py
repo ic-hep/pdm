@@ -15,5 +15,6 @@ setup(name='pdm',
                         'sqlalchemy==0.9.8',
                         'twisted==12.1.0'],
       include_package_data=True,
+      scripts=['bin/pdm']
      )
 
