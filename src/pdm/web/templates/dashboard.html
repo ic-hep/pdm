@@ -117,19 +117,19 @@
 <script>
 
 function bootstrap_alert(level, status, message){
-    // the below pops the notification into existence immediately
-    // hence we add the hide to allow fadeIn once filled with html
-    $("#notification").hide().html(`
-        <div class="alert alert-dismissible alert-###LEVEL### fade show" role="alert">
-            <strong>###STATUS###</strong> ###MESSAGE###.
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span class="oi oi-circle-x" aria-hidden="true"></span>
-            </button>
-        </div>`.replace("###LEVEL###", level)
-               .replace("###MESSAGE###", message)
-               .replace("###STATUS###", status)
-    );
-    $("#notification").fadeIn("slow").delay(2000).fadeOut("slow");
+    var notification = $("#notification");
+    var alert = $("<div>", {class: `alert alert-dismissible alert-${level} fade show`});
+    var strong = $("<strong>");
+    strong.text(status);
+    var button = $("<button>", {type: "button", class: "close", "data-dismiss": "alert", "aria-label": "Close"});
+    button.append($("<span>", {class:"oi oi-circle-x", "aria-hidden": "true"}));
+    alert.append(strong);
+    alert.append("\t");
+    alert.append(message);
+    alert.append(button);
+    notification.empty();
+    notification.append(alert);
+    notification.fadeIn("slow").delay(2000).fadeOut("slow");
 };
 
 function listing(sitename, filepath, panel){
