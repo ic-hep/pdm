@@ -37,6 +37,7 @@ def pdm_gfal_ls(root, depth=-1, verbosity=logging.INFO):
     except Exception as gfal_exc:
         _logger.error("Error when obtaining ctx.stat(%s) \n %s", root, gfal_exc)
         json.dump({'Reason': str(gfal_exc), 'Code': 1, 'id': ID}, sys.stdout)
+        sys.stdout.write('\n')
         sys.stdout.flush()
         sys.exit(1)
 
@@ -84,6 +85,7 @@ def pdm_gfal_list_dir(ctx, root, result, max_depth=-1, depth=1):
     except Exception as gfal_exc:
         _logger.error("Error when analysing %s \n %s", root, gfal_exc)
         json.dump({'Reason': str(gfal_exc), 'Code': 1, 'id': ID}, sys.stdout)
+        sys.stdout.write('\n')
         sys.stdout.flush()
         sys.exit(1)
 
@@ -140,6 +142,7 @@ def pdm_gfal_long_list_dir(ctx, root, result, max_depth=-1, depth=1):
     except Exception as gfal_exc:
         _logger.error("Error when analysing %s \n %s", root, gfal_exc)
         json.dump({'Reason': str(gfal_exc), 'Code': 1, 'id': ID}, sys.stdout)
+        sys.stdout.write('\n')
         sys.stdout.flush()
         sys.exit(1)
 
@@ -182,6 +185,7 @@ def json_input():
     json.dump({'Reason': 'OK', 'Code': 0, 'id': ID,
                'Listing': pdm_gfal_ls(str(data.get('files')[0][1]), **data.get('options', {}))},
               sys.stdout)
+    sys.stdout.write('\n')
     sys.stdout.flush()
 
 

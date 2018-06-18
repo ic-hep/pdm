@@ -27,9 +27,11 @@ def pdm_gfal_rm(rmdict, verbosity=logging.INFO):
         try:
             res = ctx.unlink(str(elem))
             json.dump({'Code': res, 'Reason': 'OK', 'id': jobid}, sys.stdout)
+            sys.stdout.write('\n')
             sys.stdout.flush()
         except gfal2.GError as gerror:
             json.dump({'Code': 1, 'Reason': str(gerror), 'id': jobid}, sys.stdout)
+            sys.stdout.write('\n')
             _logger.error(str(gerror))
             sys.stdout.flush()
 
@@ -39,9 +41,11 @@ def pdm_gfal_rm(rmdict, verbosity=logging.INFO):
         try:
             res = ctx.rmdir(str(elem))
             json.dump({'Code': res, 'Reason': 'OK', 'id': jobid}, sys.stdout)
+            sys.stdout.write('\n')
             sys.stdout.flush()
         except gfal2.GError as gerror:
             json.dump({'Code': 1, 'Reason': str(gerror), 'id': jobid}, sys.stdout)
+            sys.stdout.write('\n')
             _logger.error(str(gerror))
             sys.stdout.flush()
 

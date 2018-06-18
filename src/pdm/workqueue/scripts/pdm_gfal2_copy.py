@@ -55,7 +55,10 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     copy_list = copy_dict.get('files', [])
 
     if not copy_list:
-        json.dump([], sys.stdout)
+        #json.dump([], sys.stdout)
+        json.dump({"Reason": "No files to copy passed in", "Code": 1, 'id': ''}, sys.stdout)
+        _logger.warning("No files to copy")
+        sys.stdout.write('\n')
         sys.stdout.flush()
         return
 
@@ -71,6 +74,7 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
         _logger.fatal("Please provide credential location: source %s, dest %s. ",
                       s_cred, t_cred)
         json.dump({"Reason": "No credentials passed in", "Code": 1, 'id': ''}, sys.stdout)
+        sys.stdout.write('\n')
         sys.stdout.flush()
         return
 
@@ -99,9 +103,11 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
         try:
             res = ctx.filecopy(params, str(source_file), str(dest_file))
             json.dump({'Code': res, 'Reason': 'OK', 'id': jobid}, sys.stdout)
+            sys.stdout.write('\n')
             sys.stdout.flush()
         except gfal2.GError as gerror:
             json.dump({'Code': 1, 'Reason': str(gerror), 'id': jobid}, sys.stdout)
+            sys.stdout.write('\n')
             _logger.error(str(gerror))
             sys.stdout.flush()
     return  # result
