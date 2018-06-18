@@ -16,7 +16,7 @@
     <title>UK DataMover</title>
     <style>
         #identicon { width: 30px; height: 30px; }
-        #notification { position: absolute; top:0px; width: 100%; z-index: 1000}
+        #notification { position: fixed; top:0; width: 100%; z-index: 1000}
         .clickable { cursor: pointer }
         .listing-window { width: 45%; height: 70%; }
         .oi-reload { cursor: pointer }
@@ -72,7 +72,7 @@
         <select id="src_site" class="card-header custom-select text-center py-1 sitelist">
             <option value="" hidden selected>Select Site</option>
         </select>
-        <div id="src_panel" class="card-body text-center src_droppable ui-widget-header">
+        <div id="src_panel" class="card-body text-center ui-widget-header">
             <img src="/static/images/pdm.png"/><br>
             Please select a site to continue
         </div>
@@ -85,7 +85,7 @@
         <button id="src_dst_copy" type="button" class="btn btn-primary">
             <span class="oi oi-caret-right text-light"></span>
         </button>
-        <button type="button" class="btn btn-primary">
+        <button id="dst_src_copy" type="button" class="btn btn-primary">
             <span class="oi oi-caret-left text-light"></span>
         </button>
         <button id="remove" type="button" class="btn btn-danger">
@@ -97,7 +97,7 @@
         <select id="dst_site" class="card-header custom-select text-center py-1 sitelist">
             <option value="" hidden selected>Select Site</option>
         </select>
-        <div id="dst_panel" class="card-body text-center dst_droppable ui-widget-header">
+        <div id="dst_panel" class="card-body text-center ui-widget-header">
             <img src="/static/images/pdm.png"/><br>
             Please select a site to continue
         </div>
@@ -190,17 +190,18 @@ function listing(sitename, filepath, panel){
 
 $(document).ready(function(){
 
-    $(".dst_droppable").droppable({
+    $("#dst_panel").droppable({
         accept: ".src_draggable",
         drop: function( event, ui ) {
-            $(`#src_panel ul.list-group li:contains(${$(ui.draggable).text()})`).toggleClass("bg-primary");
+            $(`#src_panel ul.list-group li:contains(${$(ui.draggable).text()})`).trigger("click");
             $("#src_dst_copy").trigger("click");
         }
     });
-    $(".src_droppable").droppable({
+    $("#src_panel").droppable({
         accept: ".dst_draggable",
         drop: function( event, ui ) {
-            alert("copy left");
+            $(`#dst_panel ul.list-group li:contains(${$(ui.draggable).text()})`).trigger("click");
+            $("#dst_src_copy").trigger("click");
         }
     });
 
@@ -239,6 +240,7 @@ $(document).ready(function(){
 
     $(".card-body").on("click", "ul.list-group li", function(event){
         $(this).toggleClass("bg-primary text-light");
+        $("span.oi", $(this)).toggleClass("text-light");
 /*        if (event.ctrlKey){  // TODO
         }
         else if (event.shiftKey){
@@ -296,8 +298,6 @@ $(document).ready(function(){
 
     $("#src_dst_copy").click(function(){
         var failed_items = [];
-//        var src_site = $("#src_site option:selected").val();
-//        var dst_site = $("#dst_site option:selected").val();
         var src_site = $("#src_site").val();
         var dst_site = $("#dst_site").val();
         var dst_root = $("#dst_panel ul").attr("directory");
@@ -339,7 +339,59 @@ $(document).ready(function(){
                 }
             });
         });
-        selected.toggleClass('bg-primary text-light');
+        selected.trigger("click");
+        if (failed_items.length){
+            bootstrap_alert("danger", "Error!", `Error registering copy job for: [${failed_items.join()}]`);
+        }
+        else{
+            bootstrap_alert("success", "Success!", "COPY jobs registered.");
+        }
+    });
+
+    $("#dst_src_copy").click(function(){
+        var failed_items = [];
+        var src_site = $("#dst_site").val();
+        var dst_site = $("#src_site").val();
+        var dst_root = $("#src_panel ul").attr("directory");
+        if ($.type(dst_root) === "undefined") {
+            console.warn("No destination directory listed")
+            bootstrap_alert("warning", "Attention!", "No destination directory listed");
+            return;
+        }
+        var listing = $("#dst_panel ul");
+        var src_root = listing.attr("directory");
+        if ($.type(src_root) === "undefined") {
+            console.error("No source directory listed")
+            bootstrap_alert("danger", "Error!", "No source directory listed");
+            return;
+        }
+        var selected = $("li[class ~= bg-primary]", listing);
+        selected.each(function(){
+            var filename = $(this).text();
+            var is_dir = $(this).children("span.oi").hasClass("oi-folder")
+            console.log(`${filename}: is_dir = ${is_dir}`)
+            var dst_path = `${dst_root}/${filename}`;
+            if (is_dir){
+                dst_path = dst_root;
+            }
+            $.ajax({
+                url: "/web/js/copy",
+                type: "POST",
+                data: JSON.stringify({src_sitename: src_site,
+                                      src_filepath: `${src_root}/${filename}`,
+                                      dst_sitename: dst_site,
+                                      dst_filepath: dst_path}),
+                contentType: "application/json; charset=utf-8",
+                error: function(request, status, error){
+                    console.error(`Error registering copy job for ${filename}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
+                    failed_items.push(filename);
+                },
+                success: function(response, status, request){
+                    console.log(`Successfully registered copy job for ${filename}.`);
+                }
+            });
+        });
+        selected.trigger("click");
         if (failed_items.length){
             bootstrap_alert("danger", "Error!", `Error registering copy job for: [${failed_items.join()}]`);
         }
@@ -355,7 +407,6 @@ $(document).ready(function(){
             var filename = $(this).text();
             var listing = $(this).parent("ul.list-group")
             var src_root = listing.attr("directory");
-//            var src_site = $("option:selected", listing.parent("div.card-body").siblings("select")).val()
             var src_site = listing.parent("div.card-body").prev("select.custom-select").val()
             if ($.type(src_root) === "undefined") {
                 console.error(`No source directory listed for ${filename}`)
@@ -377,7 +428,7 @@ $(document).ready(function(){
                 }
             });
         });
-        selected.toggleClass('bg-primary text-light');
+        selected.trigger("click");
         if (failed_items.length){
             bootstrap_alert("danger", "Error!", `Error registering remove job for: [${failed_items.join()}]`);
         }
@@ -387,6 +438,9 @@ $(document).ready(function(){
     });
 
     $("body").keypress(function(event){
+        ///// TESTING STUFF...IGNORE
+           //$(".card-body ul.list-group li[class ~= bg-primary]").toggleClass("progress-bar progress-bar-striped progress-bar-animated text-light text-left");
+        /////
         var backspace = 8;
         var del = 46;
         nselected = $(".card-body ul.list-group li[class ~= bg-primary]").length;
