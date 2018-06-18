@@ -143,7 +143,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
         """Handle read events."""
 
         self._buffer += self.recv(8192) + '\n'
-        buffered_elements = self.buffer.splitlines()
+        buffered_elements = self._buffer.splitlines()
         self._buffer = buffered_elements.pop()
 
         for buffered_element in buffered_elements:
