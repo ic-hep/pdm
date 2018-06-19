@@ -107,7 +107,7 @@ class WorkqueueService(object):
 #        Job = request.db.tables.Job  # pylint: disable=invalid-name
 #        JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
         alg_name = request.data.get('algorithm', 'BY_NUMBER').upper()
-        elements = Algorithm[alg_name](**request.data.get('alg_args', {}))
+        elements = Algorithm[alg_name](**request.data.get('algorithm.args', {}))
 #       elements = JobElement.query.filter(JobElement.status.in_((JobStatus.NEW, JobStatus.FAILED)),
 #                                           JobElement.attempts < JobElement.max_tries)\
 #                                   .join(JobElement.job)\
