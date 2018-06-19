@@ -72,15 +72,15 @@
         <select id="src_site" class="card-header custom-select text-center py-1 sitelist">
             <option value="" hidden selected>Select Site</option>
         </select>
-                    <div class="input-group" hidden>
-                        <input type="text" class="form-control" placeholder="directory">
-                        <div id="password_toggle" class="input-group-append clickable">
-                            <span class="input-group-text">
-                                <span class="oi oi-share text-primary" aria-hidden="true"></span>
-                            </span>
-                        </div>
-                    </div>
         <div id="src_panel" class="card-body text-center ui-widget-header">
+            <div id="src_directory" class="input-group" hidden>
+                <input type="text" class="form-control" placeholder="~">
+                <div class="input-group-append clickable">
+                    <span class="input-group-text">
+                        <span class="oi oi-share text-primary" aria-hidden="true"></span>
+                    </span>
+                </div>
+            </div>
             <img src="/static/images/pdm.png"/><br>
             Please select a site to continue
         </div>
@@ -425,13 +425,19 @@ $(document).ready(function(){
             });
         });
         selected.trigger("click");
+        selected.draggable("destroy");
+        selected.prop("disabled", true);
+        selected.addClass("progress-bar progress-bar-striped progress-bar-animated bg-secondary text-left");
+        var selected_icons = $("span.oi", selected);
+        selected_icons.removeClass("text-primary text-warning");
+        selected_icons.addClass("text-light");
+        $("#delete_modal").modal("hide");
         if (failed_items.length){
             bootstrap_alert("danger", "Error!", `Error registering remove job for: [${failed_items.join()}]`);
         }
         else{
             bootstrap_alert("success", "Success!", "REMOVE jobs registered.")
         }
-        $("#delete_modal").modal("hide");
     });
 
 
