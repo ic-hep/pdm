@@ -142,8 +142,8 @@ class StdOutDispatcher(asyncore.file_dispatcher):
     def handle_read(self):
         """Handle read events."""
 
-        self._buffer += self.recv(8192) + '\n'
-        buffered_elements = self._buffer.splitlines()
+        self._buffer += self.recv(8192)
+        buffered_elements = self._buffer.split('\n')
         self._buffer = buffered_elements.pop()
 
         for buffered_element in buffered_elements:
@@ -158,7 +158,8 @@ class StdOutDispatcher(asyncore.file_dispatcher):
             returncode = done_element['Code']
             data = {'log': log,
                     'returncode': returncode,
-                    'host': (datetime.utcnow().isoformat(),) + socket.gethostbyaddr(socket.getfqdn())}
+                    'timestamp': datetime.utcnow().isoformat(),
+                    'host': socket.gethostbyaddr(socket.getfqdn())}
             element_id = done_element['id']
 
             if returncode:
