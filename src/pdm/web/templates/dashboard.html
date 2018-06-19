@@ -72,6 +72,14 @@
         <select id="src_site" class="card-header custom-select text-center py-1 sitelist">
             <option value="" hidden selected>Select Site</option>
         </select>
+                    <div class="input-group" hidden>
+                        <input type="text" class="form-control" placeholder="directory">
+                        <div id="password_toggle" class="input-group-append clickable">
+                            <span class="input-group-text">
+                                <span class="oi oi-share text-primary" aria-hidden="true"></span>
+                            </span>
+                        </div>
+                    </div>
         <div id="src_panel" class="card-body text-center ui-widget-header">
             <img src="/static/images/pdm.png"/><br>
             Please select a site to continue
@@ -234,11 +242,11 @@ $(document).ready(function(){
     });
 
     $(".sitelist").change(function(){
-        listing($(this).val(), "~", $(this).next('.card-body'));
+        listing($(this).val(), "~", $(this).nextAll('div.card-body'));
     });
 
 
-    $(".card-body").on("click", "ul.list-group li", function(event){
+    $("div.card-body").on("click", "ul.list-group li", function(event){
         $(this).toggleClass("bg-primary text-light");
         $("span.oi", $(this)).toggleClass("text-light");
 /*        if (event.ctrlKey){  // TODO
@@ -251,11 +259,11 @@ $(document).ready(function(){
         }*/
     });
 
-    $(".card-body").on("click", "form button.submit", function(event){
+    $("div.card-body").on("click", "form button.submit", function(event){
         event.preventDefault();
         var form = $(this).closest("form");
-        var panel = form.closest(".card-body");
-        var site = panel.prev("select.custom-select").val();
+        var panel = form.closest("div.card-body");
+        var site = panel.prevAll("select.custom-select").val();
         var jsonified_form = {};
         panel.empty();
         panel.append($("<img/>", {src:"/static/images/ajax-loader.gif", alt:"Loading..."}));
@@ -282,7 +290,7 @@ $(document).ready(function(){
         });
     });
 
-    $(".card-body").on("click", "div.password_toggle", function(){
+    $("div.card-body").on("click", "div.password_toggle", function(){
         var password = $(this).prev("input.password");
         if (password.prop("type") === "password") {
             password.prop("type", "text");
@@ -291,7 +299,7 @@ $(document).ready(function(){
         }
     });
 
-    $(".oi-reload").click(function(){
+    $("span.oi-reload").click(function(){
         var site_selector = $(this).parent("div.card-footer").siblings("select.custom-select");
         site_selector.trigger("change");
     });
@@ -300,13 +308,13 @@ $(document).ready(function(){
         var failed_items = [];
         var src_site = $("#src_site").val();
         var dst_site = $("#dst_site").val();
-        var dst_root = $("#dst_panel ul").attr("directory");
+        var dst_root = $("#dst_panel ul.list-group").attr("directory");
         if ($.type(dst_root) === "undefined") {
             console.warn("No destination directory listed")
             bootstrap_alert("warning", "Attention!", "No destination directory listed");
             return;
         }
-        var listing = $("#src_panel ul");
+        var listing = $("#src_panel ul.list-group");
         var src_root = listing.attr("directory");
         if ($.type(src_root) === "undefined") {
             console.error("No source directory listed")
@@ -352,13 +360,13 @@ $(document).ready(function(){
         var failed_items = [];
         var src_site = $("#dst_site").val();
         var dst_site = $("#src_site").val();
-        var dst_root = $("#src_panel ul").attr("directory");
+        var dst_root = $("#src_panel ul.list-group").attr("directory");
         if ($.type(dst_root) === "undefined") {
             console.warn("No destination directory listed")
             bootstrap_alert("warning", "Attention!", "No destination directory listed");
             return;
         }
-        var listing = $("#dst_panel ul");
+        var listing = $("#dst_panel ul.list-group");
         var src_root = listing.attr("directory");
         if ($.type(src_root) === "undefined") {
             console.error("No source directory listed")
@@ -402,12 +410,12 @@ $(document).ready(function(){
 
     $("#remove").click(function(){
         var failed_items = [];
-        var selected = $("div.card-body ul li[class ~= bg-primary]");
+        var selected = $("div.card-body ul.list-group li[class ~= bg-primary]");
         selected.each(function(){
             var filename = $(this).text();
             var listing = $(this).parent("ul.list-group")
             var src_root = listing.attr("directory");
-            var src_site = listing.parent("div.card-body").prev("select.custom-select").val()
+            var src_site = listing.parent("div.card-body").prevAll("select.custom-select").val()
             if ($.type(src_root) === "undefined") {
                 console.error(`No source directory listed for ${filename}`)
                 bootstrap_alert("danger", "Error!", `No source directory listed for ${filename}`);
@@ -439,11 +447,11 @@ $(document).ready(function(){
 
     $("body").keypress(function(event){
         ///// TESTING STUFF...IGNORE
-           //$(".card-body ul.list-group li[class ~= bg-primary]").toggleClass("progress-bar progress-bar-striped progress-bar-animated text-light text-left");
+           //$("div.card-body ul.list-group li[class ~= bg-primary]").toggleClass("progress-bar progress-bar-striped progress-bar-animated text-light text-left");
         /////
         var backspace = 8;
         var del = 46;
-        nselected = $(".card-body ul.list-group li[class ~= bg-primary]").length;
+        nselected = $("div.card-body ul.list-group li[class ~= bg-primary]").length;
         if ( nselected > 0 && (event.keyCode == backspace || event.keyCode == del) ) {
             $("#delete_modal").modal()
         }
@@ -454,11 +462,11 @@ $(document).ready(function(){
         $("#delete_modal").modal("hide");
     });
 
-    $(".card-body").on("dblclick", "ul.list-group li", function(){
+    $("div.card-body").on("dblclick", "ul.list-group li", function(){
         element = $(this);
         if (element.children("span.oi").hasClass("oi-folder")){  // is dir
             var panel = element.closest("div.card-body");
-            var sitename = panel.prev("select.custom-select").val();
+            var sitename = panel.prevAll("select.custom-select").val();
             var root = element.parent("ul.list-group").attr("directory");
             listing(sitename, `${root}/${element.text()}`, panel)
         }
