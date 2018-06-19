@@ -196,6 +196,55 @@ function listing(sitename, filepath, panel){
     });
 }
 
+function copy(src_site, src_listing, dst_site, dst_listing){
+    var failed_items = [];
+    var dst_root = dst_listing.attr("directory");
+    if ($.type(dst_root) === "undefined") {
+        console.warn("No destination directory listed")
+        bootstrap_alert("warning", "Attention!", "No destination directory listed");
+        return;
+    }
+    var src_root = src_listing.attr("directory");
+    if ($.type(src_root) === "undefined") {
+        console.error("No source directory listed")
+        bootstrap_alert("danger", "Error!", "No source directory listed");
+        return;
+    }
+    var selected = $("li[class ~= bg-primary]", src_listing);
+    selected.each(function(){
+        var filename = $(this).text();
+        var is_dir = $(this).children("span.oi").hasClass("oi-folder")
+        console.log(`${filename}: is_dir = ${is_dir}`)
+        var dst_path = `${dst_root}/${filename}`;
+        if (is_dir){
+            dst_path = dst_root;
+        }
+        $.ajax({
+            url: "/web/js/copy",
+            type: "POST",
+            data: JSON.stringify({src_sitename: src_site,
+                                  src_filepath: `${src_root}/${filename}`,
+                                  dst_sitename: dst_site,
+                                  dst_filepath: dst_path}),
+            contentType: "application/json; charset=utf-8",
+            error: function(request, status, error){
+                console.error(`Error registering copy job for ${filename}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
+                failed_items.push(filename);
+            },
+            success: function(response, status, request){
+                console.log(`Successfully registered copy job for ${filename}.`);
+            }
+        });
+    });
+    selected.trigger("click");
+    if (failed_items.length){
+        bootstrap_alert("danger", "Error!", `Error registering copy job for: [${failed_items.join()}]`);
+    }
+    else{
+        bootstrap_alert("success", "Success!", "COPY jobs registered.");
+    }
+}
+
 $(document).ready(function(){
 
     $("#dst_panel").droppable({
@@ -259,6 +308,25 @@ $(document).ready(function(){
         }*/
     });
 
+    $("div.card-body").on("dblclick", "ul.list-group li", function(){
+        element = $(this);
+        if (element.children("span.oi").hasClass("oi-folder")){  // is dir
+            var panel = element.closest("div.card-body");
+            var sitename = panel.prevAll("select.custom-select").val();
+            var root = element.parent("ul.list-group").attr("directory");
+            listing(sitename, `${root}/${element.text()}`, panel)
+        }
+    });
+
+    $("div.card-body").on("click", "div.password_toggle", function(){
+        var password = $(this).prev("input.password");
+        if (password.prop("type") === "password") {
+            password.prop("type", "text");
+        } else {
+            password.prop("type", "password");
+        }
+    });
+
     $("div.card-body").on("click", "form button.submit", function(event){
         event.preventDefault();
         var form = $(this).closest("form");
@@ -290,125 +358,45 @@ $(document).ready(function(){
         });
     });
 
-    $("div.card-body").on("click", "div.password_toggle", function(){
-        var password = $(this).prev("input.password");
-        if (password.prop("type") === "password") {
-            password.prop("type", "text");
-        } else {
-            password.prop("type", "password");
-        }
-    });
-
     $("span.oi-reload").click(function(){
         var site_selector = $(this).parent("div.card-footer").siblings("select.custom-select");
         site_selector.trigger("change");
     });
 
     $("#src_dst_copy").click(function(){
-        var failed_items = [];
-        var src_site = $("#src_site").val();
-        var dst_site = $("#dst_site").val();
-        var dst_root = $("#dst_panel ul.list-group").attr("directory");
-        if ($.type(dst_root) === "undefined") {
-            console.warn("No destination directory listed")
-            bootstrap_alert("warning", "Attention!", "No destination directory listed");
-            return;
-        }
-        var listing = $("#src_panel ul.list-group");
-        var src_root = listing.attr("directory");
-        if ($.type(src_root) === "undefined") {
-            console.error("No source directory listed")
-            bootstrap_alert("danger", "Error!", "No source directory listed");
-            return;
-        }
-        var selected = $("li[class ~= bg-primary]", listing);
-        selected.each(function(){
-            var filename = $(this).text();
-            var is_dir = $(this).children("span.oi").hasClass("oi-folder")
-            console.log(`${filename}: is_dir = ${is_dir}`)
-            var dst_path = `${dst_root}/${filename}`;
-            if (is_dir){
-                dst_path = dst_root;
-            }
-            $.ajax({
-                url: "/web/js/copy",
-                type: "POST",
-                data: JSON.stringify({src_sitename: src_site,
-                                      src_filepath: `${src_root}/${filename}`,
-                                      dst_sitename: dst_site,
-                                      dst_filepath: dst_path}),
-                contentType: "application/json; charset=utf-8",
-                error: function(request, status, error){
-                    console.error(`Error registering copy job for ${filename}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
-                    failed_items.push(filename);
-                },
-                success: function(response, status, request){
-                    console.log(`Successfully registered copy job for ${filename}.`);
-                }
-            });
-        });
-        selected.trigger("click");
-        if (failed_items.length){
-            bootstrap_alert("danger", "Error!", `Error registering copy job for: [${failed_items.join()}]`);
-        }
-        else{
-            bootstrap_alert("success", "Success!", "COPY jobs registered.");
-        }
+        copy($("#src_site").val(),
+             $("#src_panel ul.list-group"),
+             $("#dst_site").val(),
+             $("#dst_panel ul.list-group"));
     });
 
     $("#dst_src_copy").click(function(){
-        var failed_items = [];
-        var src_site = $("#dst_site").val();
-        var dst_site = $("#src_site").val();
-        var dst_root = $("#src_panel ul.list-group").attr("directory");
-        if ($.type(dst_root) === "undefined") {
-            console.warn("No destination directory listed")
-            bootstrap_alert("warning", "Attention!", "No destination directory listed");
-            return;
-        }
-        var listing = $("#dst_panel ul.list-group");
-        var src_root = listing.attr("directory");
-        if ($.type(src_root) === "undefined") {
-            console.error("No source directory listed")
-            bootstrap_alert("danger", "Error!", "No source directory listed");
-            return;
-        }
-        var selected = $("li[class ~= bg-primary]", listing);
-        selected.each(function(){
-            var filename = $(this).text();
-            var is_dir = $(this).children("span.oi").hasClass("oi-folder")
-            console.log(`${filename}: is_dir = ${is_dir}`)
-            var dst_path = `${dst_root}/${filename}`;
-            if (is_dir){
-                dst_path = dst_root;
-            }
-            $.ajax({
-                url: "/web/js/copy",
-                type: "POST",
-                data: JSON.stringify({src_sitename: src_site,
-                                      src_filepath: `${src_root}/${filename}`,
-                                      dst_sitename: dst_site,
-                                      dst_filepath: dst_path}),
-                contentType: "application/json; charset=utf-8",
-                error: function(request, status, error){
-                    console.error(`Error registering copy job for ${filename}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
-                    failed_items.push(filename);
-                },
-                success: function(response, status, request){
-                    console.log(`Successfully registered copy job for ${filename}.`);
-                }
-            });
-        });
-        selected.trigger("click");
-        if (failed_items.length){
-            bootstrap_alert("danger", "Error!", `Error registering copy job for: [${failed_items.join()}]`);
-        }
-        else{
-            bootstrap_alert("success", "Success!", "COPY jobs registered.");
-        }
+        copy($("#dst_site").val(),
+             $("#dst_panel ul.list-group"),
+             $("#src_site").val(),
+             $("#src_panel ul.list-group"));
     });
 
     $("#remove").click(function(){
+        var nselected = $("div.card-body ul.list-group li[class ~= bg-primary]").length;
+        if ( nselected > 0 ) {
+            $("#delete_modal").modal();
+        }
+    });
+
+    $("body").keypress(function(event){
+        ///// TESTING STUFF...IGNORE
+           //$("div.card-body ul.list-group li[class ~= bg-primary]").toggleClass("progress-bar progress-bar-striped progress-bar-animated text-light text-left");
+        /////
+        var backspace = 8;
+        var del = 46;
+        var nselected = $("div.card-body ul.list-group li[class ~= bg-primary]").length;
+        if ( nselected > 0 && (event.keyCode == backspace || event.keyCode == del) ) {
+            $("#delete_modal").modal();
+        }
+    });
+
+    $("#delete_modal_ok").click(function(){
         var failed_items = [];
         var selected = $("div.card-body ul.list-group li[class ~= bg-primary]");
         selected.each(function(){
@@ -443,34 +431,9 @@ $(document).ready(function(){
         else{
             bootstrap_alert("success", "Success!", "REMOVE jobs registered.")
         }
-    });
-
-    $("body").keypress(function(event){
-        ///// TESTING STUFF...IGNORE
-           //$("div.card-body ul.list-group li[class ~= bg-primary]").toggleClass("progress-bar progress-bar-striped progress-bar-animated text-light text-left");
-        /////
-        var backspace = 8;
-        var del = 46;
-        nselected = $("div.card-body ul.list-group li[class ~= bg-primary]").length;
-        if ( nselected > 0 && (event.keyCode == backspace || event.keyCode == del) ) {
-            $("#delete_modal").modal()
-        }
-    });
-
-    $("#delete_modal_ok").click(function(){
-        $("#remove").trigger("click");
         $("#delete_modal").modal("hide");
     });
 
-    $("div.card-body").on("dblclick", "ul.list-group li", function(){
-        element = $(this);
-        if (element.children("span.oi").hasClass("oi-folder")){  // is dir
-            var panel = element.closest("div.card-body");
-            var sitename = panel.prevAll("select.custom-select").val();
-            var root = element.parent("ul.list-group").attr("directory");
-            listing(sitename, `${root}/${element.text()}`, panel)
-        }
-    });
 
 
 });
