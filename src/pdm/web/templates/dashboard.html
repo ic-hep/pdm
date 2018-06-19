@@ -210,7 +210,7 @@ function copy(src_site, src_listing, dst_site, dst_listing){
         bootstrap_alert("danger", "Error!", "No source directory listed");
         return;
     }
-    var selected = $("li[class ~= bg-primary]", src_listing);
+    var selected = $("li[class ~= bg-primary]", src_listing).not(".disabled");
     selected.each(function(){
         var filename = $(this).text();
         var is_dir = $(this).children("span.oi").hasClass("oi-folder")
@@ -233,6 +233,16 @@ function copy(src_site, src_listing, dst_site, dst_listing){
             },
             success: function(response, status, request){
                 console.log(`Successfully registered copy job for ${filename}.`);
+                var list_item = $("<li>", {class: "list-group-item progress-bar progress-bar-striped progress-bar-animated bg-primary text-light text-left disabled"});
+                list_item.prop("disabled", true);  // stops click type events but cant be selected with :enabled hence .disabled class as well
+                if (is_dir){
+                    list_item.append($("<span>", {class: "oi oi-folder text-light pr-2"}));
+                }
+                else{
+                    list_item.append($("<span>", {class: "oi oi-file text-light pr-2"}));
+                }
+                list_item.append(filename);
+                dst_listing.append(list_item);
             }
         });
     });
@@ -378,7 +388,7 @@ $(document).ready(function(){
     });
 
     $("#remove").click(function(){
-        var nselected = $("div.card-body ul.list-group li[class ~= bg-primary]").length;
+        var nselected = $("div.card-body ul.list-group li[class ~= bg-primary]").not(".disabled").length;
         if ( nselected > 0 ) {
             $("#delete_modal").modal();
         }
@@ -390,7 +400,7 @@ $(document).ready(function(){
         /////
         var backspace = 8;
         var del = 46;
-        var nselected = $("div.card-body ul.list-group li[class ~= bg-primary]").length;
+        var nselected = $("div.card-body ul.list-group li[class ~= bg-primary]").not(".disabled").length;
         if ( nselected > 0 && (event.keyCode == backspace || event.keyCode == del) ) {
             $("#delete_modal").modal();
         }
@@ -398,7 +408,7 @@ $(document).ready(function(){
 
     $("#delete_modal_ok").click(function(){
         var failed_items = [];
-        var selected = $("div.card-body ul.list-group li[class ~= bg-primary]");
+        var selected = $("div.card-body ul.list-group li[class ~= bg-primary]").not(".disabled");
         selected.each(function(){
             var filename = $(this).text();
             var listing = $(this).parent("ul.list-group")
@@ -427,7 +437,7 @@ $(document).ready(function(){
         selected.trigger("click");
         selected.draggable("destroy");
         selected.prop("disabled", true);
-        selected.addClass("progress-bar progress-bar-striped progress-bar-animated bg-secondary text-left");
+        selected.addClass("progress-bar progress-bar-striped progress-bar-animated bg-secondary text-light text-left disabled");
         var selected_icons = $("span.oi", selected);
         selected_icons.removeClass("text-primary text-warning");
         selected_icons.addClass("text-light");
