@@ -150,6 +150,7 @@ def pdm_gfal_long_list_dir(ctx, root, result, max_depth=-1, depth=1):
     for subdir in subdirs:
         pdm_gfal_long_list_dir(ctx, os.path.join(root, subdir), result, max_depth, depth=depth + 1)
 
+
 def json_input():
     """
     gfal-ls directory/file based on a json document read from stdin.
@@ -157,14 +158,16 @@ def json_input():
     """
 
     data = json.load(sys.stdin)
-    global ID # pylint: disable=global-statement
+    global ID  # pylint: disable=global-statement
     ID = data.get('files')[0][0]  # (id, file)
-    json.dump({'Reason': 'OK', 'Code': 0, 'id': ID,
-               'Listing': pdm_gfal_ls(str(data.get('files')[0][1]), **data.get('options', {}))},
-              sys.stdout)
-    sys.stdout.write('\n')
-    sys.stdout.flush()
-
+    # json.dump({'Reason': 'OK', 'Code': 0, 'id': ID,
+    #           'Listing': pdm_gfal_ls(str(data.get('files')[0][1]), **data.get('options', {}))},
+    #          sys.stdout)
+    # sys.stdout.write('\n')
+    # sys.stdout.flush()
+    obj = {'Reason': 'OK', 'Code': 0, 'id': ID,
+           'Listing': pdm_gfal_ls(str(data.get('files')[0][1]), **data.get('options', {}))}
+    dump_and_flush(obj)
 
 if __name__ == "__main__":
     json_input()
