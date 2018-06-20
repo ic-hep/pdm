@@ -309,12 +309,14 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                     else:
                         data['files'].append(src)
 
-                # correct command and credentials for LIST component of COPY/REMOVE jobs.
+                # Correct command, data options and credentials for LIST component of
+                # COPY/REMOVE jobs.
                 command = shlex.split(COMMANDMAP[job['type']][job['protocol']])
                 if job['type'] != JobType.LIST\
                         and len(job['elements']) == 1\
                         and job['elements'][0]['type'] == JobType.LIST:
                     command = shlex.split(COMMANDMAP[JobType.LIST][job['protocol']])
+                    data.pop('options', None)  # don't pass COPY/REMOVE options to scripts.
                     if job['type'] == JobType.COPY and len(credentials) == 2:
                         credentials.pop()  # remove dst_creds to get correct proxy env var
                 command[0] = os.path.join(self._script_path, command[0])

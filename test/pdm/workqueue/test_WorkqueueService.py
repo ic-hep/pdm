@@ -420,6 +420,8 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(job.type, JobType.COPY)
         self.assertEqual(returned_job['type'], 'COPY')
         self.assertEqual(job.priority, 2)
+        self.assertEqual(job.src_filepath, '/data/somefile')
+        self.assertEqual(job.dst_filepath, '/data/someotherfile')
         self.assertEqual(job.src_credentials, "somesecret")
         self.assertEqual(job.dst_credentials, "someothersecret")
         self.assertEqual(job.protocol, JobProtocol.SSH)
@@ -430,7 +432,7 @@ class TestWorkqueueService(unittest.TestCase):
         element = job.elements[0]
         self.assertEqual(element.type, JobType.LIST)
         self.assertEqual(element.src_filepath, '/data/somefile')
-        self.assertEqual(element.dst_filepath, '/data/someotherfile')
+        self.assertEqual(element.dst_filepath, None)
         self.assertEqual(element.attempts, 0)
         self.assertEqual(element.max_tries, 3)
 

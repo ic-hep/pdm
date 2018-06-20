@@ -208,11 +208,11 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
                     kwargs['dst_filepath'] = shellpath_sanitise(kwargs['dst_filepath'])
 
                 super(Job, self).__init__(**subdict(kwargs, self.allowed_args()))
-                element = JobElement(id=0, **kwargs)
-                # reset it afterwards so that the arg requirements for a copy job
-                # are checked by jobelement
-                element.type = JobType.LIST
-                self.elements = [element]
+                listing_args = {'id': 0, 'type': JobType.LIST,
+                                'src_filepath': kwargs['src_filepath']}
+                if 'max_tries' in kwargs:
+                    listing_args.update(max_tries=kwargs['max_tries'])
+                self.elements = [JobElement(**listing_args)]
 
             def add(self):
                 """Add job to session."""
