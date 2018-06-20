@@ -2,12 +2,14 @@
 """ PDM gfal2-copy wrapper """
 import os
 import sys
-import argparse
 import json
 import logging
-
 import gfal2
-from pdm.workqueue.scripts.stdout_dump_helper import dump_and_flush
+import imp
+
+dump_and_flush = imp.load_module('stdout_dump_helper',
+                                 *imp.find_module('stdout_dump_helper',
+                                                  [os.path.dirname(__file__)])).dump_and_flush
 
 logging.basicConfig()
 _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -129,4 +131,3 @@ def json_input():
 
 if __name__ == "__main__":
     json_input()
-

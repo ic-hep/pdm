@@ -4,13 +4,16 @@ import os
 import sys
 import inspect
 import stat
-import argparse
 from collections import OrderedDict
 import json
 import logging
 import pprint as pp
 import gfal2
-from pdm.workqueue.scripts.stdout_dump_helper import dump_and_flush
+import imp
+
+dump_and_flush = imp.load_module('stdout_dump_helper',
+                                 *imp.find_module('stdout_dump_helper',
+                                                  [os.path.dirname(__file__)])).dump_and_flush
 
 logging.basicConfig()
 _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -168,6 +171,7 @@ def json_input():
     obj = {'Reason': 'OK', 'Code': 0, 'id': ID,
            'Listing': pdm_gfal_ls(str(data.get('files')[0][1]), **data.get('options', {}))}
     dump_and_flush(obj)
+
 
 if __name__ == "__main__":
     json_input()

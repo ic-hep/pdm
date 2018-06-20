@@ -3,11 +3,15 @@
 gfal2 based file remover.
 """
 import sys
-import argparse
+import os
 import json
 import logging
 import gfal2
-from pdm.workqueue.scripts.stdout_dump_helper import dump_and_flush
+import imp
+
+dump_and_flush = imp.load_module('stdout_dump_helper',
+                                 *imp.find_module('stdout_dump_helper',
+                                                  [os.path.dirname(__file__)])).dump_and_flush
 
 logging.basicConfig()
 _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -41,6 +45,7 @@ def pdm_gfal_rm(rmdict, verbosity=logging.INFO):
             dump_and_flush({'Code': 1, 'Reason': str(gerror), 'id': jobid}, _logger, str(gerror))
 
     return
+
 
 def json_input():
     """
