@@ -5,7 +5,9 @@ import sys
 import argparse
 import json
 import logging
+
 import gfal2
+from pdm.workqueue.scripts.stdout_dump_helper import dump_and_flush
 
 logging.basicConfig()
 _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -51,16 +53,11 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     # _logger.addHandler(logging.StreamHandler())
     _logger.setLevel(verbosity)
 
-    # copy_dict = json.loads(copy_json)
-
     copy_list = copy_dict.get('files', [])
 
     if not copy_list:
-        # json.dump([], sys.stdout)
-        json.dump({"Reason": "No files to copy passed in", "Code": 1, 'id': ''}, sys.stdout)
         _logger.warning("No files to copy")
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+        dump_and_flush({"Reason": "No files to copy passed in", "Code": 1, 'id': ''})
         return
 
     if _logger.isEnabledFor(logging.DEBUG):
@@ -74,9 +71,7 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     if s_cred is None or t_cred is None:
         _logger.fatal("Please provide credential location: source %s, dest %s. ",
                       s_cred, t_cred)
-        json.dump({"Reason": "No credentials passed in", "Code": 1, 'id': ''}, sys.stdout)
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+        dump_and_flush({"Reason": "No credentials passed in", "Code": 1, 'id': ''})
         return
 
     ctx = gfal2.creat_context()
@@ -103,14 +98,9 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     for jobid, source_file, dest_file in copy_list:
         try:
             res = ctx.filecopy(params, str(source_file), str(dest_file))
-            json.dump({'Code': res, 'Reason': 'OK', 'id': jobid}, sys.stdout)
-            sys.stdout.write('\n')
-            sys.stdout.flush()
+            dump_and_flush({'Code': res, 'Reason': 'OK', 'id': jobid})
         except gfal2.GError as gerror:
-            json.dump({'Code': 1, 'Reason': str(gerror), 'id': jobid}, sys.stdout)
-            sys.stdout.write('\n')
-            _logger.error(str(gerror))
-            sys.stdout.flush()
+            dump_and_flush({'Code': 1, 'Reason': str(gerror), 'id': jobid}, _logger, str(gerror))
     return  # result
 
 
@@ -120,29 +110,6 @@ def _get_cred(cred_file):
     else:
         return None
     return cred
-
-
-def main():
-    """
-    Gfal2 copy wrapper with different source and destination proxies. Works with command line
-    """
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("copylist", type=str, help="copylist: {'files':[(s,t), 9s2, t2) ...]}")
-    parser.add_argument("-v", "--verbosity", action='store_const',
-                        const=logging.DEBUG, default=logging.INFO,
-                        help="verbosity, INFO, if omitted")
-    parser.add_argument("-s", "--s_cred", default=os.environ.get('X509_USER_PROXY_SRC', None),
-                        help="source credential location")
-    parser.add_argument("-t", "--t_cred", default=os.environ.get('X509_USER_PROXY_DST', None),
-                        help="target credential location")
-    parser.add_argument("-o", "--overwrite", action='store_const', const=True, default=False)
-    parser.add_argument("-p", "--parent", action='store_const', const=True, default=False)
-    parser.add_argument("-n", "--nbstreams", default=1, type=int, help="number of streams")
-    args = parser.parse_args()
-
-    pdm_gfal_copy(json.loads(args.copylist), args.s_cred, args.t_cred,
-                  args.overwrite, args.parent, args.nbstreams)
 
 
 def json_input():
@@ -162,4 +129,4 @@ def json_input():
 
 if __name__ == "__main__":
     json_input()
-    # main()
+
