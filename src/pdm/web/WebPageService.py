@@ -76,7 +76,8 @@ class WebPageService(object):
     def website():
         """to render the datamover entry/login page"""
         status = WebPageService.datamover_status()
-        return flask.render_template("datamover.html", status=status, action="/web/datamover")
+        return flask.render_template("datamover.html", status=status,
+                                     accept_cookies=flask.session.get("accept_cookies", False))
 
     @staticmethod
     @export_ext("datamover", methods=["POST"])
@@ -89,12 +90,12 @@ class WebPageService(object):
             token = flask.current_app.hrclient.login(username, password)
             set_session_state(True)
             flask.session["token"] = token
+            flask.session["accept_cookies"] = True
         except Exception as err:
             flash('Could not login user (%s)' % err)
             status = WebPageService.datamover_status()
             return flask.render_template("datamover.html", status=status)
         resp = flask.make_response(flask.redirect("/web/dashboard"))
-        # resp.set_cookie('name', 'I am a cookie')
         return resp
 
 
