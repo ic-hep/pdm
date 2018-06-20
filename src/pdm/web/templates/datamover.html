@@ -16,6 +16,7 @@
     <title>UK DataMover</title>
     <style>
         .clickable { cursor: pointer }
+        #notification { position: fixed; top:0; width: 100%; z-index: 1000; display:none; height:75% }
         .fancybox-slide--iframe .fancybox-content {
 	                width  : 800px;
 	                height : 600px;
@@ -30,6 +31,24 @@
 </head>
 
 <body>
+{% if not accept_cookies %}
+<div id="notification">
+    <div class="alert alert-dark alert-dismissible fade show h-100 d-flex justify-content-center" role="alert">
+        <div class="w-50 h-100 d-flex justify-content-end" style="flex-direction: column">
+            <strong>Attention!</strong>
+            <br>
+            <hr style="width:100%">
+            This website requires the use of cookies. By signing in you agree to their use.
+            <br>
+            <div class="w-100 d-flex justify-content-end">
+                <button id="notification_dismiss" type="button" class="btn btn-outline-dark w-25" data-dismiss="alert" aria-label="Close">
+                    I understand, let's go.
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 <div class="container w-25">
     <div class="panel panel-primary">
         <div class="panel-heading text-center">
@@ -94,6 +113,11 @@
 <script>
 $(document).ready(function(){
 
+    $("#notification").slideDown(1000);
+
+    $("#notification_dismiss").click(function(){
+        $("#notification").slideUp("slow");  // slow = 600
+    });
     $("#info").click(function(){
         $.fancybox.open({
             src  : '/static/about.html',
