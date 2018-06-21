@@ -45,7 +45,7 @@ class UserCommand(object):
         user_parser.set_defaults(func=self.not_implemented)
         # login
         user_parser = subparsers.add_parser('login', help="User login procedure.")
-        user_parser.add_argument('-e', '--email', type=str)
+        user_parser.add_argument('email', nargs='?', type=str)
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help="optional token file location (default=~/.pdm/token)")
 
@@ -237,7 +237,6 @@ class UserCommand(object):
             if not args.email:
                 print "No email provided. Exiting .."
                 exit(1)
-
         password = getpass()
 
         client = HRClient()
