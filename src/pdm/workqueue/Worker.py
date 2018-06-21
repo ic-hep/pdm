@@ -124,6 +124,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
         self._stderr_dispatcher = stderr_dispatcher
         self._callback = callback
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._buffer = ''
 
     def writable(self):
         """Writeable status of fd."""
@@ -139,39 +140,47 @@ class StdOutDispatcher(asyncore.file_dispatcher):
 
     def handle_read(self):
         """Handle read events."""
-        try:
-            done_element = json.load(self._fd)
-        except ValueError:
-            self.close()
-            return
 
-        log = self._stderr_dispatcher.buffer
-        returncode = done_element['Code']
-        data = {'log': log,
-                'returncode': returncode,
-                'host': (datetime.utcnow().isoformat(),) + socket.gethostbyaddr(socket.getfqdn())}
-        element_id = done_element['id']
+        self._buffer += self.recv(8192)
+        buffered_elements = self._buffer.split('\n')
+        self._buffer = buffered_elements.pop()
 
-        if returncode:
-            self._logger.warning("Subprocess for job.element %s failed with exit code %s",
-                                 element_id, returncode)
-        self._logger.debug("Subprocess output for job.element %s: %s", element_id, log)
+        for buffered_element in buffered_elements:
+            try:
+                done_element = json.loads(buffered_element)
+            except ValueError:
+                self._logger.exception("Problem json loading done element.")
+                self.close()
+                return
 
-        if not element_id:  # whole job failure
-            for element_id, token in self._tokens.iteritems():
-                self._callback(*element_id.split('.'), token=token, data=data)
-            self._tokens.clear()  # will cause readable to close fd on next iteration.
-            return
+            log = self._stderr_dispatcher.buffer
+            returncode = done_element['Code']
+            data = {'log': log,
+                    'returncode': returncode,
+                    'timestamp': datetime.utcnow().isoformat(),
+                    'host': socket.gethostbyaddr(socket.getfqdn())}
+            element_id = done_element['id']
 
-        if 'Listing' in done_element:
-            data['listing'] = {}
-            for root, listing in done_element['Listing'].iteritems():
-                root = urlsplit(root).path
-                if root.startswith('/~'):
-                    root = root.lstrip('/')
-                data['listing'][root] = listing
-        token = self._tokens.pop(element_id)
-        self._callback(*element_id.split('.'), token=token, data=data)
+            if returncode:
+                self._logger.warning("Subprocess for job.element %s failed with exit code %s",
+                                     element_id, returncode)
+            self._logger.debug("Subprocess output for job.element %s: %s", element_id, log)
+
+            if not element_id:  # whole job failure
+                for element_id, token in self._tokens.iteritems():
+                    self._callback(*element_id.split('.'), token=token, data=data)
+                self._tokens.clear()  # will cause readable to close fd on next iteration.
+                return
+
+            if 'Listing' in done_element:
+                data['listing'] = {}
+                for root, listing in done_element['Listing'].iteritems():
+                    root = urlsplit(root).path
+                    if root.startswith('/~'):
+                        root = root.lstrip('/')
+                    data['listing'][root] = listing
+            token = self._tokens.pop(element_id)
+            self._callback(*element_id.split('.'), token=token, data=data)
 
 
 class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attributes
