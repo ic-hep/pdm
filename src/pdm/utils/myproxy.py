@@ -61,10 +61,11 @@ class MyProxyUtils(object):
                     ca_dir = X509Utils.add_ca_to_dir(ca_certs, None)
                     env["X509_CERT_DIR"] = ca_dir
             if vomses:
-                env["X509_VOMS_DIR"] = vomses
+                env["VOMS_USERCONF"] = vomses
             # Actually run the command
             if log:
                 log.debug("Running myproxy-logon with: %s", " ".join(myproxy_opts))
+                log.debug("  myproxy-logon env: %s", str(env))
             proc = Popen(myproxy_opts, shell=False, stdin=PIPE, stdout=PIPE,
                          stderr=PIPE, env=env)
             try:
