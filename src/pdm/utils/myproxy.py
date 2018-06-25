@@ -4,6 +4,7 @@
 import os
 import copy
 import shutil
+import tempfile
 from subprocess import Popen, PIPE
 from pdm.utils.X509 import X509Utils
 
@@ -34,65 +35,67 @@ class MyProxyUtils(object):
             Returns a string with the new credential PEM. Raises a
             RuntimeError exception if anything goes wrong.
         """
-        hostname, port = myproxy_server.split(':', 1)
-        myproxy_opts = ['myproxy-logon',    # Exectuable name
-                        '-s', hostname,     # MyProxy server name
-                        '-p', '%s' % port,  # MyProxy port number
-                        '-l', username,     # Username at remote site
-                        '-t', '%u' % hours, # Lifetime in hours
-                        '-o', '-',          # Proxy on stdout
-                        '-q',               # Quiet (output only on error)
-                        '-S',               # Password on stdin
-                       ]
-        if myproxy_bin:
-            myproxy_opts[0] = myproxy_bin
-        if voms:
-            myproxy_opts.extend(['-m', voms])
-        env = copy.deepcopy(os.environ)
-        ca_dir = None
-        if ca_certs:
-            if isinstance(ca_certs, str):
-                # CA certs is a path to a cert dir
-                env["X509_CERT_DIR"] = ca_certs
-            else:
-                # ca_certs is a list of PEM strings
-                ca_dir = X509Utils.add_ca_to_dir(ca_certs, None)
-                env["X509_CERT_DIR"] = ca_dir
-        if vomses:
-            env["X509_VOMS_DIR"] = vomses
-        # Actually run the command
-        if log:
-            log.debug("Running myproxy-logon with: %s", " ".join(myproxy_opts))
-        proc = Popen(myproxy_opts, shell=False, stdin=PIPE, stdout=PIPE,
-                     stderr=PIPE, env=env)
-        try:
-            stdout, stderr = proc.communicate('%s\n' % password)
-        except Exception as err:
+        with tempfile.NamedTemporaryFile() as proxy:
+            hostname, port = myproxy_server.split(':', 1)
+            myproxy_opts = ['myproxy-logon',    # Exectuable name
+                            '-s', hostname,     # MyProxy server name
+                            '-p', '%s' % port,  # MyProxy port number
+                            '-l', username,     # Username at remote site
+                            '-t', '%u' % hours, # Lifetime in hours
+                            '-o', proxy.name,   # Proxy on stdout
+                            '-q',               # Quiet (output only on error)
+                            '-S',               # Password on stdin
+                          ]
+            if myproxy_bin:
+                myproxy_opts[0] = myproxy_bin
+            if voms:
+                myproxy_opts.extend(['-m', voms])
+            env = copy.deepcopy(os.environ)
+            ca_dir = None
+            if ca_certs:
+                if isinstance(ca_certs, str):
+                    # CA certs is a path to a cert dir
+                    env["X509_CERT_DIR"] = ca_certs
+                else:
+                    # ca_certs is a list of PEM strings
+                    ca_dir = X509Utils.add_ca_to_dir(ca_certs, None)
+                    env["X509_CERT_DIR"] = ca_dir
+            if vomses:
+                env["X509_VOMS_DIR"] = vomses
+            # Actually run the command
             if log:
-                log.warn("myproxy-logon command failed: %s", str(err))
-            raise RuntimeError("Logon error: Failed to run myproxy-logon")
-        finally:
-            # Make sure we tidy up the CA dir if we created one
-            if ca_dir:
-                shutil.rmtree(ca_dir, ignore_errors=True)
-        # Check the return code
-        if proc.returncode != 0:
-            # Command failed, attempt to infer the reason
-            error_str = "Unknown myproxy failure"
-            if "invalid password" in stderr:
-                error_str = "Incorrect password"
-            elif "Unable to connect to" in stderr:
-                error_str = "Connection error"
-            elif "No credentials exist for username" in stderr:
-                error_str = "Unrecognised user"
-            elif "Error in service module" in stderr:
-                error_str = "Unrecognised user/config error"
-            if log:
-                log.warn("myproxy-logon command failed with code %u (%s)",
-                         proc.returncode, error_str)
-                log.debug("myproxy-logon stderr: %s", stderr)
-            raise RuntimeError("Logon error: %s" % error_str)
-        return stdout # Proxy is just a string on stdout
+                log.debug("Running myproxy-logon with: %s", " ".join(myproxy_opts))
+            proc = Popen(myproxy_opts, shell=False, stdin=PIPE, stdout=PIPE,
+                         stderr=PIPE, env=env)
+            try:
+                stdout, stderr = proc.communicate('%s\n' % password)
+            except Exception as err:
+                if log:
+                    log.warn("myproxy-logon command failed: %s", str(err))
+                raise RuntimeError("Logon error: Failed to run myproxy-logon")
+            finally:
+                # Make sure we tidy up the CA dir if we created one
+                if ca_dir:
+                    shutil.rmtree(ca_dir, ignore_errors=True)
+            # Check the return code
+            if proc.returncode != 0:
+                # Command failed, attempt to infer the reason
+                error_str = "Unknown myproxy failure"
+                if "invalid password" in stderr:
+                    error_str = "Incorrect password"
+                elif "Unable to connect to" in stderr:
+                    error_str = "Connection error"
+                elif "No credentials exist for username" in stderr:
+                    error_str = "Unrecognised user"
+                elif "Error in service module" in stderr:
+                    error_str = "Unrecognised user/config error"
+                if log:
+                    log.warn("myproxy-logon command failed with code %u (%s)",
+                             proc.returncode, error_str)
+                    log.debug("myproxy-logon stderr: %s", stderr)
+                raise RuntimeError("Logon error: %s" % error_str)
+            proxy_str = proxy.read().strip()
+            return proxy_str # Proxy is just a string on stdout
 
     @staticmethod
     def load_voms_list(vomsdir):
