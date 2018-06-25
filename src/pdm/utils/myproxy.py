@@ -94,7 +94,9 @@ class MyProxyUtils(object):
                              proc.returncode, error_str)
                     log.debug("myproxy-logon stderr: %s", stderr)
                 raise RuntimeError("Logon error: %s" % error_str)
-            proxy_str = proxy.read().strip()
+            # Re-open the file to avoid any buffering
+            with open(proxy.name, "r") as proxy_fd:
+                proxy_str = proxy_fd.read().strip()
             return proxy_str # Proxy is just a string on stdout
 
     @staticmethod
