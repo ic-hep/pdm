@@ -74,9 +74,9 @@
             <option value="" hidden selected>Select Site</option>
         </select>
         <div id="src_panel" class="card-body text-center ui-widget-header">
-            <div id="src_directory" class="input-group" hidden>
+            <div class="input-group directory_input py-3" hidden>
                 <input type="text" class="form-control" placeholder="~">
-                <div class="input-group-append clickable">
+                <div class="input-group-append go_button clickable">
                     <span class="input-group-text">
                         <span class="oi oi-share text-primary" aria-hidden="true"></span>
                     </span>
@@ -107,6 +107,14 @@
             <option value="" hidden selected>Select Site</option>
         </select>
         <div id="dst_panel" class="card-body text-center ui-widget-header">
+            <div class="input-group directory_input py-3" hidden>
+                <input type="text" class="form-control" placeholder="~">
+                <div class="input-group-append go_button clickable">
+                    <span class="input-group-text">
+                        <span class="oi oi-share text-primary" aria-hidden="true"></span>
+                    </span>
+                </div>
+            </div>
             <img src="/static/images/pdm.png"/><br>
             Please select a site to continue
         </div>
@@ -146,7 +154,9 @@ function listing(sitename, filepath, panel){
         console.warn("Invalid site selected.");
         return;
     }
-    var draggable_name = panel.attr('id').replace("panel", "draggable")
+    var draggable_name = panel.attr('id').replace("panel", "draggable");
+    var directory_panel = panel.children("div.directory_input");
+    var directory_input = directory_panel.children("input.form-control");
     panel.empty();
     panel.append($("<img/>", {src:"/static/images/ajax-loader.gif", alt:"Loading..."}));  // Thanks to http://www.ajaxload.info/
     $.ajax({
@@ -167,8 +177,9 @@ function listing(sitename, filepath, panel){
           403: function(xhdr){
             console.warn(`403: Not logged in at site ${sitename}`);
             panel.empty();
+            directory_panel.prop("hidden", true);
+            panel.append(directory_panel);
             panel.append(xhdr.responseText);
-
           },
           404: function(){
             console.warn(`404: Not Found when listing site ${sitename}`);
@@ -191,7 +202,10 @@ function listing(sitename, filepath, panel){
                 element.append(response[i].name);
                 list_group.append(element);
             }
+            directory_input.attr("placeholder", filepath);
+            directory_panel.prop("hidden", false);
             panel.empty();
+            panel.append(directory_panel);
             panel.append(list_group);
         }
     });
@@ -302,9 +316,18 @@ $(document).ready(function(){
     });
 
     $(".sitelist").change(function(){
-        listing($(this).val(), "~", $(this).nextAll('div.card-body'));
+        listing($(this).val(), "~", $(this).next('div.card-body'));
     });
 
+
+    $("div.card-body").on("click", "div.go_button", function(){
+        var panel = $(this).closest("div.card-body");
+        var sitename = panel.prev("select.sitelist").val();
+        var directory = $(this).prev("input.form-control").val();
+        if (directory !== ""){
+            listing(sitename, directory, panel);
+        }
+    });
 
     $("div.card-body").on("click", "ul.list-group li", function(event){
         $(this).toggleClass("bg-primary text-light");
@@ -323,7 +346,7 @@ $(document).ready(function(){
         element = $(this);
         if (element.children("span.oi").hasClass("oi-folder")){  // is dir
             var panel = element.closest("div.card-body");
-            var sitename = panel.prevAll("select.custom-select").val();
+            var sitename = panel.prev("select.sitelist").val();
             var root = element.parent("ul.list-group").attr("directory");
             listing(sitename, `${root}/${element.text()}`, panel)
         }
@@ -342,7 +365,10 @@ $(document).ready(function(){
         event.preventDefault();
         var form = $(this).closest("form");
         var panel = form.closest("div.card-body");
-        var site = panel.prevAll("select.custom-select").val();
+        var directory_panel = panel.children("div.directory_input");
+//        var directory_input = directory_panel.children("input.form-control");
+        var site_selector = panel.prev("select.sitelist");
+        var sitename = site_selector.val()
         var jsonified_form = {};
         panel.empty();
         panel.append($("<img/>", {src:"/static/images/ajax-loader.gif", alt:"Loading..."}));
@@ -351,19 +377,21 @@ $(document).ready(function(){
             jsonified_form[serialised_form[i].name] = serialised_form[i].value
         }
         $.ajax({
-            url: `/web/sitelogin/${site}`,
+            url: `/web/sitelogin/${sitename}`,
             type: "POST",
             data: JSON.stringify(jsonified_form),
             contentType: "application/json; charset=utf-8",
             error: function(request, status, error){
-                console.error(`Error logging in to site ${site}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
-                bootstrap_alert("danger", "Failed!", `logging in to site ${site}`)
-                var site_selector = panel.siblings("select.custom-select");
-                site_selector.trigger("change");
+                console.error(`Error logging in to site ${sitename}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
+                bootstrap_alert("danger", "Failed!", `logging in to site ${sitename}`);
             },
             success: function(response, status, request){
-                console.log(`Successfully logged in to site ${site}`);
-                var site_selector = panel.siblings("select.custom-select");
+                console.log(`Successfully logged in to site ${sitename}`);
+            },
+            complete: function(response, status){
+                panel.empty();
+		directory_panel.prop("hidden", true);
+                pannel.append(directory_panel);
                 site_selector.trigger("change");
             }
         });
@@ -414,7 +442,7 @@ $(document).ready(function(){
             var filename = $(this).text();
             var listing = $(this).parent("ul.list-group")
             var src_root = listing.attr("directory");
-            var src_site = listing.parent("div.card-body").prevAll("select.custom-select").val()
+            var src_site = listing.parent("div.card-body").prev("select.sitelist").val()
             if ($.type(src_root) === "undefined") {
                 console.error(`No source directory listed for ${filename}`)
                 bootstrap_alert("danger", "Error!", `No source directory listed for ${filename}`);
