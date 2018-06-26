@@ -17,7 +17,7 @@ _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 def pdm_gfal_chmod(data, permissions, verbosity=logging.INFO):
     """
     Change directory/file permissions
-    :param data: son-loaded dict with data {"source": url}
+    :param data: json-loaded dict with data {"source": url}
     :param permissions: permissions mapped from {"options":{"permissions":int}}
     :param verbosity: mapped from {"options":{"verbosity":logging level}}
     :return: dict of a form {'Code': return code, 'Reason': reason, 'id': jobid})
