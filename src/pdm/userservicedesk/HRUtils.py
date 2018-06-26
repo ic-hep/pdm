@@ -46,3 +46,16 @@ class HRUtils(object):
         if not expiry_iso:
             HRUtils._logger.error("Token does not contain expiry information")
         return expiry_iso
+
+    @staticmethod
+    def get_token_username_insecure(token):
+        """
+        Get username from a token
+        :param token:
+        :return:
+        """
+        unpacked_token = TokenService.unpack(token)
+        username = unpacked_token.get('email')
+        if not username:
+            HRUtils._logger.error("Token does not contain user information")
+        return username

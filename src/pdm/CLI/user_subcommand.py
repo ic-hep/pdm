@@ -218,7 +218,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = UserCommand._get_token(args.token)
+        token = UserCommand._get_valid_token(args.token)
         if token:
             client = HRClient()
             client.set_token(token)
@@ -232,15 +232,24 @@ class UserCommand(object):
         """
         User login function. Stores a token obtained from the server in a file.
         """
-        if not args.email:
-            args.email = raw_input("Please enter your email address: ")
+        token = UserCommand._get_token(args.token)  # expired or not
+        if token:
+            # username from token
+            username = HRUtils.get_token_username_insecure(token)
+            if username:
+                password = getpass(prompt="[" + str(username) + "'s password]")
+        else:
+            # username from the command line
             if not args.email:
-                print "No email provided. Exiting .."
-                exit(1)
-        password = getpass()
+                args.email = raw_input("Please enter your email address: ")
+                if not args.email:
+                    print "No email provided. Exiting .."
+                    exit(1)
+            username = args.email
+            password = getpass()
 
         client = HRClient()
-        token = client.login(args.email, password)
+        token = client.login(username, password)
 
         filename = os.path.expanduser(args.token)
         try:
@@ -254,12 +263,12 @@ class UserCommand(object):
             os.chmod(filename, 0o600)
             token_file.write(token)
 
-        print "User {} logged in".format(args.email)
+        print "User {} logged in".format(username)
 
     def passwd(self, args):  # pylint: disable=no-self-use
         """ Change user password """
 
-        token = UserCommand._get_token(args.token)
+        token = UserCommand._get_valid_token(args.token)
         if token:
             password = getpass(prompt='Old Password: ')
             newpassword = getpass(prompt='New Password: ')
@@ -279,7 +288,7 @@ class UserCommand(object):
         get users own data
         """
 
-        token = UserCommand._get_token(args.token)
+        token = UserCommand._get_valid_token(args.token)
         if token:
             client = HRClient()
             client.set_token(token)
@@ -296,7 +305,7 @@ class UserCommand(object):
         nap = 0.2
         count = 1
         #
-        token = UserCommand._get_token(args.token)
+        token = UserCommand._get_valid_token(args.token)
         if token:
             client = TransferClientFacade(token)
             # remove None values, position args, func and token from the kwargs:
@@ -315,7 +324,7 @@ class UserCommand(object):
                         break
 
                 if status['status'] == 'DONE':
-                    listing_output = client.output(resp['id'])[0] #listing is element 0
+                    listing_output = client.output(resp['id'])[0]  # listing is element 0
                     listing_d_value = listing_output['listing']
                     root, listing = listing_d_value.items()[0]  # top root
                     self._print_formatted_listing(root, listing_d_value)
@@ -333,7 +342,7 @@ class UserCommand(object):
         :param args: carry a user token
         :return: None
         """
-        token = UserCommand._get_token(args.token)
+        token = UserCommand._get_valid_token(args.token)
         if token:
             client = TransferClientFacade(token)
             sites = client.list_sites()
@@ -385,7 +394,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = UserCommand._get_token(args.token)
+        token = UserCommand._get_valid_token(args.token)
         block = args.block
         job_id = int(args.job)
         if token:
@@ -416,7 +425,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = UserCommand._get_token(args.token)
+        token = UserCommand._get_valid_token(args.token)
         if token:
             client = TransferClientFacade(token)
             # remove None values, position args, func and token from the kwargs:
@@ -432,7 +441,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = UserCommand._get_token(args.token)
+        token = UserCommand._get_valid_token(args.token)
         if token:
             client = TransferClientFacade(token)
             src_site = args.src_site
@@ -451,7 +460,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = UserCommand._get_token(args.token)
+        token = UserCommand._get_valid_token(args.token)
         if token:
             job_id = int(args.job)
             client = TransferClientFacade(token)
@@ -469,7 +478,7 @@ class UserCommand(object):
         :param args: parser arguments, in particular site name.
         :return: None
         """
-        token = UserCommand._get_token(args.token)
+        token = UserCommand._get_valid_token(args.token)
         if token:
             site_client, site_id = UserCommand._get_site_id(args.name, token)
             if site_id:
@@ -489,7 +498,7 @@ class UserCommand(object):
         :param args: parser arguments, in particular site name
         :return: None
         """
-        token = UserCommand._get_token(args.token)
+        token = UserCommand._get_valid_token(args.token)
         if token:
             site_client, site_id = UserCommand._get_site_id(args.name, token)
             if site_id:
@@ -504,7 +513,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = UserCommand._get_token(args.token)
+        token = UserCommand._get_valid_token(args.token)
         if token:
             site_info = {key: value for (key, value) in vars(args).iteritems() if
                          value is not None and key not in ('func', 'token',
@@ -533,7 +542,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = UserCommand._get_token(args.token)
+        token = UserCommand._get_valid_token(args.token)
         if token:
             site_client, site_id = UserCommand._get_site_id(args.name, token)
             if site_id:
@@ -547,7 +556,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = UserCommand._get_token(args.token)
+        token = UserCommand._get_valid_token(args.token)
         if token:
             site_client, site_id = UserCommand._get_site_id(args.name, token)
             if site_id:
@@ -579,7 +588,7 @@ class UserCommand(object):
         :param args:
         :return:
         """
-        token = UserCommand._get_token(args.token)
+        token = UserCommand._get_valid_token(args.token)
         if token:
             site_client, site_id = UserCommand._get_site_id(args.name, token)
             if site_id:
@@ -646,16 +655,36 @@ class UserCommand(object):
         print '-' + 91 * '-' + '-'
 
     @staticmethod
-    def _get_token(tokenfile):
+    def _get_valid_token(tokenfile):
+        """
+        Get valid toke or None if expired
+        """
+        if os.path.isfile(os.path.expanduser(tokenfile)):
+            with open(os.path.expanduser(tokenfile)) as token_file:
+                token = token_file.read()
+                if not token:
+                    print "No token at requested location. Please login first."
+                    return None
+                if HRUtils.is_token_expired_insecure(token):
+                    print "Token expired. Please log in again."
+                    return None
+                return token
+        print "Token file %s does not exist or is not a file" % (tokenfile,)
 
-        with open(os.path.expanduser(tokenfile)) as token_file:
-            token = token_file.read()
-            if not token:
-                print "No token at requested location. Please login first."
-            if HRUtils.is_token_expired_insecure(token):
-                print "Token expired. Please log in again."
-                return None
-            return token
+    @staticmethod
+    def _get_token(tokenfile):
+        """
+        Get a token from a file, expired or not.
+        :param tokenfile: file containing a token
+        :return: token or None if tokenfile not present or empty
+        """
+        if os.path.isfile(os.path.expanduser(tokenfile)):
+            with open(os.path.expanduser(tokenfile)) as token_file:
+                token = token_file.read()
+                if not token:
+                    print "No token at requested location. Please login first."
+                    return None
+                return token
 
     @staticmethod
     def _get_cert(certfile):
