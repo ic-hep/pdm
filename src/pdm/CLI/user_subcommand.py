@@ -50,6 +50,12 @@ class UserCommand(object):
                                  help="optional token file location (default=~/.pdm/token)")
 
         user_parser.set_defaults(func=self.login)
+        # logoff
+        user_parser = subparsers.add_parser('logoff',
+                                            help="User logoff procedure (deletesthe token.")
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help="optional token file location (default=~/.pdm/token)")
+        user_parser.set_defaults(func=self.logoff)
         # change password
         user_parser = subparsers.add_parser('passwd', help="Change user password.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
@@ -233,11 +239,13 @@ class UserCommand(object):
         User login function. Stores a token obtained from the server in a file.
         """
         token = UserCommand._get_token(args.token)  # expired or not
+        username = None
         if token:
             # username from token
             username = HRUtils.get_token_username_insecure(token)
-            if username:
-                password = getpass(prompt="[" + str(username) + "'s password]")
+        # a valid token should normally have a username, but to be safe:
+        if username:
+            password = getpass(prompt="[" + str(username) + "'s password]")
         else:
             # username from the command line
             if not args.email:
@@ -264,6 +272,30 @@ class UserCommand(object):
             token_file.write(token)
 
         print "User {} logged in".format(username)
+
+    def logoff(self, args):
+        """
+        User logoff. Just delete a token if present.
+        :param args:
+        :return:
+        """
+        token = UserCommand._get_token(args.token)  # expired or not
+        if token:
+            # username from token
+            try:
+                username = HRUtils.get_token_username_insecure(token)
+                if username:
+                    print "User {} logged off.".format(str(username))
+                else:
+                    print "Token did not contain username."
+            except ValueError as ve:
+                print ve.message
+            finally:
+                os.remove(os.path.expanduser(args.token))
+                print "Token deleted."
+        else:
+            print "No token found, no one to log off."
+
 
     def passwd(self, args):  # pylint: disable=no-self-use
         """ Change user password """
