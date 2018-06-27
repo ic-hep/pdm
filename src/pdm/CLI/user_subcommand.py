@@ -52,7 +52,7 @@ class UserCommand(object):
         user_parser.set_defaults(func=self.login)
         # logoff
         user_parser = subparsers.add_parser('logoff',
-                                            help="User logoff procedure (deletesthe token.")
+                                            help="User logoff procedure (deletes the token.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help="optional token file location (default=~/.pdm/token)")
         user_parser.set_defaults(func=self.logoff)
