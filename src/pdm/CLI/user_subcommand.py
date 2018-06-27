@@ -328,8 +328,6 @@ class UserCommand(object):
             client.set_token(token)
             ret = client.get_user()
             UserCommand._print_formatted_user_info(ret)
-        else:
-            print "Please log in first."
 
     def list(self, args):  # pylint: disable=no-self-use
         """
@@ -708,7 +706,8 @@ class UserCommand(object):
                         print "Token expired. Please log in again."
                         return None
                 return token
-        #print "Token file %s does not exist or is not a file" % (tokenfile,)
+        if check_validity:
+            print "No token at requested location. Please login first."
         return None
 
     @staticmethod
