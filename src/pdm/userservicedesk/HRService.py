@@ -259,7 +259,6 @@ class HRService(object):
             HRService._logger.error("login request exception:%s", str(verror))
             abort(400)
 
-
         if not ('email' in data and 'passwd' in data):
             HRService._logger.error("login request:no password or email supplied")
             abort(400)
@@ -284,7 +283,7 @@ class HRService(object):
             abort(403)
 
         expiry = datetime.datetime.utcnow() + current_app.token_duration
-        plain = {'id': user_id, 'expiry': expiry.isoformat()}
+        plain = {'id': user_id, 'expiry': expiry.isoformat(), 'email': user.email}
         HRService._logger.info("login request accepted for %s", data['email'])
         token = request.token_svc.issue(plain)
         try:
