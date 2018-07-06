@@ -135,6 +135,13 @@ def find_bins():
     print "  Found myproxy-server at '%s'." % res
     res = find_bin_helper("build_pdm_ca.sh", "ca_builder", True)
     print "  Found build_pdm_ca.sh helper script at '%s'." % res
+    # One last binary to check for: the gridmap myproxy callout library
+    # As this is a library, we'll check for the config file from the package instead
+    if not os.path.exists("/etc/gridmap_verify_myproxy_callout-gsi_authz.conf"):
+        print "ERROR: Failed to find the myproxy callout library."
+        print "Please ensure you have the globus-gridmap-verify-myproxy-callout"
+        print "package installed."
+        sys.exit(1)
 
 def check_conf():
     """ Check that the config has all required options.
