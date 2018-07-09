@@ -9,7 +9,7 @@ import time
 from operator import itemgetter
 import jinja2
 import flask
-from flask import request, flash
+from flask import request, flash, current_app, redirect, render_template, make_response
 from pdm.framework.Decorators import export, export_ext, startup, decode_json_data
 from pdm.framework.ACLManager import set_session_state
 from pdm.framework.RESTClient import RESTException
@@ -45,10 +45,10 @@ class WebPageService(object):
             Creates an example database if DB is entry.
             Prints valud of "test_param" from the config.
         """
-        log = flask.current_app.log
+        log = current_app.log
         log.info("Web interface starting")
-        flask.current_app.hrclient = HRClient()
-        flask.current_app.siteclient = SiteClient()
+        current_app.hrclient = HRClient()
+        current_app.siteclient = SiteClient()
 
 
     @staticmethod
@@ -62,13 +62,13 @@ class WebPageService(object):
     @export_ext("/")
     def web_entry():
         """ Redirect clients to the turtles page. """
-        return flask.redirect("/web/datamover")
+        return redirect("/web/datamover")
 
     @staticmethod
     @export_ext("about")
     def aboutpage():
         """renders the about page"""
-        return flask.render_template("about.html")
+        return render_template("about.html")
 
 
     @staticmethod
@@ -76,7 +76,7 @@ class WebPageService(object):
     def website():
         """to render the datamover entry/login page"""
         status = WebPageService.datamover_status()
-        return flask.render_template("datamover.html", status=status,
+        return render_template("datamover.html", status=status,
                                      accept_cookies=flask.session.get("accept_cookies", False))
 
     @staticmethod
@@ -84,18 +84,20 @@ class WebPageService(object):
     def website_post():
         """takes input fom login form and processes it"""
         # check if login is correct
+        log = current_app.log
         username = request.form['username']
         password = request.form['password']
         try:
-            token = flask.current_app.hrclient.login(username, password)
+            token = current_app.hrclient.login(username, password)
             set_session_state(True)
             flask.session["token"] = token
             flask.session["accept_cookies"] = True
         except Exception as err:
+            log.warning("Failed login: %s", err.message)
             flash('Could not login user (%s)' % err)
             status = WebPageService.datamover_status()
-            return flask.render_template("datamover.html", status=status)
-        resp = flask.make_response(flask.redirect("/web/dashboard"))
+            return render_template("datamover.html", status=status)
+        resp = make_response(redirect("/web/dashboard"))
         return resp
 
 
@@ -106,7 +108,7 @@ class WebPageService(object):
         flask.session.pop("token")
         set_session_state(False)
         flash('You have been logged out.')
-        return flask.redirect("/web/datamover")
+        return redirect("/web/datamover")
 
     # *** registration ***
     @staticmethod
@@ -114,7 +116,7 @@ class WebPageService(object):
     @export
     def registration():
         """renders the registration page"""
-        return flask.render_template("registration.html")
+        return render_template("registration.html")
 
 
     @staticmethod
@@ -124,7 +126,7 @@ class WebPageService(object):
         if request.form['password'] != request.form['cpassword']:
             flash('The two passwords do not match.')
             # to do: make sure page does not come back blank
-            return flask.render_template("registration.html")
+            return render_template("registration.html")
         # create dictionary to match HRClient input
         hrdict = {
             "email" : request.form['email'],
@@ -134,10 +136,10 @@ class WebPageService(object):
         }
 
         try:
-            flask.current_app.hrclient.add_user(hrdict)
+            current_app.hrclient.add_user(hrdict)
         except Exception as err:
             flash('Could not add user (%s)' % err)
-            return flask.render_template("registration.html")
+            return render_template("registration.html")
 
         return '%s' % request.form
 
@@ -145,7 +147,7 @@ class WebPageService(object):
     @export_ext("forgottenpwd")
     def forgottenpwd():
         """TODO: make a function that resets the password"""
-        return flask.render_template("forgottenpwd.html")
+        return render_template("forgottenpwd.html")
 
 
     # *** The main page ***
@@ -158,22 +160,25 @@ class WebPageService(object):
         # will abort of user is not logged in
         user_token = flask.session['token']
         # unpacked_user_token = TokenService.unpack(user_token)
-        flask.current_app.hrclient.set_token(user_token)
-        user = flask.current_app.hrclient.get_user()
+        current_app.hrclient.set_token(user_token)
+        try:
+            user = current_app.hrclient.get_user()
+        except RESTException as err:
+            return redirect(flask.url_for('WebPageService.website'))
         #user_name = user_data['name']
         # returns a list of sites as dictionaries
         # want to sort on 'site_name'
-#        flask.current_app.epclient.set_token(user_token)
-#        sites = flask.current_app.epclient.get_sites()
+#        current_app.epclient.set_token(user_token)
+#        sites = current_app.epclient.get_sites()
 #        sorted_sites = sorted(sites, key=lambda k: k['site_name'])
-#        return flask.render_template("dashboard.html", sites=sorted_sites, username=user_name)
-        return flask.render_template("dashboard.html", user=user)
+#        return render_template("dashboard.html", sites=sorted_sites, username=user_name)
+        return render_template("dashboard.html", user=user)
 
     @staticmethod
     @export_ext("sitelogin/<site_name>", ['POST'])
     @decode_json_data
     def site_login(site_name):
-        site = flask.current_app.site_map.get(site_name)
+        site = current_app.site_map.get(site_name)
         if site is None:
             return "EEP!"
         username = request.data.get('username')
@@ -184,11 +189,11 @@ class WebPageService(object):
         if password is None:
             return "EEP!"
         token = flask.session['token']
-        flask.current_app.siteclient.set_token(token)
-        session_info = flask.current_app.siteclient.get_session_info(site['site_id'])
+        current_app.siteclient.set_token(token)
+        session_info = current_app.siteclient.get_session_info(site['site_id'])
         if not session_info['ok']:
             try:
-                flask.current_app.siteclient.logon(site['site_id'], username, password)
+                current_app.siteclient.logon(site['site_id'], username, password)
             except RESTException as err:
                 if err.code == 403:
                     err.code = 401  # dont trigger login page loading again.
@@ -202,9 +207,9 @@ class WebPageService(object):
         user_token = flask.session['token']
 #        sites = TransferClient(user_token).list_sites()
 
-        flask.current_app.siteclient.set_token(flask.session['token'])
-        flask.current_app.site_map = {site['site_name']: site for site in flask.current_app.siteclient.get_sites()}
-        return json.dumps(sorted(flask.current_app.site_map.values(), key=itemgetter('site_name')))
+        current_app.siteclient.set_token(flask.session['token'])
+        current_app.site_map = {site['site_name']: site for site in current_app.siteclient.get_sites()}
+        return json.dumps(sorted(current_app.site_map.values(), key=itemgetter('site_name')))
 
     @staticmethod
     @export_ext("js/copy", ['POST'])
@@ -212,10 +217,10 @@ class WebPageService(object):
     def js_copy():
         """copy"""
         src_site = request.data['src_sitename']
-        if src_site not in flask.current_app.site_map:
+        if src_site not in current_app.site_map:
             flask.abort(400, description="Source site not known.")
         dst_site = request.data['dst_sitename']
-        if dst_site not in flask.current_app.site_map:
+        if dst_site not in current_app.site_map:
             flask.abort(400, description="Destination site not known.")
         token = flask.session['token']
         tclient = TransferClient(token)
@@ -231,7 +236,7 @@ class WebPageService(object):
     def js_remove():
         """copy"""
         site = request.data['sitename']
-        if site not in flask.current_app.site_map:
+        if site not in current_app.site_map:
             flask.abort(400, description="Site not known.")
         token = flask.session['token']
         tclient = TransferClient(token)
@@ -245,15 +250,15 @@ class WebPageService(object):
         """lists a directory"""
         sitename = request.data['sitename']
         filepath = request.data['filepath']
-        site = flask.current_app.site_map.get(sitename)
+        site = current_app.site_map.get(sitename)
         if site is None:
             flask.abort(404, description="Site %s not found" % sitename)
         token = flask.session['token']
-        flask.current_app.siteclient.set_token(token)
-        session_info = flask.current_app.siteclient.get_session_info(site['site_id'])
+        current_app.siteclient.set_token(token)
+        session_info = current_app.siteclient.get_session_info(site['site_id'])
         if not session_info['ok']:
             username = session_info.get('username', '')
-            return flask.render_template("loginform.html", username=username, sitename=sitename), 403
+            return render_template("loginform.html", username=username, sitename=sitename), 403
         # decode parameters
 #        siteid = request.args.get('siteid', None)
 #        sitepath = request.args.get('sitepath', None)
@@ -287,15 +292,15 @@ class WebPageService(object):
 #    @export_ext("js/list/<site_name>/<path>", ['GET'])
 #    def js_list(site_name, path='~'):
 #        """lists a directory"""
-#        site = flask.current_app.site_map.get(site_name)
+#        site = current_app.site_map.get(site_name)
 #        if site is None:
 #            flask.abort(404, description="Site %s not found" % site_name)
 #        token = flask.session['token']
-#        flask.current_app.siteclient.set_token(token)
-#        session_info = flask.current_app.siteclient.get_session_info(site['site_id'])
+#        current_app.siteclient.set_token(token)
+#        session_info = current_app.siteclient.get_session_info(site['site_id'])
 #        if not session_info['ok']:
 #            username = session_info.get('username', '')
-#            return flask.render_template("loginform.html", username=username), 403
+#            return render_template("loginform.html", username=username), 403
 #        # decode parameters
 ##        siteid = request.args.get('siteid', None)
 ##        sitepath = request.args.get('sitepath', None)
