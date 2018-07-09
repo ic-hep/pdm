@@ -9,7 +9,7 @@ import time
 from operator import itemgetter
 import jinja2
 import flask
-from flask import request, flash, current_app, redirect, render_template, make_response
+from flask import request, flash, current_app, redirect, render_template, make_response, url_for, abort
 from pdm.framework.Decorators import export, export_ext, startup, decode_json_data
 from pdm.framework.ACLManager import set_session_state
 from pdm.framework.RESTClient import RESTException
@@ -164,7 +164,7 @@ class WebPageService(object):
         try:
             user = current_app.hrclient.get_user()
         except RESTException as err:
-            return redirect(flask.url_for('WebPageService.website'))
+            return redirect(url_for('WebPageService.website'))
         #user_name = user_data['name']
         # returns a list of sites as dictionaries
         # want to sort on 'site_name'
@@ -197,7 +197,7 @@ class WebPageService(object):
             except RESTException as err:
                 if err.code == 403:
                     err.code = 401  # dont trigger login page loading again.
-                flask.abort(err.code, description="Login failure.")
+                abort(err.code, description="Login failure.")
         return '', 200
 
     @staticmethod
@@ -218,10 +218,10 @@ class WebPageService(object):
         """copy"""
         src_site = request.data['src_sitename']
         if src_site not in current_app.site_map:
-            flask.abort(400, description="Source site not known.")
+            abort(400, description="Source site not known.")
         dst_site = request.data['dst_sitename']
         if dst_site not in current_app.site_map:
-            flask.abort(400, description="Destination site not known.")
+            abort(400, description="Destination site not known.")
         token = flask.session['token']
         tclient = TransferClient(token)
         tclient.copy(src_site,
@@ -237,7 +237,7 @@ class WebPageService(object):
         """copy"""
         site = request.data['sitename']
         if site not in current_app.site_map:
-            flask.abort(400, description="Site not known.")
+            abort(400, description="Site not known.")
         token = flask.session['token']
         tclient = TransferClient(token)
         tclient.remove(site, request.data['filepath'])
@@ -252,7 +252,7 @@ class WebPageService(object):
         filepath = request.data['filepath']
         site = current_app.site_map.get(sitename)
         if site is None:
-            flask.abort(404, description="Site %s not found" % sitename)
+            abort(404, description="Site %s not found" % sitename)
         token = flask.session['token']
         current_app.siteclient.set_token(token)
         session_info = current_app.siteclient.get_session_info(site['site_id'])
@@ -294,7 +294,7 @@ class WebPageService(object):
 #        """lists a directory"""
 #        site = current_app.site_map.get(site_name)
 #        if site is None:
-#            flask.abort(404, description="Site %s not found" % site_name)
+#            abort(404, description="Site %s not found" % site_name)
 #        token = flask.session['token']
 #        current_app.siteclient.set_token(token)
 #        session_info = current_app.siteclient.get_session_info(site['site_id'])
