@@ -55,91 +55,37 @@
     </div>
 </div>
 
-<div id="navbar">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary d-flex justify-content-between">
-        <a class="navbar-brand" href="#">
-            The DataMover
-        </a>
-        <div class="text-light">
-            <h3><strong>{{ user['name'] }}'s Dashboard</strong></h3>
-        </div>
-        <div>
-            <img id="identicon" class="rounded-circle" src="https://www.gravatar.com/avatar/{{ user['email']| gravitar_hash }}?d=identicon">
-        </div>
-    </nav>
+<nav id="title_bar" class="navbar navbar-expand-lg navbar-dark bg-primary d-flex justify-content-between">
+    <a class="navbar-brand" href="#">
+        The DataMover
+    </a>
+    <div class="text-light">
+        <h3><strong>{{ user['name'] }}'s Dashboard</strong></h3>
+    </div>
+    <div>
+        <img id="identicon" class="rounded-circle" src="https://www.gravatar.com/avatar/{{ user['email']| gravitar_hash }}?d=identicon">
+    </div>
+</nav>
 
-    <nav id="navigation_menu" class="navbar navbar-expand-lg navbar-dark bg-dark" style="display:none">
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav">
-                <li class="nav-item active">
-                    <a class="nav-link" href="#">Home</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#">Jobs</a>
-                </li>
-            </ul>
-        </div>
-    </nav>
-</div>
+<nav id="navigation_menu" class="navbar navbar-expand-lg navbar-dark bg-dark" style="display:none">
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
+            <li class="nav-item {% block navhomeactive %}{% endblock %}">
+                <a class="nav-link" href="{% block navhomeurl %}/web/dashboard{% endblock %}">Home</a>
+            </li>
+            <li class="nav-item {% block navjobsactive %}{% endblock %}">
+                <a class="nav-link" href="{% block navjobsurl %}/web/dashboard/joblist{% endblock %}">Jobs</a>
+            </li>
+        </ul>
+    </div>
+</nav>
 
 <p id="heading_end" class="pb-5">
-<div class="container w-75 d-flex justify-content-around">
-    <div class="card listing-window">
-        <select id="src_site" class="card-header custom-select text-center py-1 sitelist">
-            <option value="" hidden selected>Select Site</option>
-        </select>
-        <div id="src_panel" class="card-body text-center ui-widget-header">
-            <div class="input-group directory_input py-3" hidden>
-                <input type="text" class="form-control" placeholder="~">
-                <div class="input-group-append go_button clickable">
-                    <span class="input-group-text">
-                        <span class="oi oi-share text-primary" aria-hidden="true"></span>
-                    </span>
-                </div>
-            </div>
-            <img src="/static/images/pdm.png"/><br>
-            Please select a site to continue
-        </div>
-        <div class="card-footer text-right">
-            <span id="src_reload" class="oi oi-reload"></span>
-        </div>
-    </div>
-
-    <div class="btn-group-vertical" role="group">
-        <button id="src_dst_copy" type="button" class="btn btn-primary">
-            <span class="oi oi-caret-right text-light"></span>
-        </button>
-        <button id="dst_src_copy" type="button" class="btn btn-primary">
-            <span class="oi oi-caret-left text-light"></span>
-        </button>
-        <button id="remove" type="button" class="btn btn-danger">
-            <span class="oi oi-trash text-danger text-light"></span>
-        </button>
-    </div>
-
-    <div class="card listing-window">
-        <select id="dst_site" class="card-header custom-select text-center py-1 sitelist">
-            <option value="" hidden selected>Select Site</option>
-        </select>
-        <div id="dst_panel" class="card-body text-center ui-widget-header">
-            <div class="input-group directory_input py-3" hidden>
-                <input type="text" class="form-control" placeholder="~">
-                <div class="input-group-append go_button clickable">
-                    <span class="input-group-text">
-                        <span class="oi oi-share text-primary" aria-hidden="true"></span>
-                    </span>
-                </div>
-            </div>
-            <img src="/static/images/pdm.png"/><br>
-            Please select a site to continue
-        </div>
-        <div class="card-footer text-right ui-widget-header">
-            <span id="dst_reload" class="oi oi-reload"></span>
-        </div>
-    </div>
+<div id="content_container" class="container w-75 d-flex justify-content-around">
+    {% block content %}{% endblock %}
 </div>
 
 <!-- JavaScript -->
@@ -289,19 +235,14 @@ function copy(src_site, src_listing, dst_site, dst_listing){
 }
 
 $(document).ready(function(){
-    $("#navbar").mouseover(function(){
+
+    $("#title_bar").mouseover(function(){
         $("#navigation_menu").slideDown("slow");
     });
 
     $("#heading_end").mouseover(function(){
         $("#navigation_menu").slideUp("slow");
     });
-
-//    $("#navbar").hover(function(){
-//        $("#navigation_menu").slideDown("slow");
-//    }, function(){
-//        $("#navigation_menu").slideUp("slow");
-//    });
 
     $("#dst_panel").droppable({
         accept: ".src_draggable",

@@ -148,6 +148,18 @@ class WebPageService(object):
         return render_template("forgottenpwd.html")
 
 
+    @staticmethod
+    @export_ext("dashboard/joblist")
+    def joblist():
+        # will abort of user is not logged in
+        user_token = flask.session['token']
+        # unpacked_user_token = TokenService.unpack(user_token)
+        current_app.hrclient.set_token(user_token)
+        try:
+            user = current_app.hrclient.get_user()
+        except RESTException as err:
+            return redirect(url_for('WebPageService.website'))
+        return render_template("joblist.html", user=user)
     # *** The main page ***
 
 
@@ -170,7 +182,7 @@ class WebPageService(object):
 #        sites = current_app.epclient.get_sites()
 #        sorted_sites = sorted(sites, key=lambda k: k['site_name'])
 #        return render_template("dashboard.html", sites=sorted_sites, username=user_name)
-        return render_template("dashboard.html", user=user)
+        return render_template("newjob.html", user=user)
 
     @staticmethod
     @export_ext("sitelogin/<site_name>", ['POST'])
