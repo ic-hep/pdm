@@ -64,11 +64,11 @@ class WebPageService(object):
         """ Redirect clients to the turtles page. """
         return redirect("/web/datamover")
 
-    @staticmethod
-    @export_ext("about")
-    def aboutpage():
-        """renders the about page"""
-        return render_template("about.html")
+#    @staticmethod
+#    @export_ext("about")
+#    def aboutpage():
+#        """renders the about page"""
+#        return render_template("about.html")
 
 
     @staticmethod
@@ -77,7 +77,7 @@ class WebPageService(object):
         """to render the datamover entry/login page"""
         status = WebPageService.datamover_status()
         return render_template("datamover.html", status=status,
-                                     accept_cookies=flask.session.get("accept_cookies", False))
+                               accept_cookies=flask.session.get("accept_cookies", False))
 
     @staticmethod
     @export_ext("datamover", methods=["POST"])
@@ -95,10 +95,8 @@ class WebPageService(object):
         except Exception as err:
             log.warning("Failed login: %s", err.message)
             flash('Could not login user (%s)' % err)
-            status = WebPageService.datamover_status()
-            return render_template("datamover.html", status=status)
-        resp = make_response(redirect("/web/dashboard"))
-        return resp
+            return WebPageService.website()
+        return redirect(url_for("WebPageService.dashboard"))
 
 
     @staticmethod
