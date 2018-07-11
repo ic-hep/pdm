@@ -55,19 +55,37 @@
     </div>
 </div>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary d-flex justify-content-between">
-    <a class="navbar-brand" href="#">
-        The DataMover
-    </a>
-    <div class="text-light">
-        <h3><strong>{{ user['name'] }}'s Dashboard</strong></h3>
-    </div>
-    <div>
-        <img id="identicon" class="rounded-circle" src="https://www.gravatar.com/avatar/{{ user['email']| gravitar_hash }}?d=identicon">
-    </div>
-</nav>
+<div id="navbar">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary d-flex justify-content-between">
+        <a class="navbar-brand" href="#">
+            The DataMover
+        </a>
+        <div class="text-light">
+            <h3><strong>{{ user['name'] }}'s Dashboard</strong></h3>
+        </div>
+        <div>
+            <img id="identicon" class="rounded-circle" src="https://www.gravatar.com/avatar/{{ user['email']| gravitar_hash }}?d=identicon">
+        </div>
+    </nav>
 
-<p class="pb-5">
+    <nav id="navigation_menu" class="navbar navbar-expand-lg navbar-dark bg-dark" style="display:none">
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item active">
+                    <a class="nav-link" href="#">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Jobs</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+</div>
+
+<p id="heading_end" class="pb-5">
 <div class="container w-75 d-flex justify-content-around">
     <div class="card listing-window">
         <select id="src_site" class="card-header custom-select text-center py-1 sitelist">
@@ -271,6 +289,19 @@ function copy(src_site, src_listing, dst_site, dst_listing){
 }
 
 $(document).ready(function(){
+    $("#navbar").mouseover(function(){
+        $("#navigation_menu").slideDown("slow");
+    });
+
+    $("#heading_end").mouseover(function(){
+        $("#navigation_menu").slideUp("slow");
+    });
+
+//    $("#navbar").hover(function(){
+//        $("#navigation_menu").slideDown("slow");
+//    }, function(){
+//        $("#navigation_menu").slideUp("slow");
+//    });
 
     $("#dst_panel").droppable({
         accept: ".src_draggable",
