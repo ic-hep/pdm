@@ -107,7 +107,7 @@ class WorkqueueService(object):
 #        Job = request.db.tables.Job  # pylint: disable=invalid-name
 #        JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
         alg_name = request.data.get('algorithm', 'BY_NUMBER').upper()
-        elements = Algorithm[alg_name](**request.data.get('alg_args', {}))
+        elements = Algorithm[alg_name](**request.data.get('algorithm.args', {}))
 #       elements = JobElement.query.filter(JobElement.status.in_((JobStatus.NEW, JobStatus.FAILED)),
 #                                           JobElement.attempts < JobElement.max_tries)\
 #                                   .join(JobElement.job)\
@@ -150,7 +150,7 @@ class WorkqueueService(object):
                   description="Token not valid for element %d of job %d" % (element_id, job_id))
         current_app.log.debug("Received data from worker for job.element %s.%s: %s",
                               job_id, element_id, pformat(request.data))
-        require_attrs('returncode', 'host', 'log')
+        require_attrs('returncode', 'host', 'log', 'timestamp')
 
         # Update job status.
         JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
@@ -180,7 +180,8 @@ class WorkqueueService(object):
         if not os.path.exists(dir_):
             os.makedirs(dir_)
         with open(os.path.join(dir_, 'attempt%i.log' % element.attempts), 'wb') as logfile:
-            logfile.write("Job run on host: %s\n" % request.data['host'])
+            logfile.write("Job run on host: %s, timestamp: %s\n" % (request.data['host'],
+                                                                    request.data['timestamp']))
             logfile.write(request.data['log'])
 
         # Expand listing for COPY or REMOVE jobs.

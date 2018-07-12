@@ -8,7 +8,7 @@ class TestHRUtils(unittest.TestCase):
     def setUp(self):
 
         self.__future_date = (datetime.timedelta(0, 600) + datetime.datetime.utcnow()).isoformat()
-        plain = {'id': 44, 'expiry': self.__future_date}
+        plain = {'id': 44, 'expiry': self.__future_date, 'email' : 'jma@me.com'}
         svc = TokenService()
         self._validtoken = svc.issue(plain)
 
@@ -26,4 +26,9 @@ class TestHRUtils(unittest.TestCase):
 
     def test_get_token_expiry_insecure(self):
         assert HRUtils.get_token_expiry_insecure(self._validtoken) ==  self.__future_date
+
+    def test_get_token_username_insecure(self):
+        assert HRUtils.get_token_username_insecure(self._validtoken) == 'jma@me.com'
+        assert HRUtils.get_token_username_insecure(self._incomplete) is None  # no username: None
+
 

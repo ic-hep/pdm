@@ -14,9 +14,8 @@ import logging
 from pprint import pformat
 from datetime import datetime
 from contextlib import contextmanager
-from urlparse import urlunsplit
+from urlparse import urlsplit, urlunsplit
 from tempfile import NamedTemporaryFile
-from urlparse import urlsplit
 
 from requests.exceptions import Timeout
 
@@ -125,6 +124,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
         self._stderr_dispatcher = stderr_dispatcher
         self._callback = callback
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._buffer = ''
 
     def writable(self):
         """Writeable status of fd."""
@@ -140,42 +140,50 @@ class StdOutDispatcher(asyncore.file_dispatcher):
 
     def handle_read(self):
         """Handle read events."""
-        try:
-            done_element = json.load(self._fd)
-        except ValueError:
-            self.close()
-            return
 
-        log = self._stderr_dispatcher.buffer
-        returncode = done_element['Code']
-        data = {'log': log,
-                'returncode': returncode,
-                'host': (datetime.utcnow().isoformat(),) + socket.gethostbyaddr(socket.getfqdn())}
-        element_id = done_element['id']
+        self._buffer += self.recv(8192)
+        buffered_elements = self._buffer.split('\n')
+        self._buffer = buffered_elements.pop()
 
-        if returncode:
-            self._logger.warning("Subprocess for job.element %s failed with exit code %s",
-                                 element_id, returncode)
-        self._logger.debug("Subprocess output for job.element %s: %s", element_id, log)
+        for buffered_element in buffered_elements:
+            try:
+                done_element = json.loads(buffered_element)
+            except ValueError:
+                self._logger.exception("Problem json loading done element.")
+                self.close()
+                return
 
-        if not element_id:  # whole job failure
-            for element_id, token in self._tokens.iteritems():
-                self._callback(*element_id.split('.'), token=token, data=data)
-            self._tokens.clear()  # will cause readable to close fd on next iteration.
-            return
+            log = self._stderr_dispatcher.buffer
+            returncode = done_element['Code']
+            data = {'log': log,
+                    'returncode': returncode,
+                    'timestamp': datetime.utcnow().isoformat(),
+                    'host': socket.gethostbyaddr(socket.getfqdn())}
+            element_id = done_element['id']
 
-        if 'Listing' in done_element:
-            data['listing'] = {}
-            for root, listing in done_element['Listing'].iteritems():
-                root = urlsplit(root).path
-                if root.startswith('/~'):
-                    root = root.lstrip('/')
-                data['listing'][root] = listing
-        token = self._tokens.pop(element_id)
-        self._callback(*element_id.split('.'), token=token, data=data)
+            if returncode:
+                self._logger.warning("Subprocess for job.element %s failed with exit code %s",
+                                     element_id, returncode)
+            self._logger.debug("Subprocess output for job.element %s: %s", element_id, log)
+
+            if not element_id:  # whole job failure
+                for element_id, token in self._tokens.iteritems():
+                    self._callback(*element_id.split('.'), token=token, data=data)
+                self._tokens.clear()  # will cause readable to close fd on next iteration.
+                return
+
+            if 'Listing' in done_element:
+                data['listing'] = {}
+                for root, listing in done_element['Listing'].iteritems():
+                    root = urlsplit(root).path
+                    if root.startswith('/~'):
+                        root = root.lstrip('/')
+                    data['listing'][root] = listing
+            token = self._tokens.pop(element_id)
+            self._callback(*element_id.split('.'), token=token, data=data)
 
 
-class Worker(RESTClient, Daemon):
+class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attributes
     """Worker Daemon."""
 
     def __init__(self, debug=False, n_shot=None, loglevel=logging.INFO):
@@ -191,9 +199,12 @@ class Worker(RESTClient, Daemon):
         conf = getConfig('worker')
         self._types = [JobType[type_.upper()] for type_ in  # pylint: disable=unsubscriptable-object
                        conf.pop('types', ('LIST', 'COPY', 'REMOVE'))]
+        self._alg = conf.pop('algorithm', 'BY_NUMBER').upper()
+        self._alg_args = conf.pop('algorithm.args', {})
         self._interpoll_sleep_time = conf.pop('poll_time', 2)
         self._system_ca_dir = conf.pop('system_ca_dir',
-                                       os.environ.get('X509_CERT_DIR', '/etc/grid-security'))
+                                       os.environ.get('X509_CERT_DIR',
+                                                      '/etc/grid-security/certificates'))
         self._script_path = conf.pop('script_path',
                                      os.path.join(os.path.dirname(__file__), 'scripts'))
         self._script_path = os.path.abspath(self._script_path)
@@ -246,7 +257,9 @@ class Worker(RESTClient, Daemon):
         while self.should_run:
             self._logger.info("Getting workload from WorkqueueService.")
             try:
-                workload = self.post('worker/jobs', data={'types': self._types})
+                workload = self.post('worker/jobs', data={'types': self._types,
+                                                          'algorithm': self._alg,
+                                                          'algorithm.args': self._alg_args})
             except Timeout:
                 self._logger.warning("Timed out contacting the WorkqueueService.")
                 continue
@@ -306,12 +319,14 @@ class Worker(RESTClient, Daemon):
                     else:
                         data['files'].append(src)
 
-                # correct command and credentials for LIST component of COPY/REMOVE jobs.
+                # Correct command, data options and credentials for LIST component of
+                # COPY/REMOVE jobs.
                 command = shlex.split(COMMANDMAP[job['type']][job['protocol']])
                 if job['type'] != JobType.LIST\
                         and len(job['elements']) == 1\
                         and job['elements'][0]['type'] == JobType.LIST:
                     command = shlex.split(COMMANDMAP[JobType.LIST][job['protocol']])
+                    data.pop('options', None)  # don't pass COPY/REMOVE options to scripts.
                     if job['type'] == JobType.COPY and len(credentials) == 2:
                         credentials.pop()  # remove dst_creds to get correct proxy env var
                 command[0] = os.path.join(self._script_path, command[0])

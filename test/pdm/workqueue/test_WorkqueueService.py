@@ -129,19 +129,22 @@ class TestWorkqueueService(unittest.TestCase):
         request = self.__test.put('/workqueue/api/v1.0/worker/jobs/1/elements/2',
                                   data={'log': 'blah blah',
                                         'returncode': 0,
-                                        'host': 'somehost.domain'})
+                                        'host': 'somehost.domain',
+                                        'timestamp': 'timestamp'})
         self.assertEqual(request.status_code, 404)
 
         self.__service.fake_auth("TOKEN", "1.0")
         request = self.__test.put('/workqueue/api/v1.0/worker/jobs/1/elements/0',
                                   data={'log': 'blah blah',
                                         'returncode': 0,
-                                        'host': 'somehost.domain'})
+                                        'host': 'somehost.domain',
+                                        'timestamp': 'timestamp'})
         self.assertEqual(request.status_code, 400)
         request = self.__test.put('/workqueue/api/v1.0/worker/jobs/1/elements/0',
                                   data={'log': 'blah blah',
                                         'returncode': 1,
-                                        'host': 'somehost.domain'})
+                                        'host': 'somehost.domain',
+                                        'timestamp': 'timestamp'})
         self.assertEqual(request.status_code, 200)
         Job = self.__service.test_db().tables.Job
         JobElement = self.__service.test_db().tables.JobElement
@@ -156,7 +159,7 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertTrue(os.path.isfile(logfile))
 
         expected_log = dedent("""
-        Job run on host: somehost.domain
+        Job run on host: somehost.domain, timestamp: timestamp
         blah blah
         """).strip()
         with open(logfile, 'rb') as log:
@@ -166,6 +169,7 @@ class TestWorkqueueService(unittest.TestCase):
                                   data={'log': 'blah blah',
                                         'returncode': 0,
                                         'host': 'somehost.domain',
+                                        'timestamp': 'timestamp',
                                         'listing': {'root': []}})
         self.assertEqual(request.status_code, 200)
         je = JobElement.query.filter_by(job_id=1, id=0).one()
@@ -185,6 +189,7 @@ class TestWorkqueueService(unittest.TestCase):
                                   data={'log': 'blah blah',
                                         'returncode': 0,
                                         'host': 'somehost.domain',
+                                        'timestamp': 'timestamp',
                                         'listing': {'root': []}})
         self.assertEqual(request.status_code, 400, 'Exceeding max tries should give 400')
 
@@ -220,6 +225,7 @@ class TestWorkqueueService(unittest.TestCase):
                                   data={'log': 'blah blah',
                                         'returncode': 0,
                                         'host': 'somehost.domain',
+                                        'timestamp': 'timestamp',
                                         'listing': {'/site1/data': [{'name': 'somefile',
                                                                      'st_size': 100,
                                                                      'st_mode': 0o0100655},
@@ -237,6 +243,7 @@ class TestWorkqueueService(unittest.TestCase):
                                   data={'log': 'blah blah',
                                         'returncode': 0,
                                         'host': 'somehost.domain',
+                                        'timestamp': 'timestamp',
                                         'listing': {'/site1/data': [{'name': 'somefile',
                                                                      'st_size': 100,
                                                                      'st_mode': 0o0100655},
@@ -254,6 +261,7 @@ class TestWorkqueueService(unittest.TestCase):
                                   data={'log': 'blah blah',
                                         'returncode': 0,
                                         'host': 'somehost.domain',
+                                        'timestamp': 'timestamp',
                                         'listing': {'~': [{'name': 'somefile',
                                                                      'st_size': 100,
                                                                      'st_mode': 0o0100655}]}})
@@ -268,6 +276,7 @@ class TestWorkqueueService(unittest.TestCase):
                                   data={'log': 'blah blah',
                                         'returncode': 0,
                                         'host': 'somehost.domain',
+                                        'timestamp': 'timestamp',
                                         'listing': {'/site1/data': [{'name': '.', 'st_mode': 0o040655}, {'name': '..', 'st_mode': 0o040655},
                                                                     {'name': 'somefile',
                                                                      'st_size': 100,
@@ -294,6 +303,7 @@ class TestWorkqueueService(unittest.TestCase):
                                   data={'log': 'blah blah',
                                         'returncode': 0,
                                         'host': 'somehost.domain',
+                                        'timestamp': 'timestamp',
                                         'listing': {'/site1/data': [{'name': '.', 'st_mode': 0o040655}, {'name': '..', 'st_mode': 0o040655},
                                                                     {'name': 'somefile',
                                                                      'st_size': 100,
@@ -326,6 +336,7 @@ class TestWorkqueueService(unittest.TestCase):
                                   data={'log': 'blah blah',
                                         'returncode': 0,
                                         'host': 'somehost.domain',
+                                        'timestamp': 'timestamp',
                                         'listing': {'/site1/data': [{'name': '.'}, {'name': '..'},
                                                                     {'name': 'somefile',
                                                                      'st_size': 100,
@@ -420,6 +431,8 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(job.type, JobType.COPY)
         self.assertEqual(returned_job['type'], 'COPY')
         self.assertEqual(job.priority, 2)
+        self.assertEqual(job.src_filepath, '/data/somefile')
+        self.assertEqual(job.dst_filepath, '/data/someotherfile')
         self.assertEqual(job.src_credentials, "somesecret")
         self.assertEqual(job.dst_credentials, "someothersecret")
         self.assertEqual(job.protocol, JobProtocol.SSH)
@@ -430,7 +443,7 @@ class TestWorkqueueService(unittest.TestCase):
         element = job.elements[0]
         self.assertEqual(element.type, JobType.LIST)
         self.assertEqual(element.src_filepath, '/data/somefile')
-        self.assertEqual(element.dst_filepath, '/data/someotherfile')
+        self.assertEqual(element.dst_filepath, None)
         self.assertEqual(element.attempts, 0)
         self.assertEqual(element.max_tries, 3)
 
