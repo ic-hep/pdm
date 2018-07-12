@@ -41,7 +41,7 @@ def by_number(limit=20):
                            .all()
 
 
-def by_size(size=150000000, list_limit=20):
+def by_size(size=150000000, limit=20):
     """Extract job elements up to size."""
     Job = request.db.tables.Job  # pylint: disable=invalid-name
     JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
@@ -56,15 +56,15 @@ def by_size(size=150000000, list_limit=20):
                                .with_for_update()
 #                               .limit(limit)
 #                               .all()  # without this line we have a generator.
-    list_count = 0
+    zero_size_count = 0
     total_size = 0
     ret = []
     for element in elements:
         if total_size + element.size > size:
             continue
-        if element.type == JobType.LIST:
-            list_count += 1
-            if list_count > list_limit:
+        if element.type in (JobType.LIST, JobType.RENAME, JobType.MKDIR):
+            zero_size_count += 1
+            if zero_size_count > limit:
                 continue
         total_size += element.size
         ret.append(element)
@@ -246,6 +246,16 @@ class WorkqueueService(object):
                                                type=job.type,
                                                size=0))  # work out size better
             job.status = JobStatus.SUBMITTED
+        elif job.type == JobType.RENAME\
+            and element.type == JobType.LIST\
+                and element.status == JobStatus.DONE:
+            job.elements.append(JobElement(id=1,
+                                           src_filepath=job.src_filepath,
+                                           dst_filepath=job.dst_filepath,
+                                           max_tries=element.max_tries,
+                                           type=job.type,
+                                           size=0))
+            job.status = JobStatus.SUBMITTED
         job.update()
         return '', 200
 
@@ -294,6 +304,22 @@ class WorkqueueService(object):
     def remove():
         """Remove."""
         request.data['type'] = JobType.REMOVE
+        return WorkqueueService.post_job()
+
+    @staticmethod
+    @export_ext('rename', ['POST'])
+    @decode_json_data
+    def rename():
+        """Remove."""
+        request.data['type'] = JobType.RENAME
+        return WorkqueueService.post_job()
+
+    @staticmethod
+    @export_ext('mkdir', ['POST'])
+    @decode_json_data
+    def mkdir():
+        """Remove."""
+        request.data['type'] = JobType.MKDIR
         return WorkqueueService.post_job()
 
     @staticmethod

@@ -89,6 +89,58 @@ class WorkqueueClient(RESTClient):
                                          'protocol': protocol,
                                          'extra_opts': kwargs})
 
+    def rename(self, src_siteid, src_filepath,  # pylint: disable=too-many-arguments
+               dst_filepath, max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP, **kwargs):
+        """
+        Rename a filepath.
+
+        Variable keyword args are passed directly on to the worker script as extra_opts.
+
+        Args:
+            src_siteid (int): The id of the site containing the filepath to be renamed.
+            src_filepath (str): The filepath to rename.
+            dst_filepath (str): The new filepath.
+            max_tries (int): The maximum number of times to attempt the listing. (default: 2)
+            priority (int): The DIRAC priority (0-9) of the job. (default: 5)
+            protocol (JobProtocol): The protocol type to use. (default: GRIDFTP)
+
+        Returns:
+            dict: The job object as stored in the workqueue database.
+        """
+        return self.post('rename', data={'src_siteid': src_siteid,
+                                         'src_filepath': src_filepath,
+                                         'dst_siteid': src_siteid,
+                                         'dst_filepath': dst_filepath,
+                                         'max_tries': max_tries,
+                                         'priority':  priority,
+                                         'protocol': protocol,
+                                         'extra_opts': kwargs})
+
+    def mkdir(self, siteid, filepath,  # pylint: disable=too-many-arguments
+              max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP, **kwargs):
+        """
+        Make a directory.
+
+        Variable keyword args are passed directly on to the worker script as extra_opts.
+
+        Args:
+            siteid (int): The id of the site containing the dir path to be created.
+            filepath (str): The dir path to create.
+            credentials (str): Token allowing access to the users credentials from the cred service.
+            max_tries (int): The maximum number of times to attempt the listing. (default: 2)
+            priority (int): The DIRAC priority (0-9) of the job. (default: 5)
+            protocol (JobProtocol): The protocol type to use. (default: GRIDFTP)
+
+        Returns:
+            dict: The job object as stored in the workqueue database.
+        """
+        return self.post('mkdir', data={'src_siteid': siteid,
+                                        'src_filepath': filepath,
+                                        'max_tries': max_tries,
+                                        'priority':  priority,
+                                        'protocol': protocol,
+                                        'extra_opts': kwargs})
+
     def jobs(self):
         """
         Get all jobs for a user.
