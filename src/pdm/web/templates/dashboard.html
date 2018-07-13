@@ -21,6 +21,7 @@
         .clickable { cursor: pointer }
         .listing-window { width: 45%; height: 70%; }
         .oi-reload { cursor: pointer }
+        span.newdir { cursor: pointer }
         .list-group {
             max-height: 400px;
             margin-bottom: 5px;
@@ -372,6 +373,53 @@ $(document).ready(function(){
     $("span.oi-reload").click(function(){
         var site_selector = $(this).parent("div.card-footer").siblings("select.custom-select");
         site_selector.trigger("change");
+    });
+
+    $("div.card-body").on("focusout", "ul.list-group li input", function(){
+        var existing_names = [];
+        var dirname = $(this).val();
+        var listing = $(this).closest("ul.list-group");
+        listing.children("li").each(function(){
+            existing_names.push($(this).text());
+        });
+
+        if (dirname === ""){
+            return
+        }
+        if ($.inArray(dirname, existing_names) !== -1){
+            console.log(`Can't use dir name ${dirname} as that name already exists.`);
+            bootstrap_alert("warning", "Warning!", `Can't use dir name ${dirname} as that name already exists.`);
+            return;
+        }
+
+        var src_root = listing.attr("directory");
+        var src_site = listing.closest("div.card-body").siblings("select.custom-select").val();
+        $(this).replaceWith(dirname);
+        $.ajax({
+            url: "/web/js/mkdir",
+            type: "POST",
+            data: JSON.stringify({sitename: src_site,
+                                  filepath: `${src_root}/${dirname}`}),
+            contentType: "application/json; charset=utf-8",
+            error: function(request, status, error){
+                console.error(`Error registering mkdir job for ${dirname}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
+                bootstrap_alert("danger", "Error!", `Error making dir: ${dirname}`);
+            },
+            success: function(response, status, request){
+                console.log(`Successfully registered mkdir job for ${dirname}.`);
+            }
+        });
+    });
+
+    $("span.newdir").click(function(){
+        var src_site = $(this).parent("div.card-footer").siblings("select.custom-select").val();
+        var listing = $(this).parent("div.card-footer").siblings("div.card-body").children("ul.list-group");
+        var newdir = $("<li>", {class: "list-group-item text-left"});
+        newdir.append($("<span>", {class: "oi oi-folder text-warning pr-2"}));
+        var name_input = $("<input>", {type: "text"});
+        newdir.append(name_input);
+        listing.append(newdir);
+        name_input.focus();
     });
 
     $("#src_dst_copy").click(function(){
