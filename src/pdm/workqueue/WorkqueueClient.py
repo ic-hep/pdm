@@ -48,7 +48,7 @@ class WorkqueueClient(RESTClient):
             src_filepath (str): The path to copy from.
             dst_siteid (int): The id of the site containing the path to be copied to.
             dst_filepath (str): The path to copy to.
-            max_tries (int): The maximum number of times to attempt the listing. (default: 2)
+            max_tries (int): The maximum number of times to attempt the copy. (default: 2)
             priority (int): The DIRAC priority (0-9) of the job. (default: 5)
             protocol (JobProtocol): The protocol type to use. (default: GRIDFTP)
 
@@ -75,7 +75,7 @@ class WorkqueueClient(RESTClient):
             siteid (int): The id of the site containing the path to be removed.
             filepath (str): The path to remove.
             credentials (str): Token allowing access to the users credentials from the cred service.
-            max_tries (int): The maximum number of times to attempt the listing. (default: 2)
+            max_tries (int): The maximum number of times to attempt the remove. (default: 2)
             priority (int): The DIRAC priority (0-9) of the job. (default: 5)
             protocol (JobProtocol): The protocol type to use. (default: GRIDFTP)
 
@@ -100,7 +100,7 @@ class WorkqueueClient(RESTClient):
             src_siteid (int): The id of the site containing the filepath to be renamed.
             src_filepath (str): The filepath to rename.
             dst_filepath (str): The new filepath.
-            max_tries (int): The maximum number of times to attempt the listing. (default: 2)
+            max_tries (int): The maximum number of times to attempt the rename. (default: 2)
             priority (int): The DIRAC priority (0-9) of the job. (default: 5)
             protocol (JobProtocol): The protocol type to use. (default: GRIDFTP)
 
@@ -127,7 +127,7 @@ class WorkqueueClient(RESTClient):
             siteid (int): The id of the site containing the dir path to be created.
             filepath (str): The dir path to create.
             credentials (str): Token allowing access to the users credentials from the cred service.
-            max_tries (int): The maximum number of times to attempt the listing. (default: 2)
+            max_tries (int): The maximum number of times to attempt the mkdir. (default: 2)
             priority (int): The DIRAC priority (0-9) of the job. (default: 5)
             protocol (JobProtocol): The protocol type to use. (default: GRIDFTP)
 
