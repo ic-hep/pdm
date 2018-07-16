@@ -263,7 +263,20 @@ class WebPageService(object):
             abort(400, description="Site not known.")
         token = flask.session['token']
         tclient = TransferClient(token)
-        tclient.mkdir(site, request.data['filepath'])
+        tclient.mkdir(site, request.data['dst_filepath'])
+        return '', 200
+
+    @staticmethod
+    @export_ext("js/rename", ['POST'])
+    @decode_json_data
+    def js_rename():
+        """copy"""
+        site = request.data['sitename']
+        if site not in current_app.site_map:
+            abort(400, description="Site not known.")
+        token = flask.session['token']
+        tclient = TransferClient(token)
+        tclient.rename(site, request.data['src_filepath'], request.data['dst_filepath'])
         return '', 200
 
     @staticmethod

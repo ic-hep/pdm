@@ -17,6 +17,7 @@
     <style>
         #identicon { width: 30px; height: 30px; }
         #notification { position: fixed; top:0; width: 100%; z-index: 1000 }
+        #context_menu { display: none; }
         li.list-group-item { cursor: pointer }
         .clickable { cursor: pointer }
         .listing-window { width: 45%; height: 70%; }
@@ -375,38 +376,82 @@ $(document).ready(function(){
         site_selector.trigger("change");
     });
 
+    $("body").click(function(){
+        $("#context_menu").hide();
+    });
+
+    $("div.card-body").on("contextmenu", "ul.list-group li", function(e){
+        $("div.card-body ul.list-group li[class ~= bg-primary]").not(".disabled").trigger("click");
+        $(this).trigger("click");
+        var context_menu = $("#context_menu");
+        context_menu.css({
+            top: e.pageY,
+            left: e.pageX
+        });
+        context_menu.show();//context_menu.toggle();
+        return false;
+    });
+
+    $("#context_rename").click(function(){
+        var selected = $("div.card-body ul.list-group li[class ~= bg-primary]").not(".disabled");
+        var icon = $("span.oi", selected);
+        var name = selected.text();
+        var name_input = $("<input>", {type: "text", value: name, api_type: "rename", src_name: name})
+        selected.trigger("click");
+        selected.prop("disabled", true);
+        selected.empty();
+        selected.append(icon);
+        selected.append(name_input);
+        name_input.focus();
+    });
+
     $("div.card-body").on("focusout", "ul.list-group li input", function(){
         var existing_names = [];
-        var dirname = $(this).val();
+        var type = $(this).attr("api_type");
+        var old_name = $(this).attr("src_name");
+        var name = $(this).val();
         var listing = $(this).closest("ul.list-group");
         listing.children("li").each(function(){
             existing_names.push($(this).text());
         });
 
-        if (dirname === ""){
-            return
+        $(this).closest("li").prop("disabled", false);
+        if (name === ""){
+            $(this).replaceWith(old_name);
+            console.warn("Can't set name field empty.");
+            bootstrap_alert("warning", "Warning!", "Can't set name field empty.");
+            return;
         }
-        if ($.inArray(dirname, existing_names) !== -1){
-            console.log(`Can't use dir name ${dirname} as that name already exists.`);
-            bootstrap_alert("warning", "Warning!", `Can't use dir name ${dirname} as that name already exists.`);
+        if ($.inArray(name, existing_names) !== -1){
+            $(this).replaceWith(old_name);
+            console.warn(`Can't use name ${name} as that name already exists.`);
+            bootstrap_alert("warning", "Warning!", `Can't use name ${name} as that name already exists.`);
+            return;
+        }
+        if (name === old_name){
+            $(this).replaceWith(old_name);
+            console.log("Name unchanged, nothing to do.");
             return;
         }
 
         var src_root = listing.attr("directory");
         var src_site = listing.closest("div.card-body").siblings("select.custom-select").val();
-        $(this).replaceWith(dirname);
+        var src_name = `${src_root}/${old_name}`;
+        var dst_name = `${src_root}/${name}`;
+        $(this).replaceWith(name);
         $.ajax({
-            url: "/web/js/mkdir",
+            url: `/web/js/${type}`,
             type: "POST",
             data: JSON.stringify({sitename: src_site,
-                                  filepath: `${src_root}/${dirname}`}),
+                                  src_filepath: src_name,
+                                  dst_filepath: dst_name}),
             contentType: "application/json; charset=utf-8",
             error: function(request, status, error){
-                console.error(`Error registering mkdir job for ${dirname}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
-                bootstrap_alert("danger", "Error!", `Error making dir: ${dirname}`);
+                console.error(`Error registering ${type} job for ${dst_name}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
+                bootstrap_alert("danger", "Error!", `Error registering ${type} job for ${dst_name}`);
             },
             success: function(response, status, request){
-                console.log(`Successfully registered mkdir job for ${dirname}.`);
+                console.log(`Successfully registered ${type} job for ${dst_name}.`);
             }
         });
     });
@@ -416,7 +461,7 @@ $(document).ready(function(){
         var listing = $(this).parent("div.card-footer").siblings("div.card-body").children("ul.list-group");
         var newdir = $("<li>", {class: "list-group-item text-left"});
         newdir.append($("<span>", {class: "oi oi-folder text-warning pr-2"}));
-        var name_input = $("<input>", {type: "text"});
+        var name_input = $("<input>", {type: "text", api_type: "mkdir", src_name: "newdir"});
         newdir.append(name_input);
         listing.append(newdir);
         name_input.focus();
@@ -447,8 +492,13 @@ $(document).ready(function(){
         ///// TESTING STUFF...IGNORE
            //$("div.card-body ul.list-group li[class ~= bg-primary]").toggleClass("progress-bar progress-bar-striped progress-bar-animated text-light text-left");
         /////
+        var enter = 13;
         var backspace = 8;
         var del = 46;
+        if (event.keyCode == enter){
+            $("div.card-body ul.list-group li input").trigger("focusout");
+            return;
+        }
         var nselected = $("div.card-body ul.list-group li[class ~= bg-primary]").not(".disabled").length;
         if ( nselected > 0 && (event.keyCode == backspace || event.keyCode == del) ) {
             $("#delete_modal").modal();
