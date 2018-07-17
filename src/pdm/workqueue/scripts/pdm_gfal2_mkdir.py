@@ -17,7 +17,7 @@ _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 def pdm_gfal_mkdir(data, permissions=0o755, verbosity=logging.INFO):
     """
     Create a new directory.
-    :param data: json-loaded dict with data {"dir": url}
+    :param data: json-loaded dict with data {"dirs": [jobid, url]}
     :param permissions: directory permissions mapped from {"options":{"permissions":int}}
     :param verbosity: mapped from {"options":{"verbosity":logging level}}
     :return: dict of a form {'Code': return code, 'Reason': reason, 'id': jobid})
@@ -25,19 +25,22 @@ def pdm_gfal_mkdir(data, permissions=0o755, verbosity=logging.INFO):
 
     _logger.setLevel(verbosity)
 
+    mkdir_list = data.get('dirs',[])
+    if not mkdir_list:
+        _logger.warning("No directory to create passed in")
+        dump_and_flush({"Reason": "No directory to create passed in", "Code": 1, 'id': ''})
+        return
+
     ctx = gfal2.creat_context()
-    dirname = data.get('dir', '')
-    jobid = data.get('jobid', None)
-    if dirname:
+
+    for jobid, elem in mkdir_list:
         try:
-            res = ctx.mkdir(str(dirname), permissions)
+            res = ctx.mkdir(str(elem), permissions)
             dump_and_flush({'Code': res, 'Reason': 'OK', 'id': jobid})
         except gfal2.GError as gerror:
             dump_and_flush({'Code': 1, 'Reason': str(gerror), 'id': jobid}, _logger, str(gerror),
                            logging.ERROR)
-    else:
-        dump_and_flush({'Code': 1, 'Reason': 'No directory name provided', 'id': jobid})
-
+    return
 
 def json_input():
     """

@@ -24,18 +24,21 @@ def pdm_gfal_chmod(data, permissions, verbosity=logging.INFO):
     """
     _logger.setLevel(verbosity)
 
+    chmod_list = data.get('files', [])
+    if not chmod_list:
+        _logger.warning("No files to set permissions passed in")
+        dump_and_flush({"Reason": "No files to set permissions passed in", "Code": 1, 'id': ''})
+        return
+
     ctx = gfal2.creat_context()
-    src = data.get('source', '')
-    jobid = data.get('jobid', None)
-    if src:
+    for jobid, src in chmod_list:
         try:
             res = ctx.chmod(str(src), permissions)
             dump_and_flush({'Code': res, 'Reason': 'OK', 'id': jobid})
         except gfal2.GError as gerror:
             dump_and_flush({'Code': 1, 'Reason': str(gerror), 'id': jobid}, _logger, str(gerror),
                            logging.ERROR)
-    else:
-        dump_and_flush({'Code': 1, 'Reason': 'No file or directory provided', 'id': jobid})
+    return
 
 
 def json_input():

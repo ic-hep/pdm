@@ -23,22 +23,22 @@ def pdm_gfal_rename(data, verbosity=logging.INFO):
     """
     _logger.setLevel(verbosity)
 
-    ctx = gfal2.creat_context()
-    src = data.get('source', None)
-    dst = data.get('dest', None)
-    jobid = data.get('jobid', None)
+    rename_list = data.get('dirs',[])
+    if not rename_list:
+        _logger.warning("No files to rename")
+        dump_and_flush({"Reason": "No files to rename passed in", "Code": 1, 'id': ''})
+        return
 
-    if src and dst:
+    ctx = gfal2.creat_context()
+
+    for jobid, src, dst in rename_list:
         try:
             res = ctx.rename(str(src), str(dst))
             dump_and_flush({'Code': res, 'Reason': 'OK', 'id': jobid})
         except gfal2.GError as gerror:
             dump_and_flush({'Code': 1, 'Reason': str(gerror), 'id': jobid}, _logger, str(gerror),
                            logging.ERROR)
-    else:
-        dump_and_flush({'Code': 1, 'Reason': 'No source:({}) or destination:({}) provided'.
-                       format(src, dst), 'id': jobid})
-
+    return
 
 def json_input():
     """
