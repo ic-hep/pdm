@@ -203,7 +203,8 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
         self._alg_args = conf.pop('algorithm.args', {})
         self._interpoll_sleep_time = conf.pop('poll_time', 2)
         self._system_ca_dir = conf.pop('system_ca_dir',
-                                       os.environ.get('X509_CERT_DIR', '/etc/grid-security'))
+                                       os.environ.get('X509_CERT_DIR',
+                                                      '/etc/grid-security/certificates'))
         self._script_path = conf.pop('script_path',
                                      os.path.join(os.path.dirname(__file__), 'scripts'))
         self._script_path = os.path.abspath(self._script_path)
@@ -308,18 +309,19 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                            urlunsplit((protocol,
                                        random.choice(src_endpoints),
                                        element['src_filepath'], '', '')))
-                    if element['type'] == JobType.COPY:
+                    if element['type'] in (JobType.COPY, JobType.RENAME):
                         data['files'].append(src + (urlunsplit((protocol,
                                                                 random.choice(dst_endpoints),
                                                                 element['dst_filepath'], '', '')),))
-                    elif element['type'] == JobType.REMOVE\
-                            and element['src_filepath'].endswith('/'):
+                    elif element['type'] == JobType.MKDIR\
+                            or (element['type'] == JobType.REMOVE
+                                and element['src_filepath'].endswith('/')):
                         data.setdefault('dirs', []).append(src)
                     else:
                         data['files'].append(src)
 
                 # Correct command, data options and credentials for LIST component of
-                # COPY/REMOVE jobs.
+                # COPY/REMOVE/RENAME jobs.
                 command = shlex.split(COMMANDMAP[job['type']][job['protocol']])
                 if job['type'] != JobType.LIST\
                         and len(job['elements']) == 1\

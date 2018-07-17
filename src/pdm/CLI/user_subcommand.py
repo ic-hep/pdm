@@ -50,6 +50,12 @@ class UserCommand(object):
                                  help="optional token file location (default=~/.pdm/token)")
 
         user_parser.set_defaults(func=self.login)
+        # logoff
+        user_parser = subparsers.add_parser('logoff',
+                                            help="User logoff procedure (deletes the token.)")
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help="optional token file location (default=~/.pdm/token)")
+        user_parser.set_defaults(func=self.logoff)
         # change password
         user_parser = subparsers.add_parser('passwd', help="Change user password.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
@@ -232,15 +238,32 @@ class UserCommand(object):
         """
         User login function. Stores a token obtained from the server in a file.
         """
-        if not args.email:
-            args.email = raw_input("Please enter your email address: ")
+        token = UserCommand._get_token(args.token, check_validity=False)  # expired or not
+
+        password = None
+        if token:
+            # username from token
+            try:
+                username = HRUtils.get_token_username_insecure(token)
+                # a valid token should normally have a username, but to be safe:
+                if username:
+                    password = getpass(prompt=str(username) + "'s password: ")
+            except ValueError as ve:
+                # corrupted or empty token
+                print ve.message
+
+        if not password:
+            # username from the command line
             if not args.email:
-                print "No email provided. Exiting .."
-                exit(1)
-        password = getpass()
+                args.email = raw_input("Please enter your email address: ")
+                if not args.email:
+                    print "No email provided. Exiting .."
+                    exit(1)
+            username = args.email
+            password = getpass()
 
         client = HRClient()
-        token = client.login(args.email, password)
+        token = client.login(username, password)
 
         filename = os.path.expanduser(args.token)
         try:
@@ -254,7 +277,27 @@ class UserCommand(object):
             os.chmod(filename, 0o600)
             token_file.write(token)
 
-        print "User {} logged in".format(args.email)
+        print "User {} logged in".format(username)
+
+    def logoff(self, args):
+        """
+        User logoff. Just delete a token if present.
+        :param args:
+        :return:
+        """
+        token = UserCommand._get_token(args.token, check_validity=False)  # expired or not
+        if token:
+            # username from token
+            username = ''
+            try:
+                username = HRUtils.get_token_username_insecure(token)
+            except ValueError as ve:
+                print ve.message
+            finally:
+                os.remove(os.path.expanduser(args.token))
+                print "Token deleted, user {} is now logged off".format(str(username))
+        else:
+            print "No token found, no one to log off."
 
     def passwd(self, args):  # pylint: disable=no-self-use
         """ Change user password """
@@ -315,7 +358,7 @@ class UserCommand(object):
                         break
 
                 if status['status'] == 'DONE':
-                    listing_output = client.output(resp['id'])[0] #listing is element 0
+                    listing_output = client.output(resp['id'])[0]  # listing is element 0
                     listing_d_value = listing_output['listing']
                     root, listing = listing_d_value.items()[0]  # top root
                     self._print_formatted_listing(root, listing_d_value)
@@ -646,16 +689,26 @@ class UserCommand(object):
         print '-' + 91 * '-' + '-'
 
     @staticmethod
-    def _get_token(tokenfile):
-
-        with open(os.path.expanduser(tokenfile)) as token_file:
-            token = token_file.read()
-            if not token:
-                print "No token at requested location. Please login first."
-            if HRUtils.is_token_expired_insecure(token):
-                print "Token expired. Please log in again."
-                return None
-            return token
+    def _get_token(tokenfile, check_validity=True):
+        """
+        Get a token from a file, expired or not.
+        :param tokenfile: file containing a token
+        :return: token or None if tokenfile not present or empty
+        """
+        if os.path.isfile(os.path.expanduser(tokenfile)):
+            with open(os.path.expanduser(tokenfile)) as token_file:
+                token = token_file.read()
+                if not token:
+                    print "No token at requested location. Please login first."
+                    return None
+                if check_validity:
+                    if HRUtils.is_token_expired_insecure(token):
+                        print "Token expired. Please log in again."
+                        return None
+                return token
+        if check_validity:
+            print "No token at requested location. Please login first."
+        return None
 
     @staticmethod
     def _get_cert(certfile):

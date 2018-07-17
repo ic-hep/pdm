@@ -13,7 +13,8 @@ setup(name='pdm',
                         'pyOpenSSL', # ==0.13.1 on RHEL7
                         'requests==2.6.0',
                         'sqlalchemy==0.9.8',
-                        'twisted==12.1.0'],
+                        'twisted==12.1.0',
+                        'enum34==1.0.4'],
       include_package_data=True,
       scripts=['src/pdm/bin/pdm'],
      )

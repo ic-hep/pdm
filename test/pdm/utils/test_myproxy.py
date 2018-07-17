@@ -19,17 +19,21 @@ class TestMyProxyUtils(unittest.TestCase):
         cmd_args = " ".join(popen_mock.call_args[0][0])
         return cmd_args, popen_mock.call_args[1]['env']
 
+    @mock.patch("pdm.utils.myproxy.open", create=True)
     @mock.patch("pdm.utils.myproxy.X509Utils")
     @mock.patch("pdm.utils.myproxy.Popen")
-    def test_myproxy_logon(self, popen_mock, x509_mock):
+    def test_myproxy_logon(self, popen_mock, x509_mock, open_mock):
         """ Test that the logon function works as expected.
         """
         x509_mock.add_ca_to_dir.return_value = "/tmp/cadir"
         # Set-up a fake Popen object
         proc = mock.MagicMock()
-        proc.communicate.return_value = ('PEMFILE', '')
+        proc.communicate.return_value = ('Your proxy has been stored.', '')
         proc.returncode = 0
         popen_mock.return_value = proc
+        # We also have to patch open, so that when the proxy file is
+        # read back in, the test PEM string is returned
+        open_mock().__enter__().read.return_value = 'PEMFILE'
         # Simplest test
         res = MyProxyUtils.logon("localhost:12345", "user", "pass")
         self.assertEqual(res, 'PEMFILE')
@@ -54,7 +58,7 @@ class TestMyProxyUtils(unittest.TestCase):
         self.assertIn('-t 123', args)
         self.assertIn('-m dteam', args)
         self.assertEqual(env['X509_CERT_DIR'], "/tmp/cadir")
-        self.assertEqual(env['X509_VOMS_DIR'], "/opt/etc/vomses")
+        self.assertEqual(env['VOMS_USERCONF'], "/opt/etc/vomses")
         self.assertTrue(log.debug.called)
 
     def assertRaisesMsg(self, msgPart, func, *args, **kwargs):
