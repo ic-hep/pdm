@@ -132,6 +132,12 @@ class UserCommand(object):
         st_help = "periodically check the job status (up to %d times)" % (self.__max_iter,)
         user_parser.add_argument('-b', '--block', action='store_true', help=st_help)
         user_parser.set_defaults(func=self.status)
+        # jobs
+        user_parser = subparsers.add_parser('jobs',
+                                            help="get status of user jobs")
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
+        user_parser.set_defaults(func=self.jobs)
         # log
         user_parser = subparsers.add_parser('log',
                                             help="get log of a job/task.")
@@ -560,6 +566,18 @@ class UserCommand(object):
                 else:
                     print log_listing
 
+    def jobs(self, args):
+        """
+        Get user jobs' info
+        :param args:
+        :return:
+        """
+        token = UserCommand._get_token(args.token)
+        if token:
+            client = TransferClientFacade(token)
+            jobs = client.jobs()
+            UserCommand._print_formatted_jobs_info(jobs)
+
     def get_site(self, args):
         """
         Get site information from the Site Service
@@ -741,6 +759,10 @@ class UserCommand(object):
         for key, value in userinfo.iteritems():
             print '|{0:20}|{1:70}|'.format(key, str(value))
         print '-' + 91 * '-' + '-'
+
+    @staticmethod
+    def _print_formatted_jobs_info(jobs):
+        print jobs
 
     @staticmethod
     def _get_token(tokenfile, check_validity=True):
