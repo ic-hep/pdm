@@ -89,7 +89,7 @@ class WorkqueueClient(RESTClient):
                                          'protocol': protocol,
                                          'extra_opts': kwargs})
 
-    def rename(self, src_siteid, src_filepath,  # pylint: disable=too-many-arguments
+    def rename(self, siteid, src_filepath,  # pylint: disable=too-many-arguments
                dst_filepath, max_tries=2, priority=5, protocol=JobProtocol.GRIDFTP, **kwargs):
         """
         Rename a filepath.
@@ -107,9 +107,9 @@ class WorkqueueClient(RESTClient):
         Returns:
             dict: The job object as stored in the workqueue database.
         """
-        return self.post('rename', data={'src_siteid': src_siteid,
+        return self.post('rename', data={'src_siteid': siteid,
                                          'src_filepath': src_filepath,
-                                         'dst_siteid': src_siteid,
+                                         'dst_siteid': siteid,
                                          'dst_filepath': dst_filepath,
                                          'max_tries': max_tries,
                                          'priority':  priority,
