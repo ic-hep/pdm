@@ -147,7 +147,7 @@ class TestTransferClient(unittest.TestCase):
 
     def test_rename(self):
         s_site = "localhost:/root/file.txt"
-        t_site = "/root/file2.txt"
+        t_site = ":/root/file2.txt"
 
         with mock.patch.object(self.__client._TransferClient__wq_client, 'rename') as mock_rename:
             mock_rename.return_value = 'root/file.txt renamed'
