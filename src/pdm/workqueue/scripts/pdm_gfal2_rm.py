@@ -49,7 +49,7 @@ def pdm_gfal_rm(rmdict, verbosity=logging.INFO):
 
 def json_input():
     """
-    gfal-ls directory/file based on a json document read from stdin.
+    gfal-rm directory/file based on a json document read from stdin.
     :return: None
     """
 
