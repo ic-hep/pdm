@@ -1,6 +1,30 @@
 {% extends "dashboard.html" %}
+{% block head %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css" />
+{% endblock %}
 {% block navjobsactive %}active{% endblock %}
 {% block navjobsurl%}#{% endblock %}
+{% block scripts %}
+<script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+<script>
+$(document).ready(function(){
+    $.ajax({
+        url: "/web/js/jobs",
+        type: "GET",
+        cache: true,
+        dataType: "json",
+        error: function(request, status, error){
+            console.warn(`Error getting users jobs!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
+            bootstrap_alert("Attention!", `Error getting users jobs! status: ${status} error: ${error}`, "alert-danger");
+        },
+        success: function(response, status, request){
+            console.log("Successfully retrieved users jobs.")
+            $("#jobs_table").DataTable(response);
+        }
+    });
+});
+</script>
+{% endblock %}
 {% block content %}
-<h1>BLAH</h1>
+<table id="jobs_table" class="display"></table>
 {% endblock %}

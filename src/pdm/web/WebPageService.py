@@ -149,6 +149,16 @@ class WebPageService(object):
 
 
     @staticmethod
+    @export_ext("js/jobs")
+    def jobs():
+        token = flask.session['token']
+        tclient = TransferClient(token)
+        j = tclient.jobs()
+        columns = [{"data", key} for key in j[0].keys()]
+        return json.dumps({'columns': columns, 'data': j})
+
+
+    @staticmethod
     @export_ext("dashboard/joblist")
     def joblist():
         # will abort of user is not logged in
