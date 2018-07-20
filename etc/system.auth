@@ -100,6 +100,10 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 /workqueue/api/v1.0/copy%POST = "@user"
 # Add a remove job
 /workqueue/api/v1.0/remove%POST = "@user"
+# Add a rename job
+/workqueue/api/v1.0/rename%POST = "@user"
+# Add a mkdir job
+/workqueue/api/v1.0/mkdir%POST = "@user"
 # Get the next available job meeting criteria
 /workqueue/api/v1.0/worker/jobs%POST = "@worker"
 # Return job status information

@@ -14,9 +14,11 @@ from pdm.framework.Database import JSONMixin
 from pdm.utils.db import managed_session
 
 
-def subdict(dct, keys):
+def subdict(dct, keys, **kwargs):
     """Create a sub dictionary."""
-    return {k: dct[k] for k in keys if k in dct}
+    return_dict = {k: dct[k] for k in keys if k in dct}
+    return_dict.update(kwargs)
+    return return_dict
 
 
 class EnumBase(IntEnum):
@@ -62,6 +64,8 @@ class JobType(EnumBase):
     LIST = 0
     COPY = 1
     REMOVE = 2
+    RENAME = 3
+    MKDIR = 4
 
 
 @unique
@@ -85,7 +89,13 @@ COMMANDMAP = {JobType.LIST: {JobProtocol.GRIDFTP: 'pdm_gfal2_ls.py',
                                JobProtocol.DUMMY: 'dummy.sh remove'},
               JobType.COPY: {JobProtocol.GRIDFTP: 'pdm_gfal2_copy.py',
                              JobProtocol.SSH: 'scp',
-                             JobProtocol.DUMMY: 'dummy.sh copy'}}
+                             JobProtocol.DUMMY: 'dummy.sh copy'},
+              JobType.RENAME: {JobProtocol.GRIDFTP: 'pdm_gfal2_rename.py',
+                               JobProtocol.SSH: 'echo',
+                               JobProtocol.DUMMY: 'dummy.sh rename'},
+              JobType.MKDIR: {JobProtocol.GRIDFTP: 'pdm_gfal2_mkdir.py',
+                              JobProtocol.SSH: 'echo',
+                              JobProtocol.DUMMY: 'dummy.sh mkdir'}}
 SHELLPATH_REGEX = re.compile(r'^[/~][a-zA-Z0-9/_.*~-]*$')
 
 
@@ -201,18 +211,20 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
                 kwargs['type'] = JobType.parse(kwargs['type'])
                 if 'protocol' in kwargs:
                     kwargs['protocol'] = JobProtocol.parse(kwargs['protocol'])
-                if kwargs['type'] == JobType.COPY:
+                if kwargs['type'] in (JobType.COPY, JobType.RENAME):
                     required_args = {'dst_siteid', 'dst_filepath'}.difference(kwargs)
                     if required_args:
                         raise ValueError("Missing %s" % list(required_args))
                     kwargs['dst_filepath'] = shellpath_sanitise(kwargs['dst_filepath'])
 
                 super(Job, self).__init__(**subdict(kwargs, self.allowed_args()))
-                listing_args = {'id': 0, 'type': JobType.LIST,
-                                'src_filepath': kwargs['src_filepath']}
-                if 'max_tries' in kwargs:
-                    listing_args.update(max_tries=kwargs['max_tries'])
-                self.elements = [JobElement(**listing_args)]
+                if kwargs['type'] == JobType.MKDIR:
+                    self.elements = [JobElement(**dict(kwargs, id=0, size=0))]
+                else:
+                    self.elements = [JobElement(**subdict(kwargs,
+                                                          ('src_filepath', 'max_tries'),
+                                                          id=0,
+                                                          type=JobType.LIST))]
 
             def add(self):
                 """Add job to session."""
@@ -313,7 +325,7 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
                     raise ValueError("Missing %s" % list(required_args))
                 kwargs['src_filepath'] = shellpath_sanitise(kwargs['src_filepath'])
                 kwargs['type'] = JobType.parse(kwargs['type'])
-                if kwargs['type'] == JobType.COPY:
+                if kwargs['type'] in (JobType.COPY, JobType.RENAME):
                     required_args = {'dst_filepath'}.difference(kwargs)
                     if required_args:
                         raise ValueError("Missing %s" % list(required_args))
