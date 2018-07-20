@@ -154,8 +154,9 @@ class WebPageService(object):
         token = flask.session['token']
         tclient = TransferClient(token)
         j = tclient.jobs()
-        columns = [{"data", key} for key in j[0].keys()]
-        return json.dumps({'columns': columns, 'data': j})
+        table_config = {'columns': [{"data": key, 'title': key} for key in j[0].keys()],
+                        'data': j}
+        return json.dumps(table_config)
 
 
     @staticmethod
