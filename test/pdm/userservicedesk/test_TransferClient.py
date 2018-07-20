@@ -130,6 +130,39 @@ class TestTransferClient(unittest.TestCase):
         assert e == 'localhost'
         assert f == '/root/file.txt:1'
 
+    def test_mkdir(self):
+        site = "localhost:/root/subdir"
+        with mock.patch.object(self.__client._TransferClient__wq_client, 'mkdir') as mock_mkdir:
+            mock_mkdir.return_value = 'root/subdir created'
+            assert self.__client.mkdir(site, **{'priority': 2}) == 'root/subdir created'
+        assert mock_mkdir.called
+        mock_mkdir.assert_called_with(self.site_id, '/root/subdir',
+                                       priority=2)
+        # now unknown site:
+        wrongurl = "localhost2:/root/file.txt"  # no such site,
+        with mock.patch.object(self.__client._TransferClient__wq_client, 'mkdir') as mock_mkdir:
+            mock_mkdir.return_value = 'whatever..'  # event if ...
+            assert self.__client.mkdir(wrongurl, **{'priority': 2}) == None  # we return None
+        assert not mock_mkdir.called
 
+    def test_rename(self):
+        s_site = "localhost:/root/file.txt"
+        t_site = "/root/file2.txt"
+
+        with mock.patch.object(self.__client._TransferClient__wq_client, 'rename') as mock_rename:
+            mock_rename.return_value = 'root/file.txt renamed'
+            assert self.__client.rename(s_site, t_site,
+                                      **{'priority': 2}) == 'root/file.txt renamed'
+        assert mock_rename.called
+        mock_rename.assert_called_with(self.site_id, '/root/file.txt',
+                                     '/root/file2.txt',
+                                     priority=2)
+
+        wrongurl = "localhost2:/root/file.txt"  # no such site,
+        with mock.patch.object(self.__client._TransferClient__wq_client, 'rename') as mock_rename:
+            mock_rename.return_value = 'whatever..'  # even if ...
+            assert self.__client.rename(wrongurl, t_site,
+                                      **{'priority': 2}) == None  # we return None
+        assert not mock_rename.called
     def tearDown(self):
         pass
