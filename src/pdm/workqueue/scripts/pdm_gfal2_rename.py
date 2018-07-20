@@ -23,7 +23,7 @@ def pdm_gfal_rename(data, verbosity=logging.INFO):
     """
     _logger.setLevel(verbosity)
 
-    rename_list = data.get('dirs',[])
+    rename_list = data.get('files',[])
     if not rename_list:
         _logger.warning("No files to rename")
         dump_and_flush({"Reason": "No files to rename passed in", "Code": 1, 'id': ''})
