@@ -63,9 +63,9 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
         return
 
     if _logger.isEnabledFor(logging.DEBUG):
-        for f_source, f_dest in copy_list:
-            _logger.debug("gfal copy source: %s TO dest: %s , overwrite ? %s ",
-                          f_source, f_dest, overwrite)
+        for job_id, f_source, f_dest in copy_list:
+            _logger.debug("job id %s : gfal copy source: %s TO dest: %s , overwrite ? %s ",
+                          job_id, f_source, f_dest, overwrite)
 
     s_cred = _get_cred(s_cred_file)
     t_cred = _get_cred(t_cred_file)
