@@ -87,8 +87,13 @@ class TransferClientFacade(TransferClient):
         :return: rename result message, or None if malformed site path
         """
         sitename, path = self.split_site_path(site_path)
+        new_site, newpath = self.split_site_path(newname)
+        if new_site:
+            print "Malformed (new) site path (it has to start with a : " \
+                  "since source and dest share the same site)", new_site
+            return None
         if sitename:
-            return super(TransferClientFacade, self).rename(sitename, path, newname, **kwargs)
+            return super(TransferClientFacade, self).rename(sitename, path, newpath, **kwargs)
         else:
             print "Malformed (old) site path (probably missing colon)", site_path
             return None
