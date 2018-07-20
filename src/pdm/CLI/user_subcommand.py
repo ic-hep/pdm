@@ -104,6 +104,8 @@ class UserCommand(object):
                                             help="rename a file. pdm rename site:path newpath")
         user_parser.add_argument('oldname', type=str, help="site:path_to_file to rename from")
         user_parser.add_argument('newname', type=str, help="path_to_file to rename to")
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
         user_parser.add_argument('-b', '--block', action='store_true')
@@ -113,6 +115,8 @@ class UserCommand(object):
         user_parser = subparsers.add_parser('mkdir',
                                             help="create a new directory at a site.")
         user_parser.add_argument('site', type=str)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
         user_parser.add_argument('-b', '--block', action='store_true')
@@ -533,8 +537,8 @@ class UserCommand(object):
         if token:
             client = TransferClientFacade(token)
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
-                             value is not None and key not in ('func', 'site', 'token', 'block',
-                                                               'config', 'verbosity')}
+                             value is not None and key not in ('func', 'token', 'block',
+                                                               'config', 'verbosity','oldname', 'newname')}
         response = client.rename(args.oldname, args.newname, **accepted_args) # max_tries, priority
         self._status(response['id'], client, block=args.block)
 
