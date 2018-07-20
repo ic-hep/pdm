@@ -88,7 +88,7 @@ class TransferClientFacade(TransferClient):
         """
         sitename, path = self.split_site_path(site_path)
         new_site, newpath = self.split_site_path(newname)
-        if new_site:
+        if new_site or new_site is None:  # we expect '' !
             print "Malformed (new) site path (it has to start with a : " \
                   "since source and dest share the same site)", new_site
             return None
