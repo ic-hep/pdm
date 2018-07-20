@@ -95,7 +95,7 @@ class TransferClientFacade(TransferClient):
         if sitename:
             return super(TransferClientFacade, self).rename(sitename, path, newpath, **kwargs)
         else:
-            print "Malformed (old) site path (probably missing colon)", site_path
+            print "Malformed (old) site path (probably missing sitename:)", site_path
             return None
 
     @staticmethod
