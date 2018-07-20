@@ -49,7 +49,7 @@ class TransferClient(object):
             response = self.__wq_client.list(src_siteid[0], src_filepath, **kwargs)
             # max_tries, priority, protocol=JobProtocol.GRIDFTP)
             return response
-        return src_siteid # an empty list
+        return src_siteid  # an empty list
 
     def output(self, job_id, attempt=None):
         """
@@ -125,4 +125,45 @@ class TransferClient(object):
         response = self.__wq_client.remove(src_siteid[0], src_filepath,
                                            # pylint: disable=too-many-arguments
                                            **kwargs)
+        return response
+
+    def mkdir(self, site, dirpath, **kwargs):
+        """
+        Create a new directory at
+        :param site:  site name
+        :param dirpath: directory path
+        :param kwargs: max_tries:
+                       priority:
+                       protocol:
+        :return: workqueue client response
+        """
+
+        src_siteid = [elem['site_id'] for elem in self.__sitelist if elem['site_name'] == site]
+        if not src_siteid:
+            return None
+
+        response = self.__wq_client.mkdir(src_siteid[0], dirpath,
+                                          # pylint: disable=too-many-arguments
+                                          **kwargs)
+        return response
+
+    def rename(self, site, oldname, newname, **kwargs):
+        """
+        Rename a file or directory (?) within site.
+        :param site: site name
+        :param oldname: old file name
+        :param newname: new file name
+        :param kwargs: max_tries:
+                       priority:
+                       protocol:
+        :return: workqueue client response
+        """
+
+        src_siteid = [elem['site_id'] for elem in self.__sitelist if elem['site_name'] == site]
+        if not src_siteid:
+            return None
+
+        response = self.__wq_client.rename(src_siteid[0], oldname, newname,
+                                           **kwargs)
+
         return response

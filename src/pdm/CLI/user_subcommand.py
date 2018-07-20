@@ -99,6 +99,29 @@ class UserCommand(object):
         user_parser.add_argument('-b', '--block', action='store_true')
         user_parser.add_argument('-s', '--protocol', type=str, help='protocol')
         user_parser.set_defaults(func=self.copy)
+        # rename
+        user_parser = subparsers.add_parser('rename',
+                                            help="rename a file. pdm rename site:path newpath")
+        user_parser.add_argument('oldname', type=str, help="site:path_to_file to rename from")
+        user_parser.add_argument('newname', type=str, help="path_to_file to rename to")
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
+        user_parser.add_argument('-m', '--max_tries', type=int)
+        user_parser.add_argument('-p', '--priority', type=int)
+        user_parser.add_argument('-b', '--block', action='store_true')
+        user_parser.add_argument('-s', '--protocol', type=str, help='protocol')
+        user_parser.set_defaults(func=self.rename)
+        # mkdir
+        user_parser = subparsers.add_parser('mkdir',
+                                            help="create a new directory at a site.")
+        user_parser.add_argument('site', type=str)
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
+        user_parser.add_argument('-m', '--max_tries', type=int)
+        user_parser.add_argument('-p', '--priority', type=int)
+        user_parser.add_argument('-b', '--block', action='store_true')
+        user_parser.add_argument('-s', '--protocol', type=str, help='protocol')
+        user_parser.set_defaults(func=self.mkdir)
         # status
         user_parser = subparsers.add_parser('status',
                                             help="get status of a job/task.")
@@ -487,6 +510,37 @@ class UserCommand(object):
                                              'config', 'verbosity')}
             response = client.copy(src_site, dst_site, **accepted_args)
             self._status(response['id'], client, block=args.block)
+
+    def mkdir(self, args):
+        """
+        Create a new directory at a site.
+        :param args: site - the new directory in a form site:path
+        :return:
+        """
+        token = UserCommand._get_token(args.token)
+        if token:
+            client = TransferClientFacade(token)
+            accepted_args = {key: value for (key, value) in vars(args).iteritems() if
+                             value is not None and key not in ('func', 'site', 'token', 'block',
+                                                               'config', 'verbosity')}
+            response = client.mkdir(args.site, **accepted_args)  # max_tries, priority
+            self._status(response['id'], client, block=args.block)
+
+    def rename(self, args):
+        """
+        Rename a file at a site. It's like a copy, but with the source and destination
+        site being the same.
+        :param args: old name: site:path, new name: path.
+        :return:
+        """
+        token = UserCommand._get_token(args.token)
+        if token:
+            client = TransferClientFacade(token)
+            accepted_args = {key: value for (key, value) in vars(args).iteritems() if
+                             value is not None and key not in ('func', 'token', 'block',
+                                                               'config', 'verbosity','oldname', 'newname')}
+        response = client.rename(args.oldname, args.newname, **accepted_args) # max_tries, priority
+        self._status(response['id'], client, block=args.block)
 
     def log(self, args):
         """

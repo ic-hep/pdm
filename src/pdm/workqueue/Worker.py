@@ -198,7 +198,7 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                         debug=debug)
         conf = getConfig('worker')
         self._types = [JobType[type_.upper()] for type_ in  # pylint: disable=unsubscriptable-object
-                       conf.pop('types', ('LIST', 'COPY', 'REMOVE'))]
+                       conf.pop('types', ('LIST', 'COPY', 'REMOVE', 'MKDIR', 'RENAME'))]
         self._alg = conf.pop('algorithm', 'BY_NUMBER').upper()
         self._alg_args = conf.pop('algorithm.args', {})
         self._interpoll_sleep_time = conf.pop('poll_time', 2)
@@ -286,11 +286,13 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                     cas.extend(src_endpoint_dict['cas'])
                     template_ca_dir = None
 
+                if job['type'] in (JobType.COPY, JobType.RENAME):
+                    dst_endpoint_dict = self._site_client.get_endpoints(job['dst_siteid'])
+                    dst_endpoints = dst_endpoint_dict['endpoints']
+
                 if job['type'] == JobType.COPY:
                     credentials.append(job['dst_credentials'])
                     template_ca_dir = self._system_ca_dir
-                    dst_endpoint_dict = self._site_client.get_endpoints(job['dst_siteid'])
-                    dst_endpoints = dst_endpoint_dict['endpoints']
                     if 'cas' in dst_endpoint_dict:
                         cas.extend(dst_endpoint_dict['cas'])
                         template_ca_dir = None

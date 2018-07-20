@@ -66,6 +66,38 @@ class TransferClientFacade(TransferClient):
             print "Malformed site path (probably missing colon)", src_site
             return None
 
+    def mkdir(self, sitepath, **kwargs):
+        """
+        Create a new directory at the site.
+        :param site_path: string of a form sitename:directory_path_to_create
+        :return: mkdir result message, or None if malformed site path
+        """
+        sitename, path = self.split_site_path(sitepath)
+        if sitename:
+            return super(TransferClientFacade, self).mkdir(sitename, path, **kwargs)
+        else:
+            print "Malformed site path (probably missing colon)", sitepath
+            return None
+
+    def rename(self, site_path, newname, **kwargs):
+        """
+        Rename a file.
+        :param site_path: string of a form sitename:file_path_to_rename
+        :param newname new file name (w/o the site prefix)
+        :return: rename result message, or None if malformed site path
+        """
+        sitename, path = self.split_site_path(site_path)
+        new_site, newpath = self.split_site_path(newname)
+        if new_site or new_site is None:  # we expect '' !
+            print "Malformed (new) site path (it has to start with a : " \
+                  "since source and dest share the same site)", new_site
+            return None
+        if sitename:
+            return super(TransferClientFacade, self).rename(sitename, path, newpath, **kwargs)
+        else:
+            print "Malformed (old) site path (probably missing sitename:)", site_path
+            return None
+
     @staticmethod
     def split_site_path(path):
         """
