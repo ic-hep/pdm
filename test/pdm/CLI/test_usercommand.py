@@ -158,6 +158,34 @@ class TestUsercommand(unittest.TestCase):
         args.func(args)
         assert mocked_facade.return_value.status.call_count == 50
 
+    @mock.patch('pdm.CLI.user_subcommand.sleep')
+    @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
+    def test_rename(self, mocked_facade, mock_sleep):
+        mocked_facade.return_value = MockTransferClientFacade("anything")
+        mocked_facade.return_value.status = mock.MagicMock()
+        mocked_facade.return_value.status.return_value = {'status': 'DONE', 'id': 1}
+        mocked_facade.return_value.rename = mock.MagicMock()
+        # protocol swittch is -s !!!
+        args = self._parser.parse_args('rename source destination -s gsiftp -m 3 -t {}'.format(self._tmp_file.name).split())
+        args.func(args)
+
+        mocked_facade.return_value.rename.assert_called_with('source', 'destination', max_tries=3, protocol='gsiftp')
+        assert mocked_facade.return_value.status.call_count == 1 # block resolves immediately
+
+    @mock.patch('pdm.CLI.user_subcommand.sleep')
+    @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
+    def test_mkdir(self, mocked_facade, mock_sleep):
+        mocked_facade.return_value = MockTransferClientFacade("anything")
+        mocked_facade.return_value.status = mock.MagicMock()
+        mocked_facade.return_value.status.return_value = {'status': 'DONE', 'id': 1}
+        mocked_facade.return_value.mkdir = mock.MagicMock()
+    # protocol swittch is -s !!!
+        args = self._parser.parse_args('mkdir site:/path/to/file -s gsiftp -m 3 -t {}'.format(self._tmp_file.name).split())
+        args.func(args)
+
+        mocked_facade.return_value.mkdir.assert_called_with('site:/path/to/file', max_tries=3, protocol='gsiftp')
+        assert mocked_facade.return_value.status.call_count == 1 # block resolves immediately
+
     @mock.patch('pdm.CLI.user_subcommand.SiteClient')
     def test_add_site(self, mock_site_client):
         args = self._parser.parse_args('addsite test_site just_a_test_site'
