@@ -579,7 +579,7 @@ class UserCommand(object):
         if token:
             client = TransferClientFacade(token)
             jobs = client.jobs()
-            UserCommand._print_formatted_jobs_info(jobs, long_listing=args.long)
+            UserCommand._print_formatted_jobs_info(jobs, long_listing=args.long_listing)
 
     def get_site(self, args):
         """
