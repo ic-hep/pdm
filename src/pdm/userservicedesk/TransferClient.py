@@ -175,3 +175,13 @@ class TransferClient(object):
         """
         response = self.__wq_client.jobs()
         return response
+
+    def elements(self, job_id):
+        """
+        Get job elements information
+        :param job_id:
+        :return: workqueue elements response
+        """
+
+        response = self.__wq_client.elements(job_id)
+        return response
