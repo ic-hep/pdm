@@ -40,7 +40,7 @@ class UserCommand(object):
         user_parser = subparsers.add_parser('unregister', help="Delete a user from the PDM.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
-        # TODO sue to a bug in the SiteService, commented out
+        # TODO due to a bug in the SiteService, commented out
         # user_parser.set_defaults(func=self.unregister)
         user_parser.set_defaults(func=self.not_implemented)
         # login
@@ -137,6 +137,7 @@ class UserCommand(object):
                                             help="get status of user jobs")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
+        user_parser.add_argument('-l', '--long', action='store_true', help='Long listingjobs')
         user_parser.set_defaults(func=self.jobs)
         # log
         user_parser = subparsers.add_parser('log',
@@ -182,7 +183,8 @@ class UserCommand(object):
         # user_parser.add_argument('-d', '--default_path', default ='/~',
         #                         help='The default path to use when connecting to this site')
         user_parser.add_argument('-e', '--endpoints', nargs='+', required=True,
-                                 help='List of gridftp endpoints for this site in host:port format.')
+                                 help='List of gridftp endpoints for this '
+                                      'site in host:port format.')
         user_parser.add_argument('-p', '--public', action='store_true')
         user_parser.add_argument('-u', '--user_ca_cert', help='File holding the CA '
                                                               'used for user certificates')
@@ -543,9 +545,10 @@ class UserCommand(object):
         if token:
             client = TransferClientFacade(token)
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
-                             value is not None and key not in ('func', 'token', 'block',
-                                                               'config', 'verbosity','oldname', 'newname')}
-        response = client.rename(args.oldname, args.newname, **accepted_args) # max_tries, priority
+                             value is not None
+                             and key not in ('func', 'token', 'block',
+                                             'config', 'verbosity', 'oldname', 'newname')}
+        response = client.rename(args.oldname, args.newname, **accepted_args)  # max_tries, priority
         self._status(response['id'], client, block=args.block)
 
     def log(self, args):
@@ -576,7 +579,7 @@ class UserCommand(object):
         if token:
             client = TransferClientFacade(token)
             jobs = client.jobs()
-            UserCommand._print_formatted_jobs_info(jobs)
+            UserCommand._print_formatted_jobs_info(jobs, long=args.long)
 
     def get_site(self, args):
         """
@@ -641,6 +644,7 @@ class UserCommand(object):
             site_client = SiteClient()
             site_client.set_token(token)
             site_client.add_site(site_info)
+            return None
 
     def del_site(self, args):
         """
@@ -761,8 +765,40 @@ class UserCommand(object):
         print '-' + 91 * '-' + '-'
 
     @staticmethod
-    def _print_formatted_jobs_info(jobs):
-        print jobs
+    def _print_formatted_jobs_info(jobs, long=True):
+
+        lkeys = [('id', 10), ('status', 10), ('type', 8), ('user_id', 20), ('timestamp', 20),
+                 ('priority', 8), ('src_siteid', 12), ('src_filepath', 20), ('dst_siteid', 12),
+                 ('dst_filepath', 20), ('protocol', 8), ('extra_opts', 30)]
+        skeys = [('id', 10), ('status', 10), ('type', 8), ('src_siteid', 12), ('src_filepath', 60),
+                 ('dst_siteid', 12), ('dst_filepath', 60)]
+        if long:
+            keys = lkeys
+        else:
+            keys = skeys
+
+        fmt = '|'
+        fmth = '|'
+        nchars = len(keys) + 1
+        for i, elem in enumerate(keys):
+            fmt += '{%s:^%d}|' % elem
+            fmth += '{%d:^%d}|' % (i, elem[1])
+            nchars += elem[1]
+        print nchars * '-'
+        print fmth.format(*zip(*keys)[0])
+        print nchars * '-'
+        for job in jobs:
+            print fmt.format(
+                **dict(job, timestamp=job['timestamp'][:19],
+                       src_filepath=None if job['src_filepath'] is None
+                       else job['src_filepath'][-dict(keys)['src_filepath']:]
+                       if len(job['src_filepath']) <= dict(keys)['src_filepath']
+                       else '...' + job['src_filepath'][-dict(keys)['src_filepath'] + 3:],
+                       dst_filepath=None if job['dst_filepath'] is None
+                       else job['dst_filepath'][-dict(keys)['dst_filepath']:]
+                       if len(job['dst_filepath']) <= dict(keys)['dst_filepath']
+                       else '...' + job['dst_filepath'][-dict(keys)['dst_filepath'] + 3:]))
+        print nchars * '-'
 
     @staticmethod
     def _get_token(tokenfile, check_validity=True):
@@ -795,3 +831,4 @@ class UserCommand(object):
                     print "No certificate at requested location. Please check and try again."
                 return cert
         print "%s does not exist or it is not a file. Please check and try again." % (certfile,)
+        return None
