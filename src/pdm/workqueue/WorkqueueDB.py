@@ -187,6 +187,8 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
                 This makes use of the JSONMixin.encode_for_json() rather than just simply returning
                 dict(self) in order to get datetime.isoformat() conversions. Crucially it keeps the
                 enums in their integer form.
+
+                Used primarily for communication between Workqueue and Worker.
                 """
                 return super(Job, self).encode_for_json()
 
@@ -195,12 +197,17 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
                 Convert to JSON.
 
                 Conversion for sending to clients. This includes the expansion of enums into
-                human-readable names.
+                human-readable names and removing of credentials.
                 """
-                return dict(super(Job, self).encode_for_json(),
-                            type=JobType(self.type).name,  # pylint: disable=no-member
-                            protocol=JobProtocol(self.protocol).name,  # pylint: disable=no-member
-                            status=JobStatus(self.status).name)  # pylint: disable=no-member
+                # pylint: disable=no-member
+                return_dict = dict(super(Job, self).encode_for_json(),
+                                   type=JobType(self.type).name,
+                                   protocol=JobProtocol(self.protocol).name,
+                                   status=JobStatus(self.status).name)
+                # Don't return credentials to clients.
+                return_dict.pop('src_credentials', None)
+                return_dict.pop('dst_credentials', None)
+                return return_dict
 
             def __init__(self, **kwargs):
                 """Initialisation."""

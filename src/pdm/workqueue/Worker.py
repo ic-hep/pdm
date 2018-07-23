@@ -140,7 +140,6 @@ class StdOutDispatcher(asyncore.file_dispatcher):
 
     def handle_read(self):
         """Handle read events."""
-
         self._buffer += self.recv(8192)
         buffered_elements = self._buffer.split('\n')
         self._buffer = buffered_elements.pop()
@@ -315,9 +314,10 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                         data['files'].append(src + (urlunsplit((protocol,
                                                                 random.choice(dst_endpoints),
                                                                 element['dst_filepath'], '', '')),))
+                    # pylint: disable=bad-continuation
                     elif element['type'] == JobType.MKDIR\
-                            or (element['type'] == JobType.REMOVE
-                                and element['src_filepath'].endswith('/')):
+                            or (element['type'] == JobType.REMOVE and
+                                element['src_filepath'].endswith('/')):
                         data.setdefault('dirs', []).append(src)
                     else:
                         data['files'].append(src)
