@@ -137,7 +137,7 @@ class UserCommand(object):
                                             help="get status of user jobs")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
-        user_parser.add_argument('-l', '--long', action='store_true', help='Long listingjobs')
+        user_parser.add_argument('-l', '--long_listing', action='store_true', help='Long listingjobs')
         user_parser.set_defaults(func=self.jobs)
         # log
         user_parser = subparsers.add_parser('log',
@@ -579,7 +579,7 @@ class UserCommand(object):
         if token:
             client = TransferClientFacade(token)
             jobs = client.jobs()
-            UserCommand._print_formatted_jobs_info(jobs, long=args.long)
+            UserCommand._print_formatted_jobs_info(jobs, long_listing=args.long)
 
     def get_site(self, args):
         """
@@ -765,7 +765,7 @@ class UserCommand(object):
         print '-' + 91 * '-' + '-'
 
     @staticmethod
-    def _print_formatted_jobs_info(jobs, long=True):
+    def _print_formatted_jobs_info(jobs, long_listing=True):
 
         lkeys = [('id', 10), ('status', 10), ('type', 8), ('user_id', 20), ('timestamp', 20),
                  ('priority', 8), ('src_siteid', 12), ('src_filepath', 20), ('dst_siteid', 12),
