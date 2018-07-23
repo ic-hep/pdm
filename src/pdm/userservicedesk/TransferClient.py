@@ -179,7 +179,7 @@ class TransferClient(object):
     def elements(self, job_id):
         """
         Get job elements information
-        :param job_id:
+        :param job_id: job id
         :return: workqueue elements response
         """
 
