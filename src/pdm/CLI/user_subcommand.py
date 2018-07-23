@@ -788,16 +788,23 @@ class UserCommand(object):
         print fmth.format(*zip(*keys)[0])
         print nchars * '-'
         for job in jobs:
+            # only print the tail of the paths if space permits;
+            # if the truncation occurs, put 3 dots before the path.
+
+            src_filepath = None if job['src_filepath'] is None \
+                else job['src_filepath'][-dict(keys)['src_filepath']:] \
+                if len(job['src_filepath']) <= dict(keys)['src_filepath'] \
+                else '...' + job['src_filepath'][-dict(keys)['src_filepath'] + 3:]
+
+            dst_filepath = None if job['dst_filepath'] is None \
+                else job['dst_filepath'][-dict(keys)['dst_filepath']:] \
+                if len(job['dst_filepath']) <= dict(keys)['dst_filepath'] \
+                else '...' + job['dst_filepath'][-dict(keys)['dst_filepath'] + 3:]
+
             print fmt.format(
                 **dict(job, timestamp=job['timestamp'][:19],
-                       src_filepath=None if job['src_filepath'] is None
-                       else job['src_filepath'][-dict(keys)['src_filepath']:]
-                       if len(job['src_filepath']) <= dict(keys)['src_filepath']
-                       else '...' + job['src_filepath'][-dict(keys)['src_filepath'] + 3:],
-                       dst_filepath=None if job['dst_filepath'] is None
-                       else job['dst_filepath'][-dict(keys)['dst_filepath']:]
-                       if len(job['dst_filepath']) <= dict(keys)['dst_filepath']
-                       else '...' + job['dst_filepath'][-dict(keys)['dst_filepath'] + 3:]))
+                       src_filepath=src_filepath,
+                       dst_filepath=dst_filepath))
         print nchars * '-'
 
     @staticmethod
