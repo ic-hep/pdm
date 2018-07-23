@@ -167,3 +167,11 @@ class TransferClient(object):
                                            **kwargs)
 
         return response
+
+    def jobs(self):
+        """
+        Get user jobs' info.
+        :return:
+        """
+        response = self.__wq_client.jobs()
+        return response

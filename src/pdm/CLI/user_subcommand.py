@@ -40,7 +40,7 @@ class UserCommand(object):
         user_parser = subparsers.add_parser('unregister', help="Delete a user from the PDM.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
-        # TODO sue to a bug in the SiteService, commented out
+        # TODO due to a bug in the SiteService, commented out
         # user_parser.set_defaults(func=self.unregister)
         user_parser.set_defaults(func=self.not_implemented)
         # login
@@ -132,6 +132,13 @@ class UserCommand(object):
         st_help = "periodically check the job status (up to %d times)" % (self.__max_iter,)
         user_parser.add_argument('-b', '--block', action='store_true', help=st_help)
         user_parser.set_defaults(func=self.status)
+        # jobs
+        user_parser = subparsers.add_parser('jobs',
+                                            help="get status of user jobs")
+        user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
+                                 help='optional token file location (default=~/.pdm/token)')
+        user_parser.add_argument('-l', '--long_listing', action='store_true', help='Long listingjobs')
+        user_parser.set_defaults(func=self.jobs)
         # log
         user_parser = subparsers.add_parser('log',
                                             help="get log of a job/task.")
@@ -176,7 +183,8 @@ class UserCommand(object):
         # user_parser.add_argument('-d', '--default_path', default ='/~',
         #                         help='The default path to use when connecting to this site')
         user_parser.add_argument('-e', '--endpoints', nargs='+', required=True,
-                                 help='List of gridftp endpoints for this site in host:port format.')
+                                 help='List of gridftp endpoints for this '
+                                      'site in host:port format.')
         user_parser.add_argument('-p', '--public', action='store_true')
         user_parser.add_argument('-u', '--user_ca_cert', help='File holding the CA '
                                                               'used for user certificates')
@@ -537,9 +545,10 @@ class UserCommand(object):
         if token:
             client = TransferClientFacade(token)
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
-                             value is not None and key not in ('func', 'token', 'block',
-                                                               'config', 'verbosity','oldname', 'newname')}
-        response = client.rename(args.oldname, args.newname, **accepted_args) # max_tries, priority
+                             value is not None
+                             and key not in ('func', 'token', 'block',
+                                             'config', 'verbosity', 'oldname', 'newname')}
+        response = client.rename(args.oldname, args.newname, **accepted_args)  # max_tries, priority
         self._status(response['id'], client, block=args.block)
 
     def log(self, args):
@@ -559,6 +568,18 @@ class UserCommand(object):
                     pprint(element)
                 else:
                     print log_listing
+
+    def jobs(self, args):
+        """
+        Get user jobs' info
+        :param args:
+        :return:
+        """
+        token = UserCommand._get_token(args.token)
+        if token:
+            client = TransferClientFacade(token)
+            jobs = client.jobs()
+            UserCommand._print_formatted_jobs_info(jobs, long_listing=args.long_listing)
 
     def get_site(self, args):
         """
@@ -623,6 +644,7 @@ class UserCommand(object):
             site_client = SiteClient()
             site_client.set_token(token)
             site_client.add_site(site_info)
+            return None
 
     def del_site(self, args):
         """
@@ -743,6 +765,49 @@ class UserCommand(object):
         print '-' + 91 * '-' + '-'
 
     @staticmethod
+    def _print_formatted_jobs_info(jobs, long_listing=True):
+
+        lkeys = [('id', 10), ('status', 10), ('type', 8), ('user_id', 20), ('timestamp', 20),
+                 ('priority', 8), ('src_siteid', 12), ('src_filepath', 20), ('dst_siteid', 12),
+                 ('dst_filepath', 20), ('protocol', 8), ('extra_opts', 30)]
+        skeys = [('id', 10), ('status', 10), ('type', 8), ('src_siteid', 12), ('src_filepath', 60),
+                 ('dst_siteid', 12), ('dst_filepath', 60)]
+        if long:
+            keys = lkeys
+        else:
+            keys = skeys
+
+        fmt = '|'
+        fmth = '|'
+        nchars = len(keys) + 1
+        for i, elem in enumerate(keys):
+            fmt += '{%s:^%d}|' % elem
+            fmth += '{%d:^%d}|' % (i, elem[1])
+            nchars += elem[1]
+        print nchars * '-'
+        print fmth.format(*zip(*keys)[0])
+        print nchars * '-'
+        for job in jobs:
+            # only print the tail of the paths if space permits;
+            # if the truncation occurs, put 3 dots before the path.
+
+            src_filepath = None if job['src_filepath'] is None \
+                else job['src_filepath'] \
+                if len(job['src_filepath']) <= dict(keys)['src_filepath'] \
+                else '...' + job['src_filepath'][-dict(keys)['src_filepath'] + 3:]
+
+            dst_filepath = None if job['dst_filepath'] is None \
+                else job['dst_filepath'] \
+                if len(job['dst_filepath']) <= dict(keys)['dst_filepath'] \
+                else '...' + job['dst_filepath'][-dict(keys)['dst_filepath'] + 3:]
+
+            print fmt.format(
+                **dict(job, timestamp=job['timestamp'][:19],
+                       src_filepath=src_filepath,
+                       dst_filepath=dst_filepath))
+        print nchars * '-'
+
+    @staticmethod
     def _get_token(tokenfile, check_validity=True):
         """
         Get a token from a file, expired or not.
@@ -773,3 +838,4 @@ class UserCommand(object):
                     print "No certificate at requested location. Please check and try again."
                 return cert
         print "%s does not exist or it is not a file. Please check and try again." % (certfile,)
+        return None
