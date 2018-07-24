@@ -137,7 +137,8 @@ class UserCommand(object):
                                             help="get status of user jobs")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
-        user_parser.add_argument('-l', '--long_listing', action='store_true', help='Long listingjobs')
+        user_parser.add_argument('-l', '--long_listing', action='store_true',
+                                 help='Long listingjobs')
         user_parser.set_defaults(func=self.jobs)
         # log
         user_parser = subparsers.add_parser('log',
@@ -579,7 +580,7 @@ class UserCommand(object):
         if token:
             client = TransferClientFacade(token)
             jobs = client.jobs()
-            UserCommand._print_formatted_jobs_info(jobs, long_listing=args.long_listing)
+            UserCommand._print_formatted_jobs_info(jobs, token, long_listing=args.long_listing)
 
     def get_site(self, args):
         """
@@ -644,7 +645,7 @@ class UserCommand(object):
             site_client = SiteClient()
             site_client.set_token(token)
             site_client.add_site(site_info)
-            return None
+        return None
 
     def del_site(self, args):
         """
@@ -711,6 +712,22 @@ class UserCommand(object):
                 print "site %s not found !" % (args.name,)
 
     @staticmethod
+    def _get_site_name(site_id, token):
+        """
+        Get site name from site id. Requires a token. If site name cannot be resolved an
+        empty string is returned
+        :param site_id: site id
+        :param token: user token
+        :return: site name
+        """
+        site_name = 'Unknown'
+        if token and site_id is not None:
+            _site_client = SiteClient()
+            _site_client.set_token(token)
+            site_name = _site_client.get_site(site_id)['site_name']
+        return site_name
+
+    @staticmethod
     def _get_site_id(name, token):
         site_client = SiteClient()
         site_client.set_token(token)
@@ -765,9 +782,9 @@ class UserCommand(object):
         print '-' + 91 * '-' + '-'
 
     @staticmethod
-    def _print_formatted_jobs_info(jobs, long_listing=True):
+    def _print_formatted_jobs_info(jobs, token, long_listing=True):
 
-        lkeys = [('id', 10), ('status', 10), ('type', 8), ('user_id', 20), ('timestamp', 20),
+        lkeys = [('id', 10), ('status', 10), ('type', 8), ('timestamp', 20),
                  ('priority', 8), ('src_siteid', 12), ('src_filepath', 20), ('dst_siteid', 12),
                  ('dst_filepath', 20), ('protocol', 8), ('extra_opts', 30)]
         skeys = [('id', 10), ('status', 10), ('type', 8), ('src_siteid', 12), ('src_filepath', 60),
@@ -787,25 +804,56 @@ class UserCommand(object):
         print nchars * '-'
         print fmth.format(*zip(*keys)[0])
         print nchars * '-'
+
+        sites = {}
         for job in jobs:
             # only print the tail of the paths if space permits;
             # if the truncation occurs, put 3 dots before the path.
+            src_id = job['src_siteid']
+            dst_id = job['dst_siteid']
 
-            src_filepath = None if job['src_filepath'] is None \
-                else job['src_filepath'] \
-                if len(job['src_filepath']) <= dict(keys)['src_filepath'] \
-                else '...' + job['src_filepath'][-dict(keys)['src_filepath'] + 3:]
+            src_sitename = sites.get(src_id)
+            if src_sitename is None:
+                src_sitename = UserCommand._get_site_name(job['src_siteid'], token)
+                sites[src_id] = src_sitename
 
-            dst_filepath = None if job['dst_filepath'] is None \
-                else job['dst_filepath'] \
-                if len(job['dst_filepath']) <= dict(keys)['dst_filepath'] \
-                else '...' + job['dst_filepath'][-dict(keys)['dst_filepath'] + 3:]
+            dst_sitename = sites.get(dst_id)
+            if dst_sitename is None:
+                dst_sitename = UserCommand._get_site_name(job['dst_siteid'], token)
+                sites[dst_id] = dst_sitename
+
+            src_filepath = UserCommand._trim_string_to_size(job['src_filepath'],
+                                                            dict(keys)['src_filepath'])
+            dst_filepath = UserCommand._trim_string_to_size(job['dst_filepath'],
+                                                            dict(keys)['dst_filepath'])
 
             print fmt.format(
                 **dict(job, timestamp=job['timestamp'][:19],
                        src_filepath=src_filepath,
-                       dst_filepath=dst_filepath))
+                       dst_filepath=dst_filepath,
+                       src_siteid=src_sitename,
+                       dst_siteid=dst_sitename))
         print nchars * '-'
+
+    @staticmethod
+    def _trim_string_to_size(source, size, dots=True):
+        """
+        Chop off beginning of a string to size. Add 3 optional dots
+        at the beginning if trimming is required.
+        :param source: string to chop
+        :param size: field size
+        :param dots: optional dots
+        :return: modified string
+        """
+        if source is None:
+            return None
+        elif len(source) <= size:
+            return source
+        else:
+            if dots:
+                return '...' + source[-size + 3:]
+            else:
+                return source[-size:]
 
     @staticmethod
     def _get_token(tokenfile, check_validity=True):
