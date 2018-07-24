@@ -15,17 +15,9 @@
 <script>
 $(document).ready(function(){
     // placeholder spinning pdm image
-    $("#jobs_table").DataTable({
-        "columnDefs" : [{
-            "className": "dt-center",
-            "targets" : 0 ,
-            "data": "img",
-            "render" : function ( url, type, full) {
-                         return `<img src=${full}/>`;
-                       }
-            }],
-        "data": [['/static/images/pdm_animation.gif']]
-    });
+    var jobs_table = $("#jobs_table");
+    jobs_table.append($("<img>", {src: '/static/images/pdm_animation.gif', class: "w-50"}));
+
 
     $.ajax({
         url: "/web/js/jobs",
@@ -38,10 +30,10 @@ $(document).ready(function(){
         },
         success: function(response, status, request){
             console.log("Successfully retrieved users jobs.");
-            $("#jobs_table").DataTable().destroy();
-            $("#jobs_table").empty(); // needed if columns change
-            $("#jobs_table").DataTable(response);
-            $($("#jobs_table").DataTable().table().container()).addClass("w-100");
+            jobs_table.empty();
+            jobs_table.toggleClass("text-center");
+            var table_container = jobs_table.DataTable(response).table().container();
+            $(table_container).addClass("w-100");
         }
     });
 
@@ -49,7 +41,7 @@ $(document).ready(function(){
     $('#jobs_table').on('click', 'tbody tr td.details-control span.oi', function (){
         var details_control = $(this);
         var tr = details_control.closest('tr');
-        var row = $("#jobs_table").DataTable().row(tr);
+        var row = jobs_table.DataTable().row(tr);
         details_control.toggleClass("oi-chevron-top text-danger oi-chevron-bottom text-primary")
         if ( row.child.isShown() ) {
             // This row is already open - close it
@@ -59,7 +51,7 @@ $(document).ready(function(){
         }
         var job_id = tr.children("td.job_id").text();
         var loading_image = $("<img>", {src: "/static/images/pdm_animation.gif"})
-        var subtable = $("<table>");
+        var subtable = $("<table>", {class: "compact w-100"});
         row.child(loading_image).show();
         tr.addClass('shown');
         $.ajax({
@@ -82,5 +74,5 @@ $(document).ready(function(){
 </script>
 {% endblock %}
 {% block content %}
-<table id="jobs_table" class="display compact w-100"></table>
+<table id="jobs_table" class="display compact w-100 text-center"></table>
 {% endblock %}

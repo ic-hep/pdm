@@ -174,11 +174,18 @@ class WebPageService(object):
         token = flask.session['token']
         tclient = TransferClient(token)
         elements = tclient.elements(job_id)
-        columns = [{'title': 'ID', 'data': 'id'},
-                   {'title': 'Type', 'data': 'type'},
-                   {'title': 'From', 'data': 'src_filepath'},
-                   {'title': 'To', 'data': 'dst_filepath'},
-                   {'title': 'Status', 'data': 'status'}]
+        if not elements:
+            abort(404, "No elements for job %s" % job_id)
+        type = elements[-1]['type']
+        if type == "COPY":
+            columns = [{'title': 'ID', 'data': 'id'},
+                       {'title': 'From', 'data': 'src_filepath'},
+                       {'title': 'To', 'data': 'dst_filepath'},
+                       {'title': 'Status', 'data': 'status'}]
+        else:
+            columns = [{'title': 'ID', 'data': 'id'},
+                       {'title': 'Target', 'data': 'src_filepath'},
+                       {'title': 'Status', 'data': 'status'}]
         #        columns.append({"data": key, 'title': key} for key in jobs[0].keys())
         table_config = {'columns': columns,
                         'data': [element for element in elements if element['type'] in ('COPY', 'REMOVE')],
