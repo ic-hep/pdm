@@ -170,7 +170,7 @@ class WorkqueueClient(RESTClient):
             job_id (int): The id number of the job containing elements to get.
 
         Returns:
-            dict: the jobs elements as dicts.
+            list: the jobs elements as dicts.
         """
         return self.get('jobs/%s/elements' % job_id)
 
