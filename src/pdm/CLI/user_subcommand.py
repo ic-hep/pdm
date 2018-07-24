@@ -137,7 +137,8 @@ class UserCommand(object):
                                             help="get status of user jobs")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
-        user_parser.add_argument('-l', '--long_listing', action='store_true', help='Long listingjobs')
+        user_parser.add_argument('-l', '--long_listing', action='store_true',
+                                 help='Long listingjobs')
         user_parser.set_defaults(func=self.jobs)
         # log
         user_parser = subparsers.add_parser('log',
@@ -418,7 +419,6 @@ class UserCommand(object):
                 print '|{site_name:40s}|{site_desc:50s}|'.format(**elem)
             print '-' + 91 * '-' + '-'
 
-
     def _print_formatted_listing(self, root, full_listing, level=0):  # pylint: disable=no-self-use
         """
         Print formatted file listing.
@@ -645,7 +645,7 @@ class UserCommand(object):
             site_client = SiteClient()
             site_client.set_token(token)
             site_client.add_site(site_info)
-            return None
+        return None
 
     def del_site(self, args):
         """
@@ -720,7 +720,7 @@ class UserCommand(object):
         :param token: user token
         :return: site name
         """
-        site_name=''
+        site_name = ''
         if token and site_id is not None:
             _site_client = SiteClient()
             _site_client.set_token(token)
@@ -805,7 +805,7 @@ class UserCommand(object):
         print fmth.format(*zip(*keys)[0])
         print nchars * '-'
 
-        sites ={}
+        sites = {}
         for job in jobs:
             # only print the tail of the paths if space permits;
             # if the truncation occurs, put 3 dots before the path.
@@ -815,15 +815,17 @@ class UserCommand(object):
             src_sitename = sites.get(src_id)
             if src_sitename is None:
                 src_sitename = UserCommand._get_site_name(job['src_siteid'], token)
-                sites[src_id] =  src_sitename
+                sites[src_id] = src_sitename
 
             dst_sitename = sites.get(dst_id)
             if dst_sitename is None:
                 dst_sitename = UserCommand._get_site_name(job['dst_siteid'], token)
-                sites[dst_id] =  dst_sitename
+                sites[dst_id] = dst_sitename
 
-            src_filepath = UserCommand._trim_string_to_size(job['src_filepath'], dict(keys)['src_filepath'])
-            dst_filepath = UserCommand._trim_string_to_size(job['dst_filepath'], dict(keys)['dst_filepath'])
+            src_filepath = UserCommand._trim_string_to_size(job['src_filepath'],
+                                                            dict(keys)['src_filepath'])
+            dst_filepath = UserCommand._trim_string_to_size(job['dst_filepath'],
+                                                            dict(keys)['dst_filepath'])
 
             print fmt.format(
                 **dict(job, timestamp=job['timestamp'][:19],
@@ -836,7 +838,8 @@ class UserCommand(object):
     @staticmethod
     def _trim_string_to_size(source, size, dots=True):
         """
-        Chop off beginning of a string to size. Add 3 optional dots at the beginning if trimming is required.
+        Chop off beginning of a string to size. Add 3 optional dots
+        at the beginning if trimming is required.
         :param source: string to chop
         :param size: field size
         :param dots: optional dots
