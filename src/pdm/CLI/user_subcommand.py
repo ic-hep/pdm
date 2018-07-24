@@ -772,7 +772,7 @@ class UserCommand(object):
                  ('dst_filepath', 20), ('protocol', 8), ('extra_opts', 30)]
         skeys = [('id', 10), ('status', 10), ('type', 8), ('src_siteid', 12), ('src_filepath', 60),
                  ('dst_siteid', 12), ('dst_filepath', 60)]
-        if long:
+        if long_listing:
             keys = lkeys
         else:
             keys = skeys
