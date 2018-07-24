@@ -720,7 +720,7 @@ class UserCommand(object):
         :param token: user token
         :return: site name
         """
-        site_name = ''
+        site_name = 'Unknown'
         if token and site_id is not None:
             _site_client = SiteClient()
             _site_client.set_token(token)
