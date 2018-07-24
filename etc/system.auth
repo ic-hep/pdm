@@ -27,6 +27,7 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 /web/js/rename%POST = "SESSION"
 /web/js/mkdir%POST = "SESSION"
 /web/js/jobs%GET = "SESSION"
+/web/js/jobs/?/elements%GET = "SESSION"
 
 [auth/users]
 # Add user
