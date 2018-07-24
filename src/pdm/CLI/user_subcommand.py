@@ -785,10 +785,10 @@ class UserCommand(object):
     def _print_formatted_jobs_info(jobs, token, long_listing=True):
 
         lkeys = [('id', 10), ('status', 10), ('type', 8), ('timestamp', 20),
-                 ('priority', 8), ('src_siteid', 12), ('src_filepath', 20), ('dst_siteid', 12),
+                 ('priority', 8), ('src_sitename', 12), ('src_filepath', 20), ('dst_sitename', 12),
                  ('dst_filepath', 20), ('protocol', 8), ('extra_opts', 30)]
-        skeys = [('id', 10), ('status', 10), ('type', 8), ('src_siteid', 12), ('src_filepath', 60),
-                 ('dst_siteid', 12), ('dst_filepath', 60)]
+        skeys = [('id', 10), ('status', 10), ('type', 8), ('src_sitename', 12), ('src_filepath', 60),
+                 ('dst_sitename', 12), ('dst_filepath', 60)]
         if long_listing:
             keys = lkeys
         else:
@@ -831,8 +831,8 @@ class UserCommand(object):
                 **dict(job, timestamp=job['timestamp'][:19],
                        src_filepath=src_filepath,
                        dst_filepath=dst_filepath,
-                       src_siteid=src_sitename,
-                       dst_siteid=dst_sitename))
+                       src_sitename=src_sitename,
+                       dst_sitename=dst_sitename))
         print nchars * '-'
 
     @staticmethod
