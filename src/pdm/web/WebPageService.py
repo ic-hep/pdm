@@ -114,8 +114,7 @@ class WebPageService(object):
     @export
     def registration():
         """renders the registration page"""
-        return render_template("registration.html")
-
+        return render_template("registration.html", accept_cookies=True)
 
     @staticmethod
     @export_ext("registration", methods=["POST"])
@@ -140,13 +139,6 @@ class WebPageService(object):
             return render_template("registration.html")
 
         return '%s' % request.form
-
-    @staticmethod
-    @export_ext("forgottenpwd")
-    def forgottenpwd():
-        """TODO: make a function that resets the password"""
-        return render_template("forgottenpwd.html")
-
 
     @staticmethod
     @export_ext("js/jobs")

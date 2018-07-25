@@ -1,66 +1,45 @@
-<html>
-  <head>
-    <title>Registration</title>
-    <link rel="stylesheet" href="/static/webpage.css">
-  </head>
-  <body>
-    <div class="inner">
-      <div class="fpborder">
-        <font color="red">
-          {% with messages = get_flashed_messages() %}
-          {% if messages %}
-          <ul class=flashes>
-            {% for message in messages %}
-            <li>{{ message }}</li>
-            {% endfor %}
-          </ul>
-          {% endif %}
-          {% endwith %}
-        </font>
-
-	<h1><img src="{{url_for('static', filename='images/pdm.png')}}" alt="Logo"> <br> Register Me</h1>
-	<center>
-
-	<form method="POST" action="/web/registration">
-	  <table>
-            <tr><td>
-		Email: 
-	      </td><td>
-		<input type="text" name="email"/> 
-	      </td>
-	    </tr><tr>
-	      <td>
-		First name:  
-	      </td><td>
-		<input type="text" name="firstname"/>
-	      </td>
-	    </tr><tr>
-	      <td>
-		Last name:
-	      </td><td>
-		<input type="text" name="lastname"/>
-	      </td>
-	    </tr><tr>
-	      <td>
-	      Password: 
-	      </td><td>
-		<input type="password" pattern=".{8,}" name="password"/> 
-	      </td>
-	    </tr><tr>
-	      <td>
-		Confirm password: 
-	      </td><td>
-		<input type="password" name="cpassword"/> 
-	      </td>
-	    </tr><tr>
-	      <td></td><td>
-	      <td align="right"><button class="lbutton" type="submit">Register</button></td>
-	      </td>
-	    </tr>
-	  </table>
-	</form>
-	</center>
-      </div>
+{% extends "datamover.html" %}
+{% block footer %}{% endblock footer %}
+{% block content%}
+<form method="POST" action="/web/registration">
+    <div class="form-group">
+        <label for="forename">User details:</label>
+        <div class="input-group">
+            <div class="input-group-prepend">
+                <span class="input-group-text">
+                    <span class="oi oi-person text-primary" aria-hidden="true"></span>
+                </span>
+            </div>
+            <input id=forename name="forename" type="text" placeholder="Forename" class="form-control" aria-label="forename" aria-describedby="basic-addon1" required>
+            <input id=surname name="surname" type="text" placeholder="Surname" class="form-control" aria-label="surname" aria-describedby="basic-addon1" required>
+        </div>
     </div>
-  </body>
-</html>
+
+    <div class="form-group">
+        <label for="username">Username:</label>
+        <div class="input-group">
+            <div class="input-group-prepend">
+                <span class="input-group-text">
+                    <span class="oi oi-person text-primary" aria-hidden="true"></span>
+                </span>
+            </div>
+            <input id=username name="username" type="text" class="form-control" placeholder="email address" aria-label="Username" aria-describedby="basic-addon1" required>
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="password">Password:</label>
+        <div class="input-group">
+            <div class="input-group-prepend">
+                <span class="input-group-text">
+                    <span class="oi oi-key text-primary" aria-hidden="true"></span>
+                </span>
+            </div>
+            <input id="password" name="password" type="password" class="form-control" placeholder="Password" required>
+            <input id="password_repeat" name="password_repeat" type="password" class="form-control" placeholder="Retype Password" required>
+        </div>
+    </div>
+    <div class="d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary">Sign in</button>
+    </div>
+</form>
+{% endblock content %}

@@ -57,6 +57,7 @@
         </div>
         <br><hr>
         <div class="panel-body text-left">
+            {% block content %}
             <form method="POST" action="/web/datamover">
                 <div class="form-group">
                     <label for="username">Username:</label>
@@ -86,20 +87,23 @@
                         </div>
                     </div>
                 </div>
-                <a href="#">Help! I forgot my password.</a>
+                <a href="/static/forgottenpwd.html">Help! I forgot my password.</a>
                 <br><br>
                 <button type="submit" class="btn btn-primary">Sign in</button>
                 <button type="button" class="btn btn-outline-primary" id="sign_up">Sign up</button>
             </form>
+            {% endblock content %}
         </div>
         <br>
         <div class="panel-footer">
+            {% block footer %}
             <div class="float-left">
                 <img src="https://img.shields.io/badge/Status-{{status}}-yellow.svg?style=social">
             </div>
             <div class="float-right">
                 <span id="info" class="oi oi-info text-primary clickable" aria-hidden="true"></span>
             </div>
+            {% endblock footer %}
         </div>
     </div>
 </div>
