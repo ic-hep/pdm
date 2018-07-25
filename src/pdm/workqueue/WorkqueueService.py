@@ -5,6 +5,7 @@ from enum import Enum
 from functools import partial
 from itertools import groupby
 from operator import attrgetter
+from collections import Counter
 from pprint import pformat
 
 from flask import request, abort, current_app
@@ -327,7 +328,17 @@ class WorkqueueService(object):
     def get_jobs():
         """Get all jobs for a user."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
-        return jsonify(Job.query.filter_by(user_id=HRService.check_token()).all())
+        jobs = []
+        for job in Job.query.filter_by(user_id=HRService.check_token()).all():
+            elements = job.elements
+            status_counter = Counter(element.status for element in elements)
+            new_job = job.encode_for_json()
+            new_job.update(num_elements=len(elements),
+                           num_done=status_counter[JobStatus.DONE],
+                           num_failed=status_counter[JobStatus.FAILED],
+                           num_submitted=status_counter[JobStatus.SUBMITTED])
+            jobs.append(new_job)
+        return jsonify(jobs)
 
     @staticmethod
     @export_ext("jobs/<int:job_id>", ['GET'])
