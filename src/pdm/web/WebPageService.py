@@ -153,20 +153,7 @@ class WebPageService(object):
     def jobs():
         token = flask.session['token']
         tclient = TransferClient(token)
-        jobs = tclient.jobs()
-        columns = [{"className": 'details-control',
-                    "orderable": False,
-                    "data": None,
-                    "defaultContent": '<span class="oi oi-chevron-bottom text-primary"></span>'},
-                   {'title': 'ID', 'data': 'id', 'className': 'job_id'},
-                   {'title': 'Type', 'data': 'type'},
-                   {'title': 'Progress', 'data': None, 'defaultContent': 'blah'},
-                   {'title': 'Status', 'data': 'status'}]
-#        columns.append({"data": key, 'title': key} for key in jobs[0].keys())
-        table_config = {'columns': columns,
-                        'data': [job for job in jobs if job['type'] in ('COPY', 'REMOVE')],
-                        'order': [[1, "desc"]]}
-        return json.dumps(table_config)
+        return json.dumps(tclient.jobs())
 
     @staticmethod
     @export_ext("js/jobs/<int:job_id>/elements")
@@ -174,23 +161,7 @@ class WebPageService(object):
         token = flask.session['token']
         tclient = TransferClient(token)
         elements = tclient.elements(job_id)
-        if not elements:
-            abort(404, "No elements for job %s" % job_id)
-        type = elements[-1]['type']
-        if type == "COPY":
-            columns = [{'title': 'ID', 'data': 'id'},
-                       {'title': 'From', 'data': 'src_filepath'},
-                       {'title': 'To', 'data': 'dst_filepath'},
-                       {'title': 'Status', 'data': 'status'}]
-        else:
-            columns = [{'title': 'ID', 'data': 'id'},
-                       {'title': 'Target', 'data': 'src_filepath'},
-                       {'title': 'Status', 'data': 'status'}]
-        #        columns.append({"data": key, 'title': key} for key in jobs[0].keys())
-        table_config = {'columns': columns,
-                        'data': [element for element in elements if element['type'] in ('COPY', 'REMOVE')],
-                        'order': [[0, "asc"]]}
-        return json.dumps(table_config)
+        return json.dumps(elements)
 
     @staticmethod
     @export_ext("dashboard/joblist")
