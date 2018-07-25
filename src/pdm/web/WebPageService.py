@@ -120,25 +120,22 @@ class WebPageService(object):
     @export_ext("registration", methods=["POST"])
     def registration_post():
         """deals with the registration form"""
-        if request.form['password'] != request.form['cpassword']:
-            flash('The two passwords do not match.')
+        if request.form['password'] != request.form['password_repeat']:
             # to do: make sure page does not come back blank
-            return render_template("registration.html")
+            return render_template("registration.html", accept_cookies=True)
         # create dictionary to match HRClient input
         hrdict = {
-            "email" : request.form['email'],
-            "name" : request.form['firstname'],
-            "surname" : request.form['lastname'],
-            "password" : request.form['password'],
+            "email": request.form['username'],
+            "name": request.form['forename'],
+            "surname": request.form['surname'],
+            "password": request.form['password'],
         }
 
         try:
             current_app.hrclient.add_user(hrdict)
         except Exception as err:
-            flash('Could not add user (%s)' % err)
-            return render_template("registration.html")
-
-        return '%s' % request.form
+            return render_template("registration.html", accept_cookies=True)
+        return redirect("/web/datamover")
 
     @staticmethod
     @export_ext("js/jobs")
