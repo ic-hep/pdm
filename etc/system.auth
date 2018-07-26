@@ -20,6 +20,14 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 /web/forgottenpwd = "ALL"
 # All other pages
 /web/* = "SESSION"
+/web/sitelogin/?%POST = "SESSION"
+/web/js/list%POST = "SESSION"
+/web/js/copy%POST = "SESSION"
+/web/js/remove%POST = "SESSION"
+/web/js/rename%POST = "SESSION"
+/web/js/mkdir%POST = "SESSION"
+/web/js/jobs%GET = "SESSION"
+/web/js/jobs/?/elements%GET = "SESSION"
 
 [auth/users]
 # Add user

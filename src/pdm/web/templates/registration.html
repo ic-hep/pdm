@@ -1,66 +1,116 @@
-<html>
-  <head>
-    <title>Registration</title>
-    <link rel="stylesheet" href="/static/webpage.css">
-  </head>
-  <body>
-    <div class="inner">
-      <div class="fpborder">
-        <font color="red">
-          {% with messages = get_flashed_messages() %}
-          {% if messages %}
-          <ul class=flashes>
-            {% for message in messages %}
-            <li>{{ message }}</li>
-            {% endfor %}
-          </ul>
-          {% endif %}
-          {% endwith %}
-        </font>
-
-	<h1><img src="{{url_for('static', filename='images/pdm.png')}}" alt="Logo"> <br> Register Me</h1>
-	<center>
-
-	<form method="POST" action="/web/registration">
-	  <table>
-            <tr><td>
-		Email: 
-	      </td><td>
-		<input type="text" name="email"/> 
-	      </td>
-	    </tr><tr>
-	      <td>
-		First name:  
-	      </td><td>
-		<input type="text" name="firstname"/>
-	      </td>
-	    </tr><tr>
-	      <td>
-		Last name:
-	      </td><td>
-		<input type="text" name="lastname"/>
-	      </td>
-	    </tr><tr>
-	      <td>
-	      Password: 
-	      </td><td>
-		<input type="password" pattern=".{8,}" name="password"/> 
-	      </td>
-	    </tr><tr>
-	      <td>
-		Confirm password: 
-	      </td><td>
-		<input type="password" name="cpassword"/> 
-	      </td>
-	    </tr><tr>
-	      <td></td><td>
-	      <td align="right"><button class="lbutton" type="submit">Register</button></td>
-	      </td>
-	    </tr>
-	  </table>
-	</form>
-	</center>
-      </div>
+{% extends "datamover.html" %}
+{% block footer %}{% endblock footer %}
+{% block content%}
+<form method="POST" action="/web/registration">
+    <div class="form-group">
+        <label for="forename">User details:</label>
+        <div class="input-group">
+            <div class="input-group-prepend">
+                <span class="input-group-text">
+                    <span class="oi oi-person text-primary" aria-hidden="true"></span>
+                </span>
+            </div>
+            <input id=forename name="forename" type="text" value="{{forename}}" placeholder="Forename" class="form-control" aria-label="forename" aria-describedby="basic-addon1" required>
+            <input id=surname name="surname" type="text" value="{{surname}}" placeholder="Surname" class="form-control" aria-label="surname" aria-describedby="basic-addon1" required>
+        </div>
     </div>
-  </body>
-</html>
+
+    <div class="form-group">
+        <label for="username">Username:</label>
+        <div class="input-group">
+            <div class="input-group-prepend">
+                <span class="input-group-text">
+                    <span id="username_icon" class="oi oi-person text-primary" aria-hidden="true"></span>
+                </span>
+            </div>
+            <input id=username name="username" type="text" class="form-control" value="{{username}}" placeholder="email address" aria-label="Username" aria-describedby="basic-addon1" data-container="body" data-toggle="popover" data-placement="right" data-content="Invalid email: regex match '^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$' only" required>
+        </div>
+        <div class="d-flex justify-content-end">
+            <span id="username_ok" class="oi oi-circle-x text-danger" style="display:none;"></span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="password">Password:</label>
+        <div class="input-group">
+            <div class="input-group-prepend">
+                <span class="input-group-text">
+                    <span id="password_icon" class="oi oi-key text-primary" aria-hidden="true"></span>
+                </span>
+            </div>
+            <input id="password" name="password" type="password" class="form-control pwd" value="{{password}}" placeholder="Password" required>
+            <input id="password_repeat" name="password_repeat" type="password" class="form-control pwd" value="{{password_repeat}}" placeholder="Retype Password" data-container="body" data-toggle="popover" data-placement="right" data-content="passwords don't match." required>
+        </div>
+        <div class="d-flex justify-content-end">
+            <span id="password_ok" class="oi oi-circle-x text-danger" style="display:none;"></span>
+        </div>
+    </div>
+    <div class="d-flex justify-content-end">
+        <button id="submit_button" type="submit" class="btn btn-primary">Sign in</button>
+    </div>
+</form>
+{% endblock content %}
+{% block script %}
+<script>
+$(document).ready(function(){
+    $("#username").keyup(function(){
+        var username = $(this).val();
+        if (username === ""){
+            $("#username_ok").hide();
+            return;
+        }
+
+        var email = new RegExp('^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$');
+        if (email.test(username)){
+            $("#username_ok").removeClass("text-danger oi-circle-x");
+            $("#username_ok").addClass("text-success oi-circle-check");
+        }
+        else{
+            $("#username_ok").removeClass("text-success oi-circle-check");
+            $("#username_ok").addClass("text-danger oi-circle-x");
+        }
+        $("#username_ok").show();
+    })
+
+    $("input.pwd").keyup(function(){
+        var pwd_ok = $("#password_ok");
+        var pwd = $("#password").val();
+        var pwd_repeat = $("#password_repeat").val();
+        if (pwd === "" && pwd_repeat === ""){
+            pwd_ok.hide();
+            return;
+        }
+
+        if (pwd === pwd_repeat){
+            pwd_ok.removeClass("text-danger oi-circle-x");
+            pwd_ok.addClass("text-success oi-circle-check");
+        }
+        else{
+            pwd_ok.removeClass("text-success oi-circle-check");
+            pwd_ok.addClass("text-danger oi-circle-x");
+        }
+        pwd_ok.show();
+    });
+
+    $("#submit_button").click(function(event){
+        var username_ok = $("#username_ok");
+        var password_ok = $("#password_ok");
+        if (username_ok.is(":visible") && username_ok.hasClass("oi-circle-x")){
+            event.preventDefault();
+            $("#username_icon").removeClass("text-primary");
+            $("#username_icon").addClass("text-danger");
+            $('#username').popover({container: 'body'});
+            $("#username").trigger('click');
+        }
+
+        if(password_ok.is(":visible") && password_ok.hasClass("oi-circle-x")){
+            event.preventDefault();
+            $("#password_icon").removeClass("text-primary");
+            $("#password_icon").addClass("text-danger");
+            $("#password_repeat").popover({container: 'body'});
+            $("#password_repeat").trigger('click');
+        }
+    });
+});
+</script>
+{% endblock script %}

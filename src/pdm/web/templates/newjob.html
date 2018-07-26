@@ -1,0 +1,63 @@
+{% extends "dashboard.html" %}
+{% block navhomeactive %}active{% endblock %}
+{% block navhomeurl%}#{% endblock %}
+{% block content %}
+    <div class="card listing-window">
+        <select id="src_site" class="card-header custom-select text-center py-1 sitelist">
+            <option value="" hidden selected>Select Site</option>
+        </select>
+        <div id="src_panel" class="card-body text-center ui-widget-header">
+            <div class="input-group directory_input py-3" hidden>
+                <input type="text" class="form-control" placeholder="~">
+                <div class="input-group-append go_button clickable">
+                    <span class="input-group-text">
+                        <span class="oi oi-share text-primary" aria-hidden="true"></span>
+                    </span>
+                </div>
+            </div>
+            <img src="/static/images/pdm.png"/><br>
+            Please select a site to continue
+        </div>
+        <div class="card-footer text-right">
+            <span id="src_newdir" class="oi oi-folder newdir"></span>&ensp;
+            <span id="src_reload" class="oi oi-reload"></span>
+        </div>
+    </div>
+
+    <div class="btn-group-vertical" role="group">
+        <button id="src_dst_copy" type="button" class="btn btn-primary">
+            <span class="oi oi-caret-right text-light"></span>
+        </button>
+        <button id="dst_src_copy" type="button" class="btn btn-primary">
+            <span class="oi oi-caret-left text-light"></span>
+        </button>
+        <button id="remove" type="button" class="btn btn-danger">
+            <span class="oi oi-trash text-danger text-light"></span>
+        </button>
+    </div>
+
+    <div class="card listing-window">
+        <select id="dst_site" class="card-header custom-select text-center py-1 sitelist">
+            <option value="" hidden selected>Select Site</option>
+        </select>
+        <div id="dst_panel" class="card-body text-center ui-widget-header">
+            <div class="input-group directory_input py-3" hidden>
+                <input type="text" class="form-control" placeholder="~">
+                <div class="input-group-append go_button clickable">
+                    <span class="input-group-text">
+                        <span class="oi oi-share text-primary" aria-hidden="true"></span>
+                    </span>
+                </div>
+            </div>
+            <img src="/static/images/pdm.png"/><br>
+            Please select a site to continue
+        </div>
+        <div class="card-footer text-right ui-widget-header">
+            <span id="dst_newdir" class="oi oi-folder newdir"></span>&ensp;
+            <span id="dst_reload" class="oi oi-reload"></span>
+        </div>
+    </div>
+    <div id="context_menu" class="dropdown-menu" aria-labelledby="dropdownMenu2">
+        <button id="context_rename" class="dropdown-item" type="button">Rename</button>
+  </div>
+{% endblock %}

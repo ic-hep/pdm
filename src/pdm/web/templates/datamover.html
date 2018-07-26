@@ -1,68 +1,150 @@
-<html>
-  <head>
+<!doctype html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+    <!-- open-iconic-bootstrap (icon set for bootstrap) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <!-- fancybox -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.3.5/jquery.fancybox.min.css" />
+    <link rel="shortcut icon" type="image/ico" href="/static/favicon.ico">
     <title>UK DataMover</title>
-    <link rel="stylesheet" href="/static/webpage.css">
-    <link rel="shortcut icon" href="/static/favicon.ico">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  </head>
-  <body>
-    <div class="inner">
-      <div class="fpborder">
-	<font color="red">
-	{% with messages = get_flashed_messages() %}
-	{% if messages %}
-	<ul class=flashes>
-	  {% for message in messages %}
-	  <li>{{ message }}</li>
-	  {% endfor %}
-	</ul>
-	{% endif %}
-	{% endwith %}
-	</font>
+    <style>
+        .clickable { cursor: pointer }
+        #notification { position: fixed; top:0; width: 100%; z-index: 1000; display:none; height:75% }
+        .fancybox-slide--iframe .fancybox-content {
+	                width  : 800px;
+	                height : 600px;
+	                max-width  : 80%;
+	                max-height : 80%;
+	                margin: 0;
+                    -moz-border-radius:10px 10px 10px 10px;
+                    border-radius:10px 10px 10px 10px;
+                    -webkit-border-radius: 10px 10px 10px 10px;
+        }
+    </style>
+</head>
 
-
-
-	<h1><img src="{{url_for('static', filename='images/pdm.png')}}" alt="Logo"> <br> The DataMover</h1>
-	<form method="POST" action="/web/datamover">
-	  <center>
-            <table>
-              <tr><td>
-                <label for="uname"><font size ="3em"><b>Username</b></font></label>
-	      </td></tr>
-	      <tr><td>
-                <input type="text" placeholder="email address" name="uname" required><br>
-	      </td></tr>
-
-	      <!--- allow some space between username and password --->
-	      <tr><td> <br></td></tr>
-
-              <tr><td>
-                  <label for="pswd"><b><font size ="3em">Password</font></b></label>
-	      </td></tr>
-	      <tr><td>
-                  <input type="password" placeholder="password" name="pswd" required><br>
-		  <div class="psw"><span><font size ="2em">
-		      Forgot <a href="forgottenpwd">password?</a>
-		  </font></span></div>
-	      </td></tr>
-	      <tr>
-		  <td><font size = "2em">New user ? </font><a href="registration" class="sbutton">Sign Up</a></td>
-		  <td align="right"><button class="lbutton" type="submit">Login</button></td>
-	      </tr>
-            </table>
-          </center>
-        </form>
-      </div> <!--- fpborder --->
-    </div> <!--- inner --->
-    <div class="inner">
-      <!--- misuse a table to align two text pieces in the same line --->
-      <table width="100%">
-        <tr>
-	  <td align="left">Current status: {{ status }} 
-	  </td>
-	  <td align="right"><a href="about" class="abutton">About</a>
-	  </td>
-	</tr>
+<body>
+{% if not accept_cookies %}
+<div id="notification">
+    <div class="alert alert-dark alert-dismissible fade show h-100 d-flex justify-content-center" role="alert">
+        <div class="w-50 h-100 d-flex justify-content-end" style="flex-direction: column">
+            <strong>Attention!</strong>
+            <br>
+            <hr style="width:100%">
+            This website requires the use of cookies. By signing in you agree to their use.
+            <br>
+            <div class="w-100 d-flex justify-content-end">
+                <button id="notification_dismiss" type="button" class="btn btn-outline-dark w-25" data-dismiss="alert" aria-label="Close">
+                    I understand, let's go.
+                </button>
+            </div>
+        </div>
     </div>
-  </body>  
+</div>
+{% endif %}
+<div class="container w-25">
+    <div class="panel panel-primary">
+        <div class="panel-heading text-center">
+            <img src="/static/images/pdm.png"/>
+            <h4 class="panel-heading">The DataMover</h4>
+        </div>
+        <br><hr>
+        <div class="panel-body text-left">
+            {% block content %}
+            <form method="POST" action="/web/datamover">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">
+                                <span class="oi oi-person text-primary" aria-hidden="true"></span>
+                            </span>
+                        </div>
+                        <input id=username name="username" type="text" class="form-control" value="{{username}}" placeholder="email address" aria-label="Username" aria-describedby="basic-addon1">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">
+                                <span class="oi oi-key text-primary" aria-hidden="true"></span>
+                            </span>
+                        </div>
+                        <input id="password" name="password" type="password" class="form-control" placeholder="Password">
+                        <div id="password_toggle" class="input-group-append clickable">
+                            <span class="input-group-text">
+                                <span class="oi oi-eye text-primary" aria-hidden="true"></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <a href="/static/forgottenpwd.html">Help! I forgot my password.</a>
+                <br><br>
+                <button type="submit" class="btn btn-primary">Sign in</button>
+                <button type="button" class="btn btn-outline-primary" id="sign_up">Sign up</button>
+            </form>
+            {% endblock content %}
+        </div>
+        <br>
+        <div class="panel-footer">
+            {% block footer %}
+            <div class="float-left">
+                <img src="https://img.shields.io/badge/Status-{{status}}-yellow.svg?style=social">
+            </div>
+            <div class="float-right">
+                <span id="info" class="oi oi-info text-primary clickable" aria-hidden="true"></span>
+            </div>
+            {% endblock footer %}
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<!-- jQuery first, then Popper.js, then Bootstrap JS, then fancybox -->
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.3.5/jquery.fancybox.min.js"></script>
+{% block script %}{% endblock script %}
+<script>
+$(document).ready(function(){
+
+    $("#notification").slideDown(1000);
+
+    $("#notification_dismiss").click(function(){
+        $("#notification").slideUp("slow");  // slow = 600
+    });
+    $("#info").click(function(){
+        $.fancybox.open({
+            src  : '/static/about.html',
+            type : 'iframe',
+            title: "About The DataMover"
+        });
+    });
+
+    $("#password_toggle").click(function(){
+        var password = $("#password")
+        if (password.prop("type") === "password") {
+            password.prop("type", "text");
+        } else {
+            password.prop("type", "password");
+        }
+    });
+
+    $("#sign_up").click(function(){
+        window.location.href='/web/registration';
+    });
+
+});
+</script>
+</body>
 </html>

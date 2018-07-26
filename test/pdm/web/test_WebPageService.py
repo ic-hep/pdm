@@ -28,11 +28,11 @@ class TestWebPageService(unittest.TestCase):
         self.assertIn('/web/datamover', res.location)
         res = self.__test.get('/web/datamover')
         self.assertEqual(res.status_code, 200)
-        self.assertIn("<html>", res.data)
+        self.assertIn("<!doctype html>", res.data)
     
     def test_about(self):
         """ Check that the about page is returned at the correct location. """
-        res = self.__test.get('/web/about')
+        res = self.__test.get('/static/about.html')
         # check its existence
         self.assertEqual(res.status_code, 200)
         self.assertIn("About the datamover", res.data)
