@@ -21,10 +21,10 @@ class TransferClientFacade(TransferClient):
         """
 
         sitename, path = self.split_site_path(site)
-        if sitename:
+        if sitename and path:
             return super(TransferClientFacade, self).list(sitename, path, **kwargs)
         else:
-            print "Malformed site path (probably missing colon)", site
+            print "Malformed site path (format sitename:path)", site
             return None
 
     def copy(self, src_site, dst_site, **kwargs):
@@ -60,10 +60,10 @@ class TransferClientFacade(TransferClient):
         """
 
         sitename, path = self.split_site_path(src_site)
-        if sitename:
+        if sitename and path:
             return super(TransferClientFacade, self).remove(sitename, path, **kwargs)
         else:
-            print "Malformed site path (probably missing colon)", src_site
+            print "Malformed site path (probably missing sitename or path)", src_site
             return None
 
     def mkdir(self, sitepath, **kwargs):
@@ -73,10 +73,10 @@ class TransferClientFacade(TransferClient):
         :return: mkdir result message, or None if malformed site path
         """
         sitename, path = self.split_site_path(sitepath)
-        if sitename:
+        if sitename and path:
             return super(TransferClientFacade, self).mkdir(sitename, path, **kwargs)
         else:
-            print "Malformed site path (probably missing colon)", sitepath
+            print "Malformed site path (probably missing colon or path element):", sitepath
             return None
 
     def rename(self, site_path, newname, **kwargs):
@@ -92,10 +92,10 @@ class TransferClientFacade(TransferClient):
             print "Malformed (new) site path (it has to start with a : " \
                   "since source and dest share the same site)", new_site
             return None
-        if sitename:
+        if sitename and path:
             return super(TransferClientFacade, self).rename(sitename, path, newpath, **kwargs)
         else:
-            print "Malformed (old) site path (probably missing sitename:)", site_path
+            print "Malformed (old) site path (probably missing sitename or path:)", site_path
             return None
 
     @staticmethod
@@ -110,54 +110,3 @@ class TransferClientFacade(TransferClient):
             return parts
         else:
             return None, None
-
-
-class MockTransferClientFacade(object):
-    """
-    Mock Transfer Client.
-    """
-
-    def __init__(self, token):
-        self.__token = token
-
-    @staticmethod
-    def list(site, **kwargs):
-        """
-        :param site: site to list
-        :param kwargs: keywords agrs to match real list fcn
-        :return: an str(site)
-        """
-        # pylint: disable=unused-argument
-        return str(site)
-
-    @staticmethod
-    def output(jobid):
-        """
-        Dummy to be mocked away
-        :param id:
-        :return:
-        """
-        return "job id %s listnig: whatever", jobid
-
-    @staticmethod
-    def remove(site, **kwargs):
-        """
-        Mock remove.
-        :param site: site to delete
-        :param kwargs:
-        :return: information message
-        """
-        # pylint: disable=unused-argument
-        return " Resource %s removed " % site
-
-    @staticmethod
-    def copy(ssite, tsite, **kwargs):
-        """
-        Mock copy
-        :param ssite: source site
-        :param tsite: target site
-        :param kwargs:
-        :return:
-        """
-        # pylint: disable=unused-argument
-        return " copy %s to %s succeeded " % (ssite, tsite)

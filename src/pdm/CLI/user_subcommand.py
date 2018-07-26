@@ -372,7 +372,7 @@ class UserCommand(object):
         count = 1
         #
         token = UserCommand._get_token(args.token)
-        if token:
+        if token and self._session_ok(args.site, token):
             client = TransferClientFacade(token)
             # remove None values, position args, func and token from the kwargs:
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
@@ -492,23 +492,26 @@ class UserCommand(object):
         :return:
         """
         token = UserCommand._get_token(args.token)
-        if token:
+        if token and self._session_ok(args.site, token):
             client = TransferClientFacade(token)
             # remove None values, position args, func and token from the kwargs:
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
                              value is not None and key not in ('func', 'site', 'token', 'block',
                                                                'config', 'verbosity')}
             response = client.remove(args.site, **accepted_args)  # max_tries, priority)
-            self._status(response['id'], client, block=args.block)
+            if response:
+                self._status(response['id'], client, block=args.block)
 
     def copy(self, args):  # pylint: disable=no-self-use
         """
-        Copy files between sites
+        Copy files between sites. Not executed if no toke or not logged in
+        to any of the sites.
         :param args:
-        :return:
+        :return: copy response or None if site paths were malformed
         """
         token = UserCommand._get_token(args.token)
-        if token:
+        if token and self._session_ok(args.src_site, token) \
+                and self._session_ok(args.dst_site, token):
             client = TransferClientFacade(token)
             src_site = args.src_site
             dst_site = args.dst_site
@@ -518,7 +521,8 @@ class UserCommand(object):
                              and key not in ('func', 'src_site', 'dst_site', 'token', 'block',
                                              'config', 'verbosity')}
             response = client.copy(src_site, dst_site, **accepted_args)
-            self._status(response['id'], client, block=args.block)
+            if response:
+                self._status(response['id'], client, block=args.block)
 
     def mkdir(self, args):
         """
@@ -527,13 +531,14 @@ class UserCommand(object):
         :return:
         """
         token = UserCommand._get_token(args.token)
-        if token:
+        if token and self._session_ok(args.site, token):
             client = TransferClientFacade(token)
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
                              value is not None and key not in ('func', 'site', 'token', 'block',
                                                                'config', 'verbosity')}
             response = client.mkdir(args.site, **accepted_args)  # max_tries, priority
-            self._status(response['id'], client, block=args.block)
+            if response:
+                self._status(response['id'], client, block=args.block)
 
     def rename(self, args):
         """
@@ -543,14 +548,15 @@ class UserCommand(object):
         :return:
         """
         token = UserCommand._get_token(args.token)
-        if token:
+        if token and self._session_ok(args.oldname, token):
             client = TransferClientFacade(token)
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
                              value is not None
                              and key not in ('func', 'token', 'block',
                                              'config', 'verbosity', 'oldname', 'newname')}
-        response = client.rename(args.oldname, args.newname, **accepted_args)  # max_tries, priority
-        self._status(response['id'], client, block=args.block)
+            response = client.rename(args.oldname, args.newname, **accepted_args)  # max_tries, priority
+            if response:
+                self._status(response['id'], client, block=args.block)
 
     def log(self, args):
         """
@@ -616,6 +622,27 @@ class UserCommand(object):
                 UserCommand._print_formatted_session_info(session_info, attach=False)
             else:
                 print "site %s not found !" % (args.name,)
+
+    def _session_ok(self, site_path, token):
+        """
+        Check user session at a site.
+        :param site_name: site to check
+        :param token: user token
+        :return:True or False
+        """
+        name, path = TransferClientFacade.split_site_path(site_path)
+        if name is None:
+            print "Malformed site path (should be sitename:path)"
+            return None
+        site_client, site_id = UserCommand._get_site_id(name, token)
+        ok = False
+        if site_id:
+            ok = site_client.get_session_info(site_id)['ok']
+            if not ok:
+                print "Please log to the site %s first" % (name)
+        else:
+            print "site %s not found !" % (name)
+        return ok
 
     def add_site(self, args):
         """

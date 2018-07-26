@@ -6,9 +6,6 @@ import datetime
 from pdm.framework.Tokens import TokenService
 from pdm.CLI.user_subcommand import UserCommand
 
-from pdm.userservicedesk.TransferClientFacade import MockTransferClientFacade
-
-
 class TestUsercommand(unittest.TestCase):
     # @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
     def setUp(self):
@@ -29,21 +26,27 @@ class TestUsercommand(unittest.TestCase):
     def tearDown(self):
         self._tmp_file.close()
 
+    @mock.patch('pdm.CLI.user_subcommand.SiteClient')
     @mock.patch('pdm.CLI.user_subcommand.sleep')
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
-    @mock.patch.object(MockTransferClientFacade, 'copy')
-    def test_copy(self, mock_copy, mocked_facade, mock_sleep):
+    def test_copy(self, mocked_facade, mock_sleep, mock_site_client):
         """ test if possible extra keys have been removed fromkeywords arguments passed to TransferClientFacade
             Currently: token, func handle and positionals and None dict values
         """
-        mocked_facade.return_value = MockTransferClientFacade("anything")
-        mocked_facade.return_value.status = mock.MagicMock()
-        mocked_facade.return_value.status.return_value = {'status': 'DONE', 'id': 1}
+        mock_site_client.return_value = mock_site_client
+        mock_site_client.get_sites = mock.MagicMock(return_value=[{'site_name': 'source', 'site_id': 1},
+                                                                  {'site_name': 'dest', 'site_id': 2}])
+        mocked_facade.return_value = mock.MagicMock()
+        mocked_facade.split_site_path = mock.MagicMock()  # static, so no return_value
+        mocked_facade.split_site_path.return_value = ('source', 'aaa')
 
-        args = self._parser.parse_args('copy source dest -m 3 -t {}'.format(self._tmp_file.name).split())
+        mocked_facade.return_value.status.return_value = {'status': 'DONE', 'id': 1}
+        mocked_copy = mocked_facade.return_value.copy
+        mocked_copy.return_value = {'status': 'DONE', 'id': 1}
+        args = self._parser.parse_args('copy source:aaa dest:bbb -m 3 -t {}'.format(self._tmp_file.name).split())
         args.func(args)
 
-        mock_copy.assert_called_with('source', 'dest', max_tries=3)
+        mocked_copy.assert_called_with('source:aaa', 'dest:bbb', max_tries=3)
         assert mocked_facade.return_value.status.call_count == 1
         # NEW, only once:
         mocked_facade.return_value.status.reset_mock()
@@ -52,11 +55,14 @@ class TestUsercommand(unittest.TestCase):
         args.func(args)
         assert mocked_facade.return_value.status.call_count == 1
 
+    #    @mock.patch.object(MockTransferClientFacade, 'list')
+    #    @mock.patch.object(MockTransferClientFacade, 'output')
+    #
+
+    @mock.patch('pdm.CLI.user_subcommand.SiteClient')
     @mock.patch('pdm.CLI.user_subcommand.sleep')
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
-    @mock.patch.object(MockTransferClientFacade, 'list')
-    @mock.patch.object(MockTransferClientFacade, 'output')
-    def test_list(self, mock_output, mock_list, mocked_facade, mock_sleep):
+    def test_list(self, mocked_facade, mock_sleep, mock_site_client):
         """ test if possible extra keys have been removed from keywords arguments passed to TransferClientFacade
             Currently: token, func handle and positionals and None dict values
         """
@@ -86,63 +92,75 @@ class TestUsercommand(unittest.TestCase):
                   {"st_ctime": 0, "st_mtime": 1526474895, "st_gid": 20032, "name": "data_copy_500MB", "st_nlink": 1,
                    "st_ino": 0, "st_dev": 0, "st_size": 524288000, "st_mode": 33188, "st_uid": 103200, "st_atime": 0}]}
 
-        mocked_facade.return_value = MockTransferClientFacade("anything")
-        mocked_facade.return_value.status = mock.MagicMock()
-        mock_list.return_value = {'status': 'DONE', 'id': 1}
+        mock_site_client.return_value = mock_site_client
+        mock_site_client.get_sites = mock.MagicMock(return_value=[{'site_name': 'source', 'site_id': 1}])
+        mocked_facade.return_value = mock.MagicMock()
+        mocked_facade.split_site_path = mock.MagicMock()  # static, so no return_value
+        mocked_facade.split_site_path.return_value = ('source', 'aaa')
+
         mocked_facade.return_value.status.return_value = {'status': 'DONE', 'id': 1}
         # top level only:
-        mock_output.return_value = [{  # listing is the element 0 of the list
-            'listing': list_dicts}]  # ['gsiftp://gfe02.grid.hep.ph.ic.ac.uk/pnfs/hep.ph.ic.ac.uk/data/mice/martynia/test']}
+        mocked_list = mocked_facade.return_value.list
+        mocked_list.return_value = {'status': 'DONE', 'id': 1}
+        mocked_output = mocked_facade.return_value.output
+        mocked_output.return_value = [{  # listing is the element 0 of the list
+                                         'listing': list_dicts}]
         args = self._parser.parse_args('list source  -m 3 -t  {}'.format(self._tmp_file.name).split())
         args.func(args)
-        mock_output.assert_called_with(1)
-        mock_list.assert_called_with('source', max_tries=3, depth=0)
 
-        mock_output.reset_mock()
-        mock_list.reset_mock()
-        mock_list.return_value = {'status': 'NEW', 'id': 1}
+        mocked_output.assert_called_with(1)
+        mocked_list.assert_called_with('source', max_tries=3, depth=0)
+
+        mocked_output.reset_mock()
+        mocked_list.reset_mock()
+        mocked_list.return_value = {'status': 'NEW', 'id': 1}
         args = self._parser.parse_args('list source  -m 3 -t {}'.format(self._tmp_file.name).split())
         args.func(args)
-        assert mock_list.call_count == 1
+        assert mocked_list.call_count == 1
         assert mocked_facade.return_value.status.call_count == 2  # one at the beginning and then get the 'DONE'
-        assert mock_output.called
+        assert mocked_output.called
 
-        mock_output.reset_mock()
-        mock_list.reset_mock()
-        mock_list.return_value = None
+        mocked_output.reset_mock()
+        mocked_list.reset_mock()
+        mocked_list.return_value = None
         args = self._parser.parse_args('list source  -m 3 -t {}'.format(self._tmp_file.name).split())
         args.func(args)
-        assert mock_list.call_count == 1  # immediate failure, no such site
-        assert not mock_output.called
+        assert mocked_list.call_count == 1  # immediate failure, no such site
+        assert not mocked_output.called
 
-        mock_output.reset_mock()
-        mock_list.reset_mock()
+        mocked_output.reset_mock()
+        mocked_list.reset_mock()
         mocked_facade.return_value.status.reset_mock()
-        mock_list.return_value = {'status': 'NEW', 'id': 1}
+        mocked_list.return_value = {'status': 'NEW', 'id': 1}
         status_list = [{'status': 'NEW', 'id': 1}] * 50
         mocked_facade.return_value.status.side_effect = status_list
         # keep list return value, timeout the status
         args = self._parser.parse_args('list source  -m 3 -t {}'.format(self._tmp_file.name).split())
         args.func(args)
-        assert mock_list.call_count == 1
+        assert mocked_list.call_count == 1
         assert mocked_facade.return_value.status.call_count == 50
-        assert not mock_output.called
+        assert not mocked_output.called
 
+    @mock.patch('pdm.CLI.user_subcommand.SiteClient')
     @mock.patch('pdm.CLI.user_subcommand.sleep')
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
-    @mock.patch.object(MockTransferClientFacade, 'remove')
-    def test_remove(self, mock_remove, mocked_facade, mock_sleep):
+    def test_remove(self, mocked_facade, mock_sleep, mock_site_client):
         """ test if possible extra keys have been removed from keywords arguments passed to TransferClientFacade
             Currently: token, func handle and positionals and None dict values
         """
-        mocked_facade.return_value = MockTransferClientFacade("anything")
-        mocked_facade.return_value.status = mock.MagicMock()
-        mocked_facade.return_value.status.return_value = {'status': 'DONE', 'id': 1}
-        # protocol swittch is -s !!!
-        args = self._parser.parse_args('remove source -s gsiftp -m 3 -t {}'.format(self._tmp_file.name).split())
+        # protocol switch is -s !!!
+
+        mock_site_client.return_value = mock_site_client
+        mock_site_client.get_sites = mock.MagicMock(return_value=[{'site_name': 'test_site', 'site_id': 1}])
+        mocked_facade.return_value = mock.MagicMock()
+        mocked_facade.split_site_path = mock.MagicMock()  # static, so no return_value
+        mocked_facade.split_site_path.return_value = ('test_site', 'aaa')
+
+        args = self._parser.parse_args('remove test_site:aaa -s gsiftp -m 3 -t {}'.format(self._tmp_file.name).split())
         args.func(args)
 
-        mock_remove.assert_called_with('source', max_tries=3, protocol='gsiftp')
+        # mock_remove.assert_called_with('source', max_tries=3, protocol='gsiftp')
+        mocked_facade.return_value.remove.assert_called_with('test_site:aaa', max_tries=3, protocol='gsiftp')
         assert mocked_facade.return_value.status.call_count == 1
 
         mocked_facade.return_value.status.reset_mock()
@@ -158,33 +176,42 @@ class TestUsercommand(unittest.TestCase):
         args.func(args)
         assert mocked_facade.return_value.status.call_count == 50
 
+    @mock.patch('pdm.CLI.user_subcommand.SiteClient')
     @mock.patch('pdm.CLI.user_subcommand.sleep')
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
-    def test_rename(self, mocked_facade, mock_sleep):
-        mocked_facade.return_value = MockTransferClientFacade("anything")
-        mocked_facade.return_value.status = mock.MagicMock()
-        mocked_facade.return_value.status.return_value = {'status': 'DONE', 'id': 1}
-        mocked_facade.return_value.rename = mock.MagicMock()
-        # protocol swittch is -s !!!
-        args = self._parser.parse_args('rename source destination -s gsiftp -m 3 -t {}'.format(self._tmp_file.name).split())
+    def test_rename(self, mocked_facade, mock_sleep, mock_site_client):
+        mock_site_client.return_value = mock_site_client
+        mock_site_client.get_sites = mock.MagicMock(return_value=[{'site_name': 'test_site', 'site_id': 1}])
+        mocked_facade.return_value = mock.MagicMock()
+        mocked_facade.split_site_path = mock.MagicMock()  # static, so no return_value
+        mocked_facade.split_site_path.return_value = ('test_site', 'aaa')
+        # protocol switch is -s !!!
+        args = self._parser.parse_args(
+            'rename test_site:aaa :bbb -s gsiftp -m 3 -t {}'.format(self._tmp_file.name).split())
         args.func(args)
 
-        mocked_facade.return_value.rename.assert_called_with('source', 'destination', max_tries=3, protocol='gsiftp')
-        assert mocked_facade.return_value.status.call_count == 1 # block resolves immediately
+        mocked_facade.return_value.rename.assert_called_with('test_site:aaa', ':bbb', max_tries=3, protocol='gsiftp')
+        assert mocked_facade.return_value.status.call_count == 1  # block resolves immediately
 
+    @mock.patch('pdm.CLI.user_subcommand.SiteClient')
     @mock.patch('pdm.CLI.user_subcommand.sleep')
     @mock.patch('pdm.CLI.user_subcommand.TransferClientFacade')
-    def test_mkdir(self, mocked_facade, mock_sleep):
-        mocked_facade.return_value = MockTransferClientFacade("anything")
-        mocked_facade.return_value.status = mock.MagicMock()
+    def test_mkdir(self, mocked_facade, mock_sleep, mock_site_client):
+        mock_site_client.return_value = mock_site_client
+        mock_site_client.get_sites = mock.MagicMock(return_value=[{'site_name': 'site', 'site_id': 1}])
+        mocked_facade.return_value = mock.MagicMock()
+        mocked_facade.split_site_path = mock.MagicMock()  # static, so no return_value
+        mocked_facade.split_site_path.return_value = ('site', '/path/to/file')
+
         mocked_facade.return_value.status.return_value = {'status': 'DONE', 'id': 1}
-        mocked_facade.return_value.mkdir = mock.MagicMock()
-    # protocol swittch is -s !!!
-        args = self._parser.parse_args('mkdir site:/path/to/file -s gsiftp -m 3 -t {}'.format(self._tmp_file.name).split())
+
+        # protocol swittch is -s !!!
+        args = self._parser.parse_args(
+            'mkdir site:/path/to/file -s gsiftp -m 3 -t {}'.format(self._tmp_file.name).split())
         args.func(args)
 
         mocked_facade.return_value.mkdir.assert_called_with('site:/path/to/file', max_tries=3, protocol='gsiftp')
-        assert mocked_facade.return_value.status.call_count == 1 # block resolves immediately
+        assert mocked_facade.return_value.status.call_count == 1  # block resolves immediately
 
     @mock.patch('pdm.CLI.user_subcommand.SiteClient')
     def test_add_site(self, mock_site_client):
@@ -228,18 +255,17 @@ class TestUsercommand(unittest.TestCase):
             {'auth_type': 0, 'site_name': 'test_site', 'def_path': '/~', 'auth_uri': 'myproxy_host:9876',
              'site_desc': 'just_a_test_site', 'public': False, 'endpoints': ['host:9876'],
              'service_ca_cert': fake_cert})
-        #same for user CA cert
+        # same for user CA cert
         args = self._parser.parse_args('addsite test_site just_a_test_site'
                                        ' -t {} -u {} -e host:9876 -a myproxy_host:9876'
                                        .format(self._tmp_file.name, _tmp_file.name).split())
         args.func(args)
         assert mock_site_client.called
         mock_site_client.return_value.add_site. \
-        assert_called_with(
-        {'auth_type': 0, 'site_name': 'test_site', 'def_path': '/~', 'auth_uri': 'myproxy_host:9876',
-         'site_desc': 'just_a_test_site', 'public': False, 'endpoints': ['host:9876'],
-         'user_ca_cert': fake_cert})
-
+            assert_called_with(
+            {'auth_type': 0, 'site_name': 'test_site', 'def_path': '/~', 'auth_uri': 'myproxy_host:9876',
+             'site_desc': 'just_a_test_site', 'public': False, 'endpoints': ['host:9876'],
+             'user_ca_cert': fake_cert})
 
     @mock.patch('pdm.CLI.user_subcommand.SiteClient')
     def test_del_site(self, mock_site_client):
