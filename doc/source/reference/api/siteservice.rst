@@ -110,7 +110,7 @@ the site.
      - username(str): The site-specific username.
      - password(str): The users' site password.
      - lifetime(int): The time (in hours) to create the credential for.
-     - vo(str, optional): The VO to use in the credential VOMS extension.
+     - voms(str, optional): The VO to use in the credential VOMS extension.
 
    Returns:
      - None
