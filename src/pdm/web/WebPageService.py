@@ -23,6 +23,7 @@ from pdm.userservicedesk.TransferClient import TransferClient
 def gravitar_hash(email_add):
     """
     Hash an email address.
+
     Generate a gravitar compatible hash from an email address.
     Args:
         email_add (str): The target email address
@@ -88,7 +89,7 @@ class WebPageService(object):
     @staticmethod
     @export_ext("logout")
     def pdm_logout():
-        """Log a client out of the Datamover"""
+        """Log a client out of the Datamover."""
         flask.session.pop("token")
         set_session_state(False)
         flash('You have been logged out.')
@@ -205,7 +206,7 @@ class WebPageService(object):
     @staticmethod
     @export_ext("js/sites")
     def js_sites():
-        """lists all registered sites."""
+        """List all registered sites."""
         token = flask.session['token']
         current_app.siteclient.set_token(token)
         current_app.site_map = {site['site_name']: site
@@ -274,7 +275,7 @@ class WebPageService(object):
     @export_ext("js/list", ['POST'])
     @decode_json_data
     def js_list():
-        """lists a directory"""
+        """List a directory."""
         sitename = request.data['sitename']
         filepath = request.data['filepath']
         site = current_app.site_map.get(sitename)
