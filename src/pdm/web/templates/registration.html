@@ -20,26 +20,97 @@
         <div class="input-group">
             <div class="input-group-prepend">
                 <span class="input-group-text">
-                    <span class="oi oi-person text-primary" aria-hidden="true"></span>
+                    <span id="username_icon" class="oi oi-person text-primary" aria-hidden="true"></span>
                 </span>
             </div>
-            <input id=username name="username" type="text" class="form-control" placeholder="email address" aria-label="Username" aria-describedby="basic-addon1" required>
+            <input id=username name="username" type="text" class="form-control" placeholder="email address" aria-label="Username" aria-describedby="basic-addon1" data-container="body" data-toggle="popover" data-placement="right" data-content="Invalid email: regex match '^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$' only" required>
+        </div>
+        <div class="d-flex justify-content-end">
+            <span id="username_ok" class="oi oi-circle-x text-danger" style="display:none;"></span>
         </div>
     </div>
+
     <div class="form-group">
         <label for="password">Password:</label>
         <div class="input-group">
             <div class="input-group-prepend">
                 <span class="input-group-text">
-                    <span class="oi oi-key text-primary" aria-hidden="true"></span>
+                    <span id="password_icon" class="oi oi-key text-primary" aria-hidden="true"></span>
                 </span>
             </div>
-            <input id="password" name="password" type="password" class="form-control" placeholder="Password" required>
-            <input id="password_repeat" name="password_repeat" type="password" class="form-control" placeholder="Retype Password" required>
+            <input id="password" name="password" type="password" class="form-control pwd" placeholder="Password" required>
+            <input id="password_repeat" name="password_repeat" type="password" class="form-control pwd" placeholder="Retype Password" data-container="body" data-toggle="popover" data-placement="right" data-content="passwords don't match." required>
+        </div>
+        <div class="d-flex justify-content-end">
+            <span id="password_ok" class="oi oi-circle-x text-danger" style="display:none;"></span>
         </div>
     </div>
     <div class="d-flex justify-content-end">
-        <button type="submit" class="btn btn-primary">Sign in</button>
+        <button id="submit_button" type="submit" class="btn btn-primary">Sign in</button>
     </div>
 </form>
 {% endblock content %}
+{% block script %}
+<script>
+$(document).ready(function(){
+    $("#username").keyup(function(){
+        var username = $(this).val();
+        if (username === ""){
+            $("#username_ok").hide();
+            return;
+        }
+
+        var email = new RegExp('^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$');
+        if (email.test(username)){
+            $("#username_ok").removeClass("text-danger oi-circle-x");
+            $("#username_ok").addClass("text-success oi-circle-check");
+        }
+        else{
+            $("#username_ok").removeClass("text-success oi-circle-check");
+            $("#username_ok").addClass("text-danger oi-circle-x");
+        }
+        $("#username_ok").show();
+    })
+
+    $("input.pwd").keyup(function(){
+        var pwd_ok = $("#password_ok");
+        var pwd = $("#password").val();
+        var pwd_repeat = $("#password_repeat").val();
+        if (pwd === "" && pwd_repeat === ""){
+            pwd_ok.hide();
+            return;
+        }
+
+        if (pwd === pwd_repeat){
+            pwd_ok.removeClass("text-danger oi-circle-x");
+            pwd_ok.addClass("text-success oi-circle-check");
+        }
+        else{
+            pwd_ok.removeClass("text-success oi-circle-check");
+            pwd_ok.addClass("text-danger oi-circle-x");
+        }
+        pwd_ok.show();
+    });
+
+    $("#submit_button").click(function(event){
+        var username_ok = $("#username_ok");
+        var password_ok = $("#password_ok");
+        if (username_ok.is(":visible") && username_ok.hasClass("oi-circle-x")){
+            event.preventDefault();
+            $("#username_icon").removeClass("text-primary");
+            $("#username_icon").addClass("text-danger");
+            $('#username').popover({container: 'body'});
+            $("#username").trigger('click');
+        }
+
+        if(password_ok.is(":visible") && password_ok.hasClass("oi-circle-x")){
+            event.preventDefault();
+            $("#password_icon").removeClass("text-primary");
+            $("#password_icon").addClass("text-danger");
+            $("#password_repeat").popover({container: 'body'});
+            $("#password_repeat").trigger('click');
+        }
+    });
+});
+</script>
+{% endblock script %}
