@@ -10,8 +10,8 @@
                     <span class="oi oi-person text-primary" aria-hidden="true"></span>
                 </span>
             </div>
-            <input id=forename name="forename" type="text" placeholder="Forename" class="form-control" aria-label="forename" aria-describedby="basic-addon1" required>
-            <input id=surname name="surname" type="text" placeholder="Surname" class="form-control" aria-label="surname" aria-describedby="basic-addon1" required>
+            <input id=forename name="forename" type="text" value="{{forename}}" placeholder="Forename" class="form-control" aria-label="forename" aria-describedby="basic-addon1" required>
+            <input id=surname name="surname" type="text" value="{{surname}}" placeholder="Surname" class="form-control" aria-label="surname" aria-describedby="basic-addon1" required>
         </div>
     </div>
 
@@ -23,7 +23,7 @@
                     <span id="username_icon" class="oi oi-person text-primary" aria-hidden="true"></span>
                 </span>
             </div>
-            <input id=username name="username" type="text" class="form-control" placeholder="email address" aria-label="Username" aria-describedby="basic-addon1" data-container="body" data-toggle="popover" data-placement="right" data-content="Invalid email: regex match '^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$' only" required>
+            <input id=username name="username" type="text" class="form-control" value="{{username}}" placeholder="email address" aria-label="Username" aria-describedby="basic-addon1" data-container="body" data-toggle="popover" data-placement="right" data-content="Invalid email: regex match '^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$' only" required>
         </div>
         <div class="d-flex justify-content-end">
             <span id="username_ok" class="oi oi-circle-x text-danger" style="display:none;"></span>
@@ -38,8 +38,8 @@
                     <span id="password_icon" class="oi oi-key text-primary" aria-hidden="true"></span>
                 </span>
             </div>
-            <input id="password" name="password" type="password" class="form-control pwd" placeholder="Password" required>
-            <input id="password_repeat" name="password_repeat" type="password" class="form-control pwd" placeholder="Retype Password" data-container="body" data-toggle="popover" data-placement="right" data-content="passwords don't match." required>
+            <input id="password" name="password" type="password" class="form-control pwd" value="{{password}}" placeholder="Password" required>
+            <input id="password_repeat" name="password_repeat" type="password" class="form-control pwd" value="{{password_repeat}}" placeholder="Retype Password" data-container="body" data-toggle="popover" data-placement="right" data-content="passwords don't match." required>
         </div>
         <div class="d-flex justify-content-end">
             <span id="password_ok" class="oi oi-circle-x text-danger" style="display:none;"></span>

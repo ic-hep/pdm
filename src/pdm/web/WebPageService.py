@@ -1,19 +1,21 @@
 #!/usr/bin/env python
-""" Starting point for all things WebPage related """
+"""Datamover's Web Service."""
 
-import os
 import json
 import hashlib
 import stat
 import time
 from operator import itemgetter
+
 import jinja2
 import flask
-from flask import request, flash, current_app, redirect, render_template, make_response, url_for, abort
-from pdm.framework.Decorators import export, export_ext, startup, decode_json_data
+from flask import request, flash, current_app, redirect, render_template, url_for, abort
+
+from pdm.framework.Decorators import export_ext, startup, decode_json_data
 from pdm.framework.ACLManager import set_session_state
 from pdm.framework.RESTClient import RESTException
 from pdm.userservicedesk.HRClient import HRClient
+from pdm.userservicedesk.HRUtils import HRUtils
 from pdm.site.SiteClient import SiteClient
 from pdm.userservicedesk.TransferClient import TransferClient
 
@@ -35,55 +37,40 @@ jinja2.filters.FILTERS['gravitar_hash'] = gravitar_hash
 
 @export_ext("/web", redir="/web/datamover?return_to=%(return_to)s")
 class WebPageService(object):
-    """ The main endpoint container class for DemoService. """
+    """The Datamover's web page service."""
 
     @staticmethod
     @startup
-    #pylint: disable=unused-argument
+    # pylint: disable=unused-argument
     def startup_web(config):
-        """ Configure the turtles application.
-            Creates an example database if DB is entry.
-            Prints valud of "test_param" from the config.
-        """
-        log = current_app.log
-        log.info("Web interface starting")
+        """Configure the web service."""
+        current_app.log.info("Web interface starting")
         current_app.hrclient = HRClient()
+        current_app.hrutils = HRUtils()
         current_app.siteclient = SiteClient()
-
-
-    @staticmethod
-    def datamover_status():
-        """returns the current status of the data mover"""
-        status = "In development"
-        return status
-
+        current_app.site_map = {}
 
     @staticmethod
     @export_ext("/")
     def web_entry():
-        """ Redirect clients to the turtles page. """
-        return redirect("/web/datamover")
-
-#    @staticmethod
-#    @export_ext("about")
-#    def aboutpage():
-#        """renders the about page"""
-#        return render_template("about.html")
-
+        """Redirect to default entry point."""
+        return redirect(url_for("WebPageService.front_portal"))
 
     @staticmethod
-    @export_ext("datamover")
-    def website():
-        """to render the datamover entry/login page"""
-        status = WebPageService.datamover_status()
-        return render_template("datamover.html", status=status,
+    @export_ext("datamover", methods=["GET"])
+    def front_portal():
+        """Render the Datamover's front portal."""
+        username = ''
+        user_token = flask.session.get('token', None)
+        if user_token is not None:
+            username = current_app.hrutils.get_token_username_insecure(user_token)
+        return render_template("datamover.html", status="In development", username=username,
                                accept_cookies=flask.session.get("accept_cookies", False))
 
     @staticmethod
     @export_ext("datamover", methods=["POST"])
-    def website_post():
-        """takes input fom login form and processes it"""
-        # check if login is correct
+    def pdm_login():
+        """Log a client into the Datamover."""
         log = current_app.log
         username = request.form['username']
         password = request.form['password']
@@ -95,113 +82,95 @@ class WebPageService(object):
         except Exception as err:
             log.warning("Failed login: %s", err.message)
             flash('Could not login user (%s)' % err)
-            return WebPageService.website()
+            return WebPageService.front_portal()
         return redirect(url_for("WebPageService.dashboard"))
-
 
     @staticmethod
     @export_ext("logout")
-    def logout():
-        """logs the user out by removing the token"""
+    def pdm_logout():
+        """Log a client out of the Datamover"""
         flask.session.pop("token")
         set_session_state(False)
         flash('You have been logged out.')
-        return redirect("/web/datamover")
+        return redirect(url_for("WebPageService.front_portal"))
 
-    # *** registration ***
     @staticmethod
-    # page and function have the same name, so 'export' is sufficient
-    @export
-    def registration():
-        """renders the registration page"""
+    @export_ext("registration", methods=["GET"])
+    def registration_portal():
+        """Render the Datamover's registration page."""
         return render_template("registration.html", accept_cookies=True)
 
     @staticmethod
     @export_ext("registration", methods=["POST"])
-    def registration_post():
-        """deals with the registration form"""
-        if request.form['password'] != request.form['password_repeat']:
+    def sign_up():
+        """Sign a client up for Datamover access."""
+        forename = request.form['forename']
+        surname = request.form['surname']
+        username = request.form['username']
+        password = request.form['password']
+        password_repeat = request.form['password_repeat']
+        if password != password_repeat:
             # to do: make sure page does not come back blank
-            return render_template("registration.html", accept_cookies=True)
-        # create dictionary to match HRClient input
-        hrdict = {
-            "email": request.form['username'],
-            "name": request.form['forename'],
-            "surname": request.form['surname'],
-            "password": request.form['password'],
-        }
-
+            return render_template("registration.html", username=username, forename=forename,
+                                   surname=surname, password=password,
+                                   password_repeat=password_repeat, accept_cookies=True)
+        hrdict = {"email": username,
+                  "name": forename,
+                  "surname": surname,
+                  "password": password}
         try:
             current_app.hrclient.add_user(hrdict)
-        except Exception as err:
-            return render_template("registration.html", accept_cookies=True)
-        return redirect("/web/datamover")
-
-    @staticmethod
-    @export_ext("js/jobs")
-    def jobs():
-        token = flask.session['token']
-        tclient = TransferClient(token)
-        return json.dumps(tclient.jobs())
-
-    @staticmethod
-    @export_ext("js/jobs/<int:job_id>/elements")
-    def elements(job_id):
-        token = flask.session['token']
-        tclient = TransferClient(token)
-        elements = tclient.elements(job_id)
-        return json.dumps(elements)
+        except RESTException:
+            current_app.log.exception("Error registering user")
+            return render_template("registration.html", username=username, forename=forename,
+                                   surname=surname, password=password,
+                                   password_repeat=password_repeat, accept_cookies=True)
+        return redirect(url_for("WebPageSevice.front_portal"))
 
     @staticmethod
     @export_ext("dashboard/joblist")
     def joblist():
-        # will abort of user is not logged in
+        """Return the Datamover's job listing page."""
+        # will abort of user is not logged in (if getting token raises keyerror)
         user_token = flask.session['token']
-        # unpacked_user_token = TokenService.unpack(user_token)
         current_app.hrclient.set_token(user_token)
         try:
             user = current_app.hrclient.get_user()
-        except RESTException as err:
-            return redirect(url_for('WebPageService.website'))
+        except RESTException:
+            current_app.log.exception("Error getting jobs list")
+            return redirect(url_for('WebPageService.front_portal'))
         return render_template("joblist.html", user=user)
-    # *** The main page ***
-
 
     @staticmethod
     @export_ext("dashboard")
     def dashboard():
-        """arrivals: what the user sees after logging in"""
-        # will abort of user is not logged in
+        """Render the Datamover's main dashboard page."""
+        # will abort of user is not logged in (if getting token raises keyerror)
         user_token = flask.session['token']
-        # unpacked_user_token = TokenService.unpack(user_token)
         current_app.hrclient.set_token(user_token)
         try:
             user = current_app.hrclient.get_user()
-        except RESTException as err:
-            return redirect(url_for('WebPageService.website'))
-        #user_name = user_data['name']
-        # returns a list of sites as dictionaries
-        # want to sort on 'site_name'
-#        current_app.epclient.set_token(user_token)
-#        sites = current_app.epclient.get_sites()
-#        sorted_sites = sorted(sites, key=lambda k: k['site_name'])
-#        return render_template("dashboard.html", sites=sorted_sites, username=user_name)
+        except RESTException:
+            current_app.log.exception("Error getting dashboard")
+            return redirect(url_for('WebPageService.front_portal'))
         return render_template("newjob.html", user=user)
 
     @staticmethod
     @export_ext("sitelogin/<site_name>", ['POST'])
     @decode_json_data
     def site_login(site_name):
+        """Log client in to given site."""
         site = current_app.site_map.get(site_name)
         if site is None:
-            return "EEP!"
+            abort(404, "Site not found")
+
         username = request.data.get('username')
         password = request.data.get('password')
-
         if username is None:
-            return "EEP!"
+            abort(400, "username required but missing.")
         if password is None:
-            return "EEP!"
+            abort(400, "password required but missing.")
+
         token = flask.session['token']
         current_app.siteclient.set_token(token)
         session_info = current_app.siteclient.get_session_info(site['site_id'])
@@ -209,33 +178,51 @@ class WebPageService(object):
             try:
                 current_app.siteclient.logon(site['site_id'], username, password)
             except RESTException as err:
+                current_app.log.exception("Error logging into site %s(id: %s)",
+                                          site_name, site['site_id'])
                 if err.code == 403:
                     err.code = 401  # dont trigger login page loading again.
                 abort(err.code, description="Login failure.")
         return '', 200
 
     @staticmethod
+    @export_ext("js/jobs")
+    def jobs():
+        """List a user's jobs."""
+        token = flask.session['token']
+        tclient = TransferClient(token)
+        return json.dumps(tclient.jobs())
+
+    @staticmethod
+    @export_ext("js/jobs/<int:job_id>/elements")
+    def elements(job_id):
+        """List elements for a given user's job."""
+        token = flask.session['token']
+        tclient = TransferClient(token)
+        elements = tclient.elements(job_id)
+        return json.dumps(elements)
+
+    @staticmethod
     @export_ext("js/sites")
     def js_sites():
-        """lists sites."""
-        user_token = flask.session['token']
-#        sites = TransferClient(user_token).list_sites()
-
-        current_app.siteclient.set_token(flask.session['token'])
-        current_app.site_map = {site['site_name']: site for site in current_app.siteclient.get_sites()}
+        """lists all registered sites."""
+        token = flask.session['token']
+        current_app.siteclient.set_token(token)
+        current_app.site_map = {site['site_name']: site
+                                for site in current_app.siteclient.get_sites()}
         return json.dumps(sorted(current_app.site_map.values(), key=itemgetter('site_name')))
 
     @staticmethod
     @export_ext("js/copy", ['POST'])
     @decode_json_data
     def js_copy():
-        """copy"""
+        """Resister a COPY job."""
         src_site = request.data['src_sitename']
         if src_site not in current_app.site_map:
-            abort(400, description="Source site not known.")
+            abort(404, description="Source site not known.")
         dst_site = request.data['dst_sitename']
         if dst_site not in current_app.site_map:
-            abort(400, description="Destination site not known.")
+            abort(404, description="Destination site not known.")
         token = flask.session['token']
         tclient = TransferClient(token)
         tclient.copy(src_site,
@@ -248,10 +235,10 @@ class WebPageService(object):
     @export_ext("js/remove", ['POST'])
     @decode_json_data
     def js_remove():
-        """copy"""
+        """Register a REMOVE job."""
         site = request.data['sitename']
         if site not in current_app.site_map:
-            abort(400, description="Site not known.")
+            abort(404, description="Site not known.")
         token = flask.session['token']
         tclient = TransferClient(token)
         tclient.remove(site, request.data['filepath'])
@@ -261,10 +248,10 @@ class WebPageService(object):
     @export_ext("js/mkdir", ['POST'])
     @decode_json_data
     def js_mkdir():
-        """copy"""
+        """Register a MKDIR job."""
         site = request.data['sitename']
         if site not in current_app.site_map:
-            abort(400, description="Site not known.")
+            abort(404, description="Site not known.")
         token = flask.session['token']
         tclient = TransferClient(token)
         tclient.mkdir(site, request.data['dst_filepath'])
@@ -274,10 +261,10 @@ class WebPageService(object):
     @export_ext("js/rename", ['POST'])
     @decode_json_data
     def js_rename():
-        """copy"""
+        """Register a RENAME job."""
         site = request.data['sitename']
         if site not in current_app.site_map:
-            abort(400, description="Site not known.")
+            abort(404, description="Site not known.")
         token = flask.session['token']
         tclient = TransferClient(token)
         tclient.rename(site, request.data['src_filepath'], request.data['dst_filepath'])
@@ -299,16 +286,11 @@ class WebPageService(object):
         if not session_info['ok']:
             username = session_info.get('username', '')
             return render_template("loginform.html", username=username, sitename=sitename), 403
-        # decode parameters
-#        siteid = request.args.get('siteid', None)
-#        sitepath = request.args.get('sitepath', None)
-#        if (not siteid) or (not sitepath):
-#            return "Missing request parameter", 400
-
 
         tclient = TransferClient(token)
         jobinfo = tclient.list(sitename, filepath, depth=1)
 
+        listing_output = []
         if jobinfo:
             time.sleep(1)
             status = tclient.status(jobinfo['id'])
@@ -317,87 +299,12 @@ class WebPageService(object):
                 status = tclient.status(jobinfo['id'])
 
             if status['status'] == 'DONE':
-                listing_output = [dict(f, is_dir=stat.S_ISDIR(f['st_mode'])) for f in tclient.output(jobinfo['id'])[0]['listing'].values()[0]]
+                listing_output = [dict(f, is_dir=stat.S_ISDIR(f['st_mode'])) for f in
+                                  tclient.output(jobinfo['id'])[0]['listing'].values()[0]]
             elif jobinfo['status'] == 'FAILED':
-                print " Failed to obtain a listing for job %d " % (jobinfo['id'],)
+                current_app.log.error("Failed to obtain a listing for job %d", jobinfo['id'])
             else:
-                print "Timeout. Last status is %s for job id %d" % \
-                      (status['status'], jobinfo['id'])
-
+                current_app.log.warning("Timeout. Last status is %s for job id %d",
+                                        status['status'], jobinfo['id'])
 
         return json.dumps(listing_output)
-
-#    @staticmethod
-#    @export_ext("js/list/<site_name>", ['GET'])
-#    @export_ext("js/list/<site_name>/<path>", ['GET'])
-#    def js_list(site_name, path='~'):
-#        """lists a directory"""
-#        site = current_app.site_map.get(site_name)
-#        if site is None:
-#            abort(404, description="Site %s not found" % site_name)
-#        token = flask.session['token']
-#        current_app.siteclient.set_token(token)
-#        session_info = current_app.siteclient.get_session_info(site['site_id'])
-#        if not session_info['ok']:
-#            username = session_info.get('username', '')
-#            return render_template("loginform.html", username=username), 403
-#        # decode parameters
-##        siteid = request.args.get('siteid', None)
-##        sitepath = request.args.get('sitepath', None)
-##        if (not siteid) or (not sitepath):
-##            return "Missing request parameter", 400
-#
-#
-#        tclient = TransferClient(token)
-#        jobinfo = tclient.list(site_name, path, depth=1)
-#
-#        if jobinfo:
-#            time.sleep(1)
-#            status = tclient.status(jobinfo['id'])
-#            while status['status'] not in ('DONE', 'FAILED'):
-#                time.sleep(1)  # seconds
-#                status = tclient.status(jobinfo['id'])
-#
-#            if status['status'] == 'DONE':
-#                listing_output = [dict(f, is_dir=stat.S_ISDIR(f['st_mode'])) for f in tclient.output(jobinfo['id'])[0]['listing'].values()[0]]
-#            elif jobinfo['status'] == 'FAILED':
-#                print " Failed to obtain a listing for job %d " % (jobinfo['id'],)
-#            else:
-#                print "Timeout. Last status is %s for job id %d" % \
-#                      (status['status'], jobinfo['id'])
-#
-#
-#        return json.dumps(listing_output)
-
-
-    @staticmethod
-    @export_ext("js/status")
-    def js_status():
-        """returns the status for a given jobid"""
-        jobid = request.args.get('jobid', None)
-        if not jobid:
-            return "No JOBID returned", 400
-        user_token = flask.session['token']
-        tclient = TransferClient(user_token)
-        res = tclient.status(jobid)
-        if res['status'] in ('DONE', 'FAILED'):
-            res.update(tclient.output(jobid))
-        return json.dumps(res)
-
-#    @staticmethod
-#    @export_ext("js/copy")
-#    def js_copy():
-#        """interface to the actual copy function"""
-#        source_site = request.args.get('source_site', None)
-#        source_path = request.args.get('source_path', None)
-#        dest_site = request.args.get('dest_site', None)
-#        dest_dir_path = request.args.get('dest_dir_path', None)
-#        if (not source_site) or (not source_path):
-#            return "Missing source parameter", 400
-#        if (not dest_site) or (not dest_dir_path):
-#            return "Missing destination parameter", 400
-#        user_token = flask.session['token']
-#        tclient = TransferClient(user_token)
-#        jobinfo = tclient.copy(source_site, source_path,
-#                               dest_site, dest_dir_path)
-#        return json.dumps(jobinfo['id'])
