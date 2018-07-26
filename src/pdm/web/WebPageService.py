@@ -285,8 +285,13 @@ class WebPageService(object):
         current_app.siteclient.set_token(token)
         session_info = current_app.siteclient.get_session_info(site['site_id'])
         if not session_info['ok']:
+            vos = []
             username = session_info.get('username', '')
-            return render_template("loginform.html", username=username, sitename=sitename), 403
+            voms_auth = current_app.siteclient.get_site(site['site_id'])['auth_type']
+            if voms_auth:
+                vos = current_app.siteclient.get_service_info()['vos']
+            return render_template("loginform.html", username=username, sitename=sitename,
+                                   voms_auth=voms_auth, vos=vos), 403
 
         tclient = TransferClient(token)
         jobinfo = tclient.list(sitename, filepath, depth=1)
