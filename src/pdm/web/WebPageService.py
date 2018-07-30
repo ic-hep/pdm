@@ -75,11 +75,11 @@ class WebPageService(object):
         log = current_app.log
         username = request.form['username']
         password = request.form['password']
+        set_session_state(True)
+        flask.session["accept_cookies"] = True
         try:
             token = current_app.hrclient.login(username, password)
-            set_session_state(True)
             flask.session["token"] = token
-            flask.session["accept_cookies"] = True
         except Exception as err:
             log.warning("Failed login: %s", err.message)
             flash('Could not login user (%s)' % err)
