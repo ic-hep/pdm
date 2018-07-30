@@ -167,6 +167,7 @@ class WebPageService(object):
 
         username = request.data.get('username')
         password = request.data.get('password')
+        vo_name = request.data.get('vo')
         if username is None:
             abort(400, "username required but missing.")
         if password is None:
@@ -177,7 +178,7 @@ class WebPageService(object):
         session_info = current_app.siteclient.get_session_info(site['site_id'])
         if not session_info['ok']:
             try:
-                current_app.siteclient.logon(site['site_id'], username, password)
+                current_app.siteclient.logon(site['site_id'], username, password, voms=vo_name)
             except RESTException as err:
                 current_app.log.exception("Error logging into site %s(id: %s)",
                                           site_name, site['site_id'])
@@ -289,7 +290,9 @@ class WebPageService(object):
             username = session_info.get('username', '')
             voms_auth = current_app.siteclient.get_site(site['site_id'])['auth_type']
             if voms_auth:
-                vos = current_app.siteclient.get_service_info()['vos']
+                vos = current_app.siteclient.get_service_info().get('vos', [])
+                if not vos:
+                    current_app.log.warning("No VOs returned by get_service_info.")
             return render_template("loginform.html", username=username, sitename=sitename,
                                    voms_auth=voms_auth, vos=vos), 403
 
