@@ -38,7 +38,7 @@ pdm.workqueue.WorkqueueDB module
 pdm.workqueue.WorkqueueService module
 -------------------------------------
 
-**Note**: All URLs are to be prefixed with **/workqueue/api/v1.0**. If in doubt look at the **Example request** for your desired api.
+.. note:: All URLs are to be prefixed with **/workqueue/api/v1.0**. If in doubt look at the **Example request** for your desired api.
 
 .. http:get:: /jobs
 
@@ -199,7 +199,8 @@ pdm.workqueue.WorkqueueService module
 .. http:get:: /jobs/<int:job_id>/output
 
    Get the latest available output of all elements for a job with given `job_id`.
-   **Note** only *LIST* type jobs get an extra listing key (see example below).
+
+   .. note:: Only *LIST* type jobs get an extra listing key (see example below).
 
    **Example request**:
 
@@ -355,7 +356,8 @@ pdm.workqueue.WorkqueueService module
 .. http:post:: /jobs
 
    Register a new job.
-   **Note** the job type must be given in integer form as described by the enums `here`. If you know the type of job that you require you can use the shorthand job registration methods below to avoid having to pass this parameter.
+
+   .. note:: The job type must be given in integer form as described by the enum :class:`pdm.workqueue.WorkqueueDB.JobType`. If you know the type of job that you require you can use the shorthand job registration methods below to avoid having to pass this parameter.
 
    **Example request**:
 
