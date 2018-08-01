@@ -1,12 +1,12 @@
-u""" The Fa\u00E7ade for the TransferClient. Uses site as an argument to most
+""" The Facade for the TransferClient. Uses site as an argument to most
     of the methods (rather them its parts)
 """
 from pdm.userservicedesk.TransferClient import TransferClient
 
 
 class TransferClientFacade(TransferClient):
-    u"""
-    Transfer client fa\u00E7ade. Methods take *sitename:path* as parameter(s)
+    """
+    Transfer client facade. Methods take *sitename:path* as parameter(s)
     rather the its parts.
     """
 
