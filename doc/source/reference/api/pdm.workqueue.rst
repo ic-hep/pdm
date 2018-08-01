@@ -17,6 +17,8 @@ pdm.workqueue.WorkqueueClient module
     :undoc-members:
     :show-inheritance:
 
+------------------------
+
 pdm.workqueue.WorkqueueDB module
 --------------------------------
 
@@ -35,10 +37,30 @@ pdm.workqueue.WorkqueueDB module
     :undoc-members:
     :show-inheritance:
 
+Job DB model
+++++++++++++
+
+.. .. data:: d={} Was going to add the jobs as data here
+
+.. literalinclude:: ../../../../src/pdm/workqueue/WorkqueueDB.py
+    :language: python
+    :lines: 152-181
+    :dedent: 8
+
+JobElement DB model
++++++++++++++++++++
+
+.. literalinclude:: ../../../../src/pdm/workqueue/WorkqueueDB.py
+    :language: python
+    :lines: 281-305
+    :dedent: 8
+
+------------------------
+
 pdm.workqueue.WorkqueueService module
 -------------------------------------
 
-**Note**: All URLs are to be prefixed with **/workqueue/api/v1.0**. If in doubt look at the **Example request** for your desired api.
+.. note:: All URLs are to be prefixed with **/workqueue/api/v1.0**. If in doubt look at the **Example request** for your desired api.
 
 .. http:get:: /jobs
 
@@ -118,11 +140,8 @@ pdm.workqueue.WorkqueueService module
 	"timestamp": "2012-03-21T13:35"
       }
 
-   :reqheader Accept: the response content type depends on
-                      :mailheader:`Accept` header
-   :resheader Content-Type: this depends on :mailheader:`Accept`
-                            header of request
    :statuscode 200: no error
+   :statuscode 404: no job with id `job_id` found
 
 .. http:get:: /jobs/<int:job_id>/elements
 
@@ -195,11 +214,13 @@ pdm.workqueue.WorkqueueService module
       }
 
    :statuscode 200: no error
+   :statuscode 404: no job with id `job_id` or element with id `element_id` found
 
 .. http:get:: /jobs/<int:job_id>/output
 
    Get the latest available output of all elements for a job with given `job_id`.
-   **Note** only *LIST* type jobs get an extra listing key (see example below).
+
+   .. note:: Only *LIST* type jobs get an extra listing key (see example below).
 
    **Example request**:
 
@@ -237,6 +258,8 @@ pdm.workqueue.WorkqueueService module
       ]
 
    :statuscode 200: no error
+   :statuscode 404: no job with id `job_id` found
+   :statuscode 500: couldn't find the requested output file on disk. 
 
 .. http:get:: /jobs/<int:job_id>/elements/<int:element_id>/output
 
@@ -267,6 +290,10 @@ pdm.workqueue.WorkqueueService module
       }	
 
    :statuscode 200: no error
+   :statuscode 400: element output not yet ready
+   :statuscode 404: no job with id `job_id` or element with id `element_id` found
+   :statuscode 500: couldn't find the requested output file on disk. 
+
 
 .. http:get:: /jobs/<int:job_id>/elements/<int:element_id>/output/<int:attempt>
 
@@ -297,6 +324,10 @@ pdm.workqueue.WorkqueueService module
       }	
 
    :statuscode 200: no error
+   :statuscode 400: element output not yet ready or invalid attempt
+   :statuscode 404: no job with id `job_id` or element with id `element_id` found
+   :statuscode 500: couldn't find the requested output file on disk. 
+
 
 .. http:get:: /jobs/<int:job_id>/status
 
@@ -323,6 +354,7 @@ pdm.workqueue.WorkqueueService module
       }	
 
    :statuscode 200: no error
+   :statuscode 404: no job with id `job_id` found
 
 .. http:get:: /jobs/<int:job_id>/elements/<int:element_id>/status
 
@@ -351,11 +383,13 @@ pdm.workqueue.WorkqueueService module
       }	
 
    :statuscode 200: no error
+   :statuscode 404: no job with id `job_id` or element with id `element_id` found
 
 .. http:post:: /jobs
 
    Register a new job.
-   **Note** the job type must be given in integer form as described by the enums `here`. If you know the type of job that you require you can use the shorthand job registration methods below to avoid having to pass this parameter.
+
+   .. note:: The job type must be given in integer form as described by the enum :class:`pdm.workqueue.WorkqueueDB.JobType`. If you know the type of job that you require you can use the shorthand job registration methods below to avoid having to pass this parameter.
 
    **Example request**:
 
@@ -392,6 +426,8 @@ pdm.workqueue.WorkqueueService module
       }
 
    :statuscode 200: no error
+   :statuscode 400: client error with input data
+   :statuscode 500: unexpected server error either creating job or registering it in DB
 
 .. http:post:: /list
 
@@ -431,6 +467,8 @@ pdm.workqueue.WorkqueueService module
       }
 
    :statuscode 200: no error
+   :statuscode 400: client error with input data
+   :statuscode 500: unexpected server error either creating job or registering it in DB
 
 .. http:post:: /copy
 
@@ -474,6 +512,8 @@ pdm.workqueue.WorkqueueService module
       }
 
    :statuscode 200: no error
+   :statuscode 400: client error with input data
+   :statuscode 500: unexpected server error either creating job or registering it in DB
 
 .. http:post:: /remove
 
@@ -513,6 +553,8 @@ pdm.workqueue.WorkqueueService module
       }
 
    :statuscode 200: no error
+   :statuscode 400: client error with input data
+   :statuscode 500: unexpected server error either creating job or registering it in DB
 
 .. http:post:: /rename
 
@@ -555,6 +597,8 @@ pdm.workqueue.WorkqueueService module
       }
 
    :statuscode 200: no error
+   :statuscode 400: client error with input data
+   :statuscode 500: unexpected server error either creating job or registering it in DB
 
 .. http:post:: /mkdir
 
@@ -594,3 +638,5 @@ pdm.workqueue.WorkqueueService module
       }
 
    :statuscode 200: no error
+   :statuscode 400: client error with input data
+   :statuscode 500: unexpected server error either creating job or registering it in DB

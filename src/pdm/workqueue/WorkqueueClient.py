@@ -97,7 +97,7 @@ class WorkqueueClient(RESTClient):
         Variable keyword args are passed directly on to the worker script as extra_opts.
 
         Args:
-            src_siteid (int): The id of the site containing the filepath to be renamed.
+            siteid (int): The id of the site containing the filepath to be renamed.
             src_filepath (str): The filepath to rename.
             dst_filepath (str): The new filepath.
             max_tries (int): The maximum number of times to attempt the rename. (default: 2)
