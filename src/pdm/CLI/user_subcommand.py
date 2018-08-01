@@ -1,6 +1,6 @@
 """
-Define pdm subcommands and action functions for them:
-Example usage: pdm register -e fred@flintstones.com -n Fred -s Flintstone
+Define *pdm* sub-commands and action functions for them:
+Example usage: *pdm register -e fred@flintstones.com -n Fred -s Flintstone*
 """
 import os
 import errno
@@ -20,7 +20,9 @@ from pdm.framework.RESTClient import RESTException
 
 class UserCommand(object):
     """
-    Define user sub-commands and assign actions fro them.
+    Define user sub-commands and assign actions to them. Use *pdm -h* to see all subcommands.
+    To see accepted sub-command parameters use *pdm subcmd -h* where *subcmd* is a sub-command
+    name i.e. *pdm register -h*
     """
 
     def __init__(self, subparsers):  # pylint: disable=too-many-statements
@@ -220,7 +222,8 @@ class UserCommand(object):
 
     def not_implemented(self, args):
         """
-        Not Implemented yet placeholder
+        Not Implemented yet placeholder.
+
         :param args:
         :return:
         """
@@ -229,9 +232,11 @@ class UserCommand(object):
 
     def register(self, args):  # pylint: disable=no-self-use
         """
-        User registration function
-        :param parser arguments when called by the master command (pdm)
-        :return:
+        User registration function. It will ask for an email address, name, surname
+        and a password.
+
+        :param args: parser arguments when called by the master command (pdm)
+        :return: None
         """
         if not args.name:
             args.name = raw_input("Please enter your given name: ")
@@ -252,9 +257,11 @@ class UserCommand(object):
 
     def unregister(self, args):
         """
-        DEletes a user from the pdm user database. A user can only delete himself.
-        :param args:
-        :return:
+        Deletes a user from the pdm user database. A user can only delete himself.
+        Result of the operation is printed to the console.
+
+        :param args: parser arguments.
+        :return: None
         """
         token = UserCommand._get_token(args.token)
         if token:
@@ -314,8 +321,9 @@ class UserCommand(object):
     def logoff(self, args):
         """
         User logoff. Just delete a token if present.
-        :param args:
-        :return:
+
+        :param args: parser arguments.
+        :return: None
         """
         token = UserCommand._get_token(args.token, check_validity=False)  # expired or not
         if token:
@@ -332,7 +340,7 @@ class UserCommand(object):
             print "No token found, no one to log off."
 
     def passwd(self, args):  # pylint: disable=no-self-use
-        """ Change user password """
+        """ Change user password. """
 
         token = UserCommand._get_token(args.token)
         if token:
@@ -351,7 +359,7 @@ class UserCommand(object):
 
     def whoami(self, args):  # pylint: disable=no-self-use
         """
-        get users own data
+        get users own data.
         """
 
         token = UserCommand._get_token(args.token)
@@ -364,8 +372,9 @@ class UserCommand(object):
     def list(self, args):  # pylint: disable=no-self-use
         """
         List files at remote site.
-        :param args:
-        :return:
+
+        :param args: parser arguments.
+        :return: None
         """
         max_iter = 50
         nap = 0.2
@@ -404,7 +413,8 @@ class UserCommand(object):
 
     def sitelist(self, args):  # pylint disable-no-self-use
         """
-        Print list of available sites
+        Print list of available sites.
+
         :param args: carry a user token
         :return: None
         """
@@ -422,6 +432,7 @@ class UserCommand(object):
     def _print_formatted_listing(self, root, full_listing, level=0):  # pylint: disable=no-self-use
         """
         Print formatted file listing.
+
         :param listing: listing (a list dictionaries) to be pretty-printed a'la ls -l
         for a single level listing
         :return: None
@@ -456,9 +467,11 @@ class UserCommand(object):
 
     def status(self, args):
         """
-        Get and print status of a job (task)
+        Get and print status of a job (task).
+
         :param args:
-        :return:
+        :return: None
+            see: :func:`pdm.userservicedesk.TransferClient.TransferClient.status`
         """
         token = UserCommand._get_token(args.token)
         block = args.block
@@ -487,9 +500,11 @@ class UserCommand(object):
 
     def remove(self, args):  # pylint: disable=no-self-use
         """
-        Remove files at remote site
-        :param args:
-        :return:
+        Remove files at remote site.
+
+        :param args: parser arguments, in particular *sitename:patname* to remove.
+        :return: None
+            see: :func:`pdm.userservicedesk.TransferClientFacade.TransferClientFacade.remove`
         """
         token = UserCommand._get_token(args.token)
         if token and self._session_ok(args.site, token):
@@ -504,10 +519,12 @@ class UserCommand(object):
 
     def copy(self, args):  # pylint: disable=no-self-use
         """
-        Copy files between sites. Not executed if no toke or not logged in
-        to any of the sites.
-        :param args:
-        :return: copy response or None if site paths were malformed
+        Copy files between sites. Not executed if no valid token or not logged in
+        to either of the sites.
+
+        :param args: parser argumens, in parcicular source and destination site paths.
+        :return: copy response or *None* if site paths were malformed.
+            see: :func:`pdm.userservicedesk.TransferClientFacade.TransferClientFacade.copy`
         """
         token = UserCommand._get_token(args.token)
         if token and self._session_ok(args.src_site, token) \
@@ -527,8 +544,10 @@ class UserCommand(object):
     def mkdir(self, args):
         """
         Create a new directory at a site.
+
         :param args: site - the new directory in a form site:path
-        :return:
+        :return: None
+            see: :func:`pdm.userservicedesk.TransferClientFacade.TransferClientFacade.mkdir`
         """
         token = UserCommand._get_token(args.token)
         if token and self._session_ok(args.site, token):
@@ -544,8 +563,10 @@ class UserCommand(object):
         """
         Rename a file at a site. It's like a copy, but with the source and destination
         site being the same.
-        :param args: old name: site:path, new name: path.
-        :return:
+
+        :param args: old name: site:path, new name: :path.
+        :return: None
+            see: :func:`pdm.userservicedesk.TransferClientFacade.TransferClientFacade.rename`
         """
         token = UserCommand._get_token(args.token)
         if token and self._session_ok(args.oldname, token):
@@ -560,9 +581,12 @@ class UserCommand(object):
 
     def log(self, args):
         """
-        Get job log of a complete finished job. Use -v to get complete job info.
-        :param args:
-        :return:
+        Get job log of a complete finished job (get *log* element of the job output).
+        Use -v to get complete job info.
+
+        :param args: parser arguments, in particualr the job *id*.
+        :return: None
+            see: :func:`pdm.userservicedesk.TransferClient.TransferClient.output`
         """
         token = UserCommand._get_token(args.token)
         if token:
@@ -578,9 +602,11 @@ class UserCommand(object):
 
     def jobs(self, args):
         """
-        Get user jobs' info
-        :param args:
-        :return:
+        Get user jobs' info. See \
+        :func:`pdm.userservicedesk.TransferClient.TransferClient.jobs`
+
+        :param args: parser arguments.
+        :return: None
         """
         token = UserCommand._get_token(args.token)
         if token:
@@ -590,7 +616,9 @@ class UserCommand(object):
 
     def get_site(self, args):
         """
-        Get site information from the Site Service
+        Get and pretty-print site information by calling\
+         :func:`pdm.site.SiteClient.SiteClient.get_site` for a given site.
+
         :param args: parser arguments, in particular site name.
         :return: None
         """
@@ -610,8 +638,10 @@ class UserCommand(object):
 
     def get_session(self, args):
         """
-        Get user session information from the Site Service for a given site
-        :param args: parser arguments, in particular site name
+        Get and prints formatted user session information
+        from the :class:`pdm.site.SiteClient.SiteClient` for a given site.
+
+        :param args: parser arguments, in particular the site name.
         :return: None
         """
         token = UserCommand._get_token(args.token)
@@ -626,6 +656,7 @@ class UserCommand(object):
     def _session_ok(self, site_path, token):
         """
         Check user session at a site.
+
         :param site_name: site to check
         :param token: user token
         :return:True or False
@@ -646,9 +677,10 @@ class UserCommand(object):
 
     def add_site(self, args):
         """
-        Add a site to the database
-        :param args:
-        :return:
+        Add a site to the database.
+
+        :param args: parser arguments
+        :return: None
         """
         token = UserCommand._get_token(args.token)
         if token:
@@ -676,9 +708,10 @@ class UserCommand(object):
 
     def del_site(self, args):
         """
-        Delete a site
-        :param args:
-        :return:
+        Delete a site.
+
+        :param args: parser arguments.
+        :return: None
         """
         token = UserCommand._get_token(args.token)
         if token:
@@ -690,9 +723,10 @@ class UserCommand(object):
 
     def site_login(self, args):
         """
-        User site logon
-        :param args:
-        :return:
+        User site logon.
+
+        :param args: parser arguments
+        :return: None
         """
         token = UserCommand._get_token(args.token)
         if token:
@@ -722,9 +756,10 @@ class UserCommand(object):
 
     def site_logoff(self, args):
         """
-        User site logoff
-        :param args:
-        :return:
+        User site logoff.
+
+        :param args: parser arguments.
+        :return: None
         """
         token = UserCommand._get_token(args.token)
         if token:
@@ -742,7 +777,8 @@ class UserCommand(object):
     def _get_site_name(site_id, token):
         """
         Get site name from site id. Requires a token. If site name cannot be resolved an
-        empty string is returned
+        empty string is returned.
+
         :param site_id: site id
         :param token: user token
         :return: site name
@@ -867,6 +903,7 @@ class UserCommand(object):
         """
         Chop off beginning of a string to size. Add 3 optional dots
         at the beginning if trimming is required.
+
         :param source: string to chop
         :param size: field size
         :param dots: optional dots
@@ -886,6 +923,7 @@ class UserCommand(object):
     def _get_token(tokenfile, check_validity=True):
         """
         Get a token from a file, expired or not.
+
         :param tokenfile: file containing a token
         :return: token or None if tokenfile not present or empty
         """
