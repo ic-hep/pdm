@@ -17,6 +17,8 @@ pdm.workqueue.WorkqueueClient module
     :undoc-members:
     :show-inheritance:
 
+------------------------
+
 pdm.workqueue.WorkqueueDB module
 --------------------------------
 
@@ -34,6 +36,26 @@ pdm.workqueue.WorkqueueDB module
     :members:
     :undoc-members:
     :show-inheritance:
+
+Job DB model
+++++++++++++
+
+.. .. data:: d={} Was going to add the jobs as data here
+
+.. literalinclude:: ../../../../src/pdm/workqueue/WorkqueueDB.py
+    :language: python
+    :lines: 152-181
+    :dedent: 8
+
+JobElement DB model
++++++++++++++++++++
+
+.. literalinclude:: ../../../../src/pdm/workqueue/WorkqueueDB.py
+    :language: python
+    :lines: 281-305
+    :dedent: 8
+
+------------------------
 
 pdm.workqueue.WorkqueueService module
 -------------------------------------
