@@ -210,21 +210,25 @@ class WorkqueueClient(RESTClient):
         """
         Get job output.
 
-        Gets the output for the given job element if it's ready. The optional parameter attempt
-        allows the user to get the output for a given attempt. If this parameter is None
-        (the default) then the latest attempts output is retrieved.
+        Gets the latest output for all elements of the given job if they are ready. The optional
+        parameter element_id allows the user to get the latest output for a given job element, while
+        attempt allows the user to get the output for a given attempt of a specific element.
+        Note that specifying attempt without an element_id is an error and will not return that
+        attempt for all elements but will instead be ignored and the user will get the latest
+        output for all elements.
 
         Args:
-            job_id (int): The id number of the job to fetch output from.
-            element_id (int): The id number of the job element to fetch output from.
-                              (default: None = first)
+            job_id (int): The id number of the job to fetch latest output from.
+            element_id (int): The id number of the job element to fetch latest output from.
+                              (default: None = all)
             attempt (int): The attempt number to get the output from. (default: None = latest)
 
         Returns:
-            dict: Representation of the output with keys (jobid, elementid, type, log).
+            dict: Representation of the output with keys (jobid, elementid, attempt, type, status,
+                  log, (listing)).
                   log is the contents of the job elements log file. If the job element in question
                   was a LIST type job then there will be the additional key "listing" which will be
-                  a JSON encoded list of files/directories each as a dict.
+                  a JSON encoded dictionary of form {directory: [files],...}.
         """
         if element_id is None:
             return self.get('jobs/%s/output' % job_id)
