@@ -25,14 +25,6 @@ pdm\.CLI\.pdmcli module
     :undoc-members:
     :show-inheritance:
 
-pdm\.CLI\.siteinfodict module
------------------------------
-
-.. automodule:: pdm.CLI.siteinfodict
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 pdm\.CLI\.user\_subcommand module
 ---------------------------------
 
