@@ -434,7 +434,7 @@ class WorkqueueService(object):
                 current_app.log.warn("No attempts have yet been recorded for element %d of "
                                      "job %d. Please try later.", element.id, job_id)
                 continue
-            if attempt is None:  # if element_id is none, attempt must also in RESTful call only
+            if attempt is None:  # via REST call: if element_id is None attempt must be None also
                 attempt = element.attempts
             if attempt not in xrange(1, element.attempts + 1):
                 current_app.log.warn("Invalid attempt '%s', job.element %s.%s has been tried %s "

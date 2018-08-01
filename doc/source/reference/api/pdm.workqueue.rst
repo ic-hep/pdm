@@ -118,11 +118,8 @@ pdm.workqueue.WorkqueueService module
 	"timestamp": "2012-03-21T13:35"
       }
 
-   :reqheader Accept: the response content type depends on
-                      :mailheader:`Accept` header
-   :resheader Content-Type: this depends on :mailheader:`Accept`
-                            header of request
    :statuscode 200: no error
+   :statuscode 404: no job with id `job_id` found
 
 .. http:get:: /jobs/<int:job_id>/elements
 
@@ -195,6 +192,7 @@ pdm.workqueue.WorkqueueService module
       }
 
    :statuscode 200: no error
+   :statuscode 404: no job with id `job_id` or element with id `element_id` found
 
 .. http:get:: /jobs/<int:job_id>/output
 
@@ -238,6 +236,8 @@ pdm.workqueue.WorkqueueService module
       ]
 
    :statuscode 200: no error
+   :statuscode 404: no job with id `job_id` found
+   :statuscode 500: couldn't find the requested output file on disk. 
 
 .. http:get:: /jobs/<int:job_id>/elements/<int:element_id>/output
 
@@ -268,6 +268,10 @@ pdm.workqueue.WorkqueueService module
       }	
 
    :statuscode 200: no error
+   :statuscode 400: element output not yet ready
+   :statuscode 404: no job with id `job_id` or element with id `element_id` found
+   :statuscode 500: couldn't find the requested output file on disk. 
+
 
 .. http:get:: /jobs/<int:job_id>/elements/<int:element_id>/output/<int:attempt>
 
@@ -298,6 +302,10 @@ pdm.workqueue.WorkqueueService module
       }	
 
    :statuscode 200: no error
+   :statuscode 400: element output not yet ready or invalid attempt
+   :statuscode 404: no job with id `job_id` or element with id `element_id` found
+   :statuscode 500: couldn't find the requested output file on disk. 
+
 
 .. http:get:: /jobs/<int:job_id>/status
 
@@ -324,6 +332,7 @@ pdm.workqueue.WorkqueueService module
       }	
 
    :statuscode 200: no error
+   :statuscode 404: no job with id `job_id` found
 
 .. http:get:: /jobs/<int:job_id>/elements/<int:element_id>/status
 
@@ -352,6 +361,7 @@ pdm.workqueue.WorkqueueService module
       }	
 
    :statuscode 200: no error
+   :statuscode 404: no job with id `job_id` or element with id `element_id` found
 
 .. http:post:: /jobs
 
@@ -394,6 +404,8 @@ pdm.workqueue.WorkqueueService module
       }
 
    :statuscode 200: no error
+   :statuscode 400: client error with input data
+   :statuscode 500: unexpected server error either creating job or registering it in DB
 
 .. http:post:: /list
 
@@ -433,6 +445,8 @@ pdm.workqueue.WorkqueueService module
       }
 
    :statuscode 200: no error
+   :statuscode 400: client error with input data
+   :statuscode 500: unexpected server error either creating job or registering it in DB
 
 .. http:post:: /copy
 
@@ -476,6 +490,8 @@ pdm.workqueue.WorkqueueService module
       }
 
    :statuscode 200: no error
+   :statuscode 400: client error with input data
+   :statuscode 500: unexpected server error either creating job or registering it in DB
 
 .. http:post:: /remove
 
@@ -515,6 +531,8 @@ pdm.workqueue.WorkqueueService module
       }
 
    :statuscode 200: no error
+   :statuscode 400: client error with input data
+   :statuscode 500: unexpected server error either creating job or registering it in DB
 
 .. http:post:: /rename
 
@@ -557,6 +575,8 @@ pdm.workqueue.WorkqueueService module
       }
 
    :statuscode 200: no error
+   :statuscode 400: client error with input data
+   :statuscode 500: unexpected server error either creating job or registering it in DB
 
 .. http:post:: /mkdir
 
@@ -596,3 +616,5 @@ pdm.workqueue.WorkqueueService module
       }
 
    :statuscode 200: no error
+   :statuscode 400: client error with input data
+   :statuscode 500: unexpected server error either creating job or registering it in DB
