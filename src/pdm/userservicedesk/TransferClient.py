@@ -19,6 +19,7 @@ class TransferClient(object):
         """
         Constructor initialises all service clients involved in the transfer management:
         EndpointService, CredService and finally the WorkqueueService.
+
         :param user_token: user token
         """
 
@@ -36,6 +37,7 @@ class TransferClient(object):
     def list(self, src_site, src_filepath, **kwargs):
         """
         List a given path. As for all client calls it need a user token set in a request beforehand.
+
         Args:
             src_site (string): The name of the site containing the path to be listed.
             src_filepath (str): The path to list.
@@ -53,7 +55,8 @@ class TransferClient(object):
 
     def output(self, job_id, attempt=None):
         """
-        Get job output
+        Get job output.
+
         :param job_id: job id
         :return: output as specified by workqueue client
         """
@@ -63,15 +66,17 @@ class TransferClient(object):
     def status(self, job_id):
         """
         Return status of a job.
+
         :param job_id: job id to get the status of.
-        :return:
+        :return: forward response from :func:`pdm.workqueue.WorkqueueClient.WorkqueueClient.status`.
         """
         response = self.__wq_client.status(job_id)
         return response
 
     def list_sites(self):
         """
-        Get list of sites
+        Get list of sites.
+
         :return: list of dictionaries with all keys but 'site_id'.
         """
         filtered_sites = deepcopy(self.__sitelist)
@@ -84,14 +89,15 @@ class TransferClient(object):
         """
         Copy files between sites.
 
-        :param src_site:
-        :param src_filepath:
-        :param dst_site:
-        :param dst_filepath:
-        :param kwargs: max_tries:
-                       priority:
-                       protocol:
-        :return:
+        :param src_site: source site
+        :param src_filepath: source site path
+        :param dst_site: destination site
+        :param dst_filepath: destination site path
+        :param kwargs: * max_tries: maximum number of attempts
+                       * priority: priority
+                       * protocol: protocol used,  see: :func:`pdm.workqueue.WorkqueueClient.WorkqueueClient.copy`
+        :return: forward response from :func:`pdm.workqueue.WorkqueueClient.WorkqueueClient.copy`
+         or *None* if either of the sites exists.
         """
 
         src_siteid = [elem['site_id'] for elem in self.__sitelist if elem['site_name'] == src_site]
@@ -108,13 +114,15 @@ class TransferClient(object):
 
     def remove(self, src_site, src_filepath, **kwargs):
         """
-        Remove files from a given site
+        Remove files from a given site.
+
         :param src_site: the site to contact
         :param src_filepath: the path to be removed
-        :param kwargs: max_tries:
-                       priority:
-                       protocol:
-        :return:
+        :param kwargs: * max_tries: maximum number of attempts
+                       * priority: priority
+                       * protocol: protocol used
+        :return: forward response from :func:`pdm.workqueue.WorkqueueClient.WorkqueueClient.remove`
+         or *None* if the source site does not exist.
         """
 
         src_siteid = [elem['site_id'] for elem in self.__sitelist if elem['site_name'] == src_site]
@@ -129,13 +137,16 @@ class TransferClient(object):
 
     def mkdir(self, site, dirpath, **kwargs):
         """
-        Create a new directory at
+        Create a new directory at a site.
+
         :param site:  site name
         :param dirpath: directory path
-        :param kwargs: max_tries:
-                       priority:
-                       protocol:
-        :return: workqueue client response
+        :param kwargs: * max_tries: maximum number of attempts
+                       * priority: priority
+                       * protocol: protocol used,\
+                         see: :func:`pdm.workqueue.WorkqueueClient.WorkqueueClient.copy`
+        :return: forward response from :func:`pdm.workqueue.WorkqueueClient.WorkqueueClient.mkdir`
+         or *None* if the site does not exist.
         """
 
         src_siteid = [elem['site_id'] for elem in self.__sitelist if elem['site_name'] == site]
@@ -149,14 +160,16 @@ class TransferClient(object):
 
     def rename(self, site, oldname, newname, **kwargs):
         """
-        Rename a file or directory (?) within site.
+        Rename a file or directory within site.
+
         :param site: site name
         :param oldname: old file name
         :param newname: new file name
-        :param kwargs: max_tries:
-                       priority:
-                       protocol:
-        :return: workqueue client response
+        :param kwargs: * max_tries: maximum number of attempts
+                       * priority: priority
+                       * protocol: protocol used
+        :return: forward response from :func:`pdm.workqueue.WorkqueueClient.WorkqueueClient.rename`
+         or *None* if the site does not exist.
         """
 
         src_siteid = [elem['site_id'] for elem in self.__sitelist if elem['site_name'] == site]
@@ -171,16 +184,20 @@ class TransferClient(object):
     def jobs(self):
         """
         Get user jobs' info.
-        :return:
+
+        :return: forwarded response from \
+        :func:`WorkqueueClient.jobs() <pdm.workqueue.WorkqueueClient.WorkqueueClient.jobs>`.
         """
         response = self.__wq_client.jobs()
         return response
 
     def elements(self, job_id):
         """
-        Get job elements information
+        Get job elements information.
+
         :param job_id: job id
-        :return: workqueue elements response
+        :return: forwarded response from \
+        :func:`WorkqueueClient.jobs() <pdm.workqueue.WorkqueueClient.WorkqueueClient.jobs>`.
         """
 
         response = self.__wq_client.elements(job_id)

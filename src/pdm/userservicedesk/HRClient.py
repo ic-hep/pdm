@@ -28,6 +28,7 @@ class HRClient(RESTClient):
     def del_user(self):
         """
         Deletes a user.
+
         :return: None
         """
         return self.delete('users/self')
@@ -35,12 +36,15 @@ class HRClient(RESTClient):
     def add_user(self, userdict):
         """
         Add a new user.
+
         :param userdict: user input data dictionary.
         The required fields (strings) are:
-        key: 'email'    value: a valid user email which server as a username
-        key: 'name'     value: user given name e.g. 'John'
-        key: 'surname'  value: user surname e.g. 'Smith'
-        key: 'password' value: password
+
+        * key: 'email'    value: a valid user email which server as a username
+        * key: 'name'     value: user given name e.g. 'John'
+        * key: 'surname'  value: user surname e.g. 'Smith'
+        * key: 'password' value: password
+
         :return: Returns a dict with user data for convenience.
         """
         return self.post('users', userdict)
@@ -50,7 +54,8 @@ class HRClient(RESTClient):
         User login procedure. Gets a token issued by a service.
         The client has to pass the token received to the set_token()
         operation in order to be able to use operations which require
-        a token (e.g. get_user() )
+        a token (e.g. get_user() ).
+
         :param username: email address
         :param password: password
         :return: user token
@@ -62,7 +67,8 @@ class HRClient(RESTClient):
 
     def change_password(self, password, newpassword):
         """
-        Request user password change
+        Request user password change.
+
         :param password: original password
         :param newpassword: new password
         :return: a dictionary with user data

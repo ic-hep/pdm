@@ -53,6 +53,7 @@ class HRService(object):
     def hello():
         """
         Ping-like method.
+
         :return: nice greeting ;-)
         """
         return jsonify('User Service Desk at your service !\n')
@@ -62,6 +63,7 @@ class HRService(object):
     def get_user():
         """
         Get user own self based on user_id from the token passed in.
+
         :return: json response with user data or 404 if the user does not exist
         """
 
@@ -85,6 +87,7 @@ class HRService(object):
     def add_user():
         """
         Add a new user.
+
         :return: json document with added user data. An HTTPException with a
                  403 status code is thrown when the user already exists. User
                  email address and a password are obligatory (404 is emitted
@@ -137,6 +140,7 @@ class HRService(object):
     def change_password():
         """
         Method to change user password. Requite old password, new password and a valid token.
+
         :return: response object containing user name, surname and date modified
         """
         HRService._logger.info("password change request ...")
@@ -208,6 +212,7 @@ class HRService(object):
     def delete_user():
         """
         Delete a user. The user can only delete himself.
+
         :return: response object with code 200 if successful, 404 if the user does not exist
         """
 
@@ -245,6 +250,7 @@ class HRService(object):
     def get_token():
         """
         User login procedure.
+
         :return: token
         """
 
@@ -298,21 +304,12 @@ class HRService(object):
 
         return jsonify(token)
 
-    # @staticmethod
-    # @export
-    # def verify_token():
-    #     if request.token_ok:
-    #         print "Token OK! (%s)" % request.token
-    #         res = "Token OK! (%s)" % request.token
-    #     else:
-    #         res = "Token Missing!"
-    #     return jsonify(res)
-
     @staticmethod
     def check_passwd(passwd):
         """
-        (Very) basic password check
-        :param passwd:
+        Very basic password check.
+
+        :param passwd:  password to be checked.
         :return: True of False
         """
         if len(passwd) < current_app.pwd_len:
@@ -326,6 +323,7 @@ class HRService(object):
     def check_token():
         """
         Token validity helper. Check token integrity and expiry date. Emit 403 if the check fails.
+
         :return: user id from the token.
         """
         isoformat = '%Y-%m-%dT%H:%M:%S.%f'
@@ -352,8 +350,9 @@ class HRService(object):
         The token intenally holds:
         id: user id
         expiry: expiry info (to be decided)
-        key: hashed key (from pdm.utils.hashing.hash_pass() )
-        :param token encrypted token
+        key: hashed key (from pdm.utils.hashing.hash_pass()).
+
+        :param   token: encrypted token
         :return: the value of the 'key' field of the token dictionary
         """
         unpacked_user_token = TokenService.unpack(token)

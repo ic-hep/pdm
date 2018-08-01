@@ -20,6 +20,8 @@ class HRUtils(object):
         """
         Check whether token is expired. This is an insecure call - it does not verify
         token's integrity.
+
+        :param token: token in
         :return: True if expired or no expiry information;  False otherwise.
         """
         _isoformat = '%Y-%m-%dT%H:%M:%S.%f'
@@ -37,6 +39,7 @@ class HRUtils(object):
     def get_token_expiry_insecure(token):
         """
         Get token expiry date in ISO format, Insecure - token integrity not checked.
+
         :param token: token in
         :return: ISO of the unpacked token
         """
@@ -50,7 +53,8 @@ class HRUtils(object):
     @staticmethod
     def get_token_username_insecure(token):
         """
-        Get username from a token
+        Get username from a token.
+
         :param token:
         :return:
         """

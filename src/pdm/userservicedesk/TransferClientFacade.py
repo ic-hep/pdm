@@ -6,7 +6,8 @@ from pdm.userservicedesk.TransferClient import TransferClient
 
 class TransferClientFacade(TransferClient):
     """
-    Transfer client facade. Method take URI(s) as parameter(s) rather the its parts.
+    Transfer client facade. Methods take *sitename:path* as parameter(s)
+    rather the its parts.
     """
 
     def __init__(self, token):
@@ -15,6 +16,7 @@ class TransferClientFacade(TransferClient):
     def list(self, site, **kwargs):
         """
         List the resource specified by site.
+
         :param site: site to list
         :param kwargs: additional arguments (like max_tries or priority)
         :return: the resource listing
@@ -30,9 +32,10 @@ class TransferClientFacade(TransferClient):
     def copy(self, src_site, dst_site, **kwargs):
         """
         Copy files or directories from one site to another.
+
         :param src_site: source site
         :param dst_site: destination site
-        :param kwargs: addition arguments (like max_tries ot priority)
+        :param kwargs: additional arguments (like max_tries or priority)
         :return: copy result message
         """
 
@@ -53,7 +56,8 @@ class TransferClientFacade(TransferClient):
 
     def remove(self, src_site, **kwargs):
         """
-        Remove the resources (file or directory)
+        Remove the resources (file or directory).
+
         :param src_site: site to remove from
         :param kwargs: additional arguments (like max_tries or priority)
         :return: remove result message
@@ -69,8 +73,9 @@ class TransferClientFacade(TransferClient):
     def mkdir(self, sitepath, **kwargs):
         """
         Create a new directory at the site.
+
         :param site_path: string of a form sitename:directory_path_to_create
-        :return: mkdir result message, or None if malformed site path
+        :return: mkdir result message, or *None* if malformed site path
         """
         sitename, path = self.split_site_path(sitepath)
         if sitename and path:
@@ -82,6 +87,7 @@ class TransferClientFacade(TransferClient):
     def rename(self, site_path, newname, **kwargs):
         """
         Rename a file.
+
         :param site_path: string of a form sitename:file_path_to_rename
         :param newname new file name (w/o the site prefix)
         :return: rename result message, or None if malformed site path
@@ -101,8 +107,8 @@ class TransferClientFacade(TransferClient):
     @staticmethod
     def split_site_path(path):
         """
-        Split a site string at the first colon. Return a tuple containing a (site, path) or
-        (None, None) if the colon is missing.
+        Split a site string at the first colon. Return a tuple containing a *(site, path)* or
+        *(None, None)* if the *path* is malformed.
         """
 
         parts = path.split(':', 1)
