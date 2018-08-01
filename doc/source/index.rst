@@ -11,12 +11,11 @@ Welcome to PDM's documentation!
    :caption: Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: API Docs:
-   :glob:
 
-   reference/api/*
-
+   reference/api/pdm
+   reference/api/siteservice
 
 Indices and tables
 ==================

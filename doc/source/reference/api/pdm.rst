@@ -10,7 +10,7 @@ Subpackages
 -----------
 
 .. toctree::
+    :glob:
 
-    pdm.utils
-    pdm.workqueue
+    pdm.*
 

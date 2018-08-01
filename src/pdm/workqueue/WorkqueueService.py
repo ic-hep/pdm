@@ -276,18 +276,28 @@ class WorkqueueService(object):
             request.data['dst_credentials'] = current_app.site_client\
                                                          .get_cred(request.data['dst_siteid'],
                                                                    user_id)
+        elif request.data['type'] == JobType.RENAME and\
+                request.data.get('dst_siteid') != request.data['src_siteid']:
+            current_app.log.warn("dst_siteid (%s) != src_siteid (%s)",
+                                 request.data.get('dst_siteid'), request.data['src_siteid'])
+            request.data['dst_siteid'] = request.data['src_siteid']
         try:
             job = Job(**request.data)
-            job.add()
-        except Exception as err:
+        except ValueError as err:
             abort(400, description=err.message)
+        except Exception as err:  # pylint: disable=broad-except
+            abort(500, description=err.message)
+        try:
+            job.add()
+        except Exception as err:  # pylint: disable=broad-except
+            abort(500, description=err.message)
         return jsonify(job)
 
     @staticmethod
     @export_ext('list', ['POST'])
     @decode_json_data
     def list():
-        """List a remote dir."""
+        """Register a LIST job."""
         request.data['type'] = JobType.LIST
         return WorkqueueService.post_job()
 
@@ -295,7 +305,7 @@ class WorkqueueService(object):
     @export_ext('copy', ['POST'])
     @decode_json_data
     def copy():
-        """Copy."""
+        """Register a COPY job."""
         request.data['type'] = JobType.COPY
         return WorkqueueService.post_job()
 
@@ -303,7 +313,7 @@ class WorkqueueService(object):
     @export_ext('remove', ['POST'])
     @decode_json_data
     def remove():
-        """Remove."""
+        """Register a REMOVE job."""
         request.data['type'] = JobType.REMOVE
         return WorkqueueService.post_job()
 
@@ -311,7 +321,7 @@ class WorkqueueService(object):
     @export_ext('rename', ['POST'])
     @decode_json_data
     def rename():
-        """Remove."""
+        """Register a RENAME job."""
         request.data['type'] = JobType.RENAME
         return WorkqueueService.post_job()
 
@@ -319,7 +329,7 @@ class WorkqueueService(object):
     @export_ext('mkdir', ['POST'])
     @decode_json_data
     def mkdir():
-        """Remove."""
+        """Register a MKDIR job."""
         request.data['type'] = JobType.MKDIR
         return WorkqueueService.post_job()
 
@@ -424,7 +434,7 @@ class WorkqueueService(object):
                 current_app.log.warn("No attempts have yet been recorded for element %d of "
                                      "job %d. Please try later.", element.id, job_id)
                 continue
-            if attempt is None:
+            if attempt is None:  # if element_id is none, attempt must also in RESTful call only
                 attempt = element.attempts
             if attempt not in xrange(1, element.attempts + 1):
                 current_app.log.warn("Invalid attempt '%s', job.element %s.%s has been tried %s "
