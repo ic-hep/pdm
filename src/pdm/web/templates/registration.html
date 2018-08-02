@@ -60,7 +60,7 @@ $(document).ready(function(){
             return;
         }
 
-        var email = new RegExp('^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$');
+        var email = new RegExp('^[a-zA-Z0-9.+_-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$');
         if (email.test(username)){
             $("#username_ok").removeClass("text-danger oi-circle-x");
             $("#username_ok").addClass("text-success oi-circle-check");
