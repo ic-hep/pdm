@@ -117,9 +117,8 @@ function bootstrap_alert(level, status, message){
     alert.append("\t");
     alert.append(message);
     alert.append(button);
-    notification.empty();
     notification.append(alert);
-    notification.fadeIn("slow").delay(2000).fadeOut("slow");
+    alert.fadeIn("slow").delay(2000).fadeOut("slow", function(){alert.remove();});
 };
 
 function listing(sitename, filepath, panel){
@@ -244,6 +243,24 @@ function copy(src_site, src_listing, dst_site, dst_listing){
 }
 
 $(document).ready(function(){
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      console.log("Server Message -- {{category}}: {{message}}");
+      bootstrap_alert("{{ category }}", "Server Message", "{{ message }}");
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+
+    $("#title_bar").mouseover(function(){
+        $("#navigation_menu").slideDown("slow");
+    });
+
+    $("#heading_end").mouseover(function(){
+        $("#navigation_menu").slideUp("slow");
+    });
 
     $("#dst_panel").droppable({
         accept: ".src_draggable",

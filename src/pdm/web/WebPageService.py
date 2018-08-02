@@ -292,6 +292,7 @@ class WebPageService(object):
             if voms_auth:
                 vos = current_app.siteclient.get_service_info().get('vos', [])
                 if not vos:
+                    flash("No VOs registered, contact your system administrator!", "danger")
                     current_app.log.warning("No VOs returned by get_service_info.")
             return render_template("loginform.html", username=username, sitename=sitename,
                                    voms_auth=voms_auth, vos=vos), 403
