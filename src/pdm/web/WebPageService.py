@@ -126,7 +126,7 @@ class WebPageService(object):
             return render_template("registration.html", username=username, forename=forename,
                                    surname=surname, password=password,
                                    password_repeat=password_repeat, accept_cookies=True)
-        return redirect(url_for("WebPageSevice.front_portal"))
+        return redirect(url_for("WebPageService.front_portal"))
 
     @staticmethod
     @export_ext("dashboard/joblist")
