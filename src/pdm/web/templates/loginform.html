@@ -49,5 +49,21 @@
     </div>
 {% endif %}
     <br><br>
+{% if voms_auth and not vos %}
+    <button type="submit" class="btn btn-danger submit" disabled>Sign in</button>
+{% else %}
     <button type="submit" class="btn btn-primary submit">Sign in</button>
+{% endif %}
 </form>
+<script>
+$(document).ready(function(){
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      console.log("Server Message -- {{category}}: {{message}}");
+      bootstrap_alert("{{ category }}", "Server Message", "{{ message }}");
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+});
+</script>
