@@ -92,7 +92,7 @@ class WebPageService(object):
         """Log a client out of the Datamover."""
         flask.session.pop("token")
         set_session_state(False)
-        flash('You have been logged out.')
+        flash('You have been logged out.', 'success')
         return redirect(url_for("WebPageService.front_portal"))
 
     @staticmethod
