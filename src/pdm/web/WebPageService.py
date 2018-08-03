@@ -165,8 +165,8 @@ class WebPageService(object):
         if site is None:
             abort(404, "Site not found")
 
-        username = request.data.get('username')
-        password = request.data.get('password')
+        username = request.data.get('susername')
+        password = request.data.get('spassword')
         vo_name = request.data.get('vo')
         if username is None:
             abort(400, "username required but missing.")
