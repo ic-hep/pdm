@@ -516,14 +516,18 @@ $(document).ready(function(){
         var enter = 13;
         var backspace = 8;
         var del = 46;
-        if (event.keyCode == enter){
-            $("div.card-body ul.list-group li input").trigger("focusout");
-            $("div.go_button").trigger("click");
-            return;
+        // is a text entry field in focus?
+        if ($("input[type=text]:focus").length){  // Note: could use :text selector but less performance, see docs for JQuery :text
+            if (event.keyCode == enter){
+                $("div.card-body ul.list-group li input").trigger("focusout");
+                $("div.go_button").trigger("click");
+            }
         }
-        var nselected = $("div.card-body ul.list-group li[class ~= bg-primary]").not(".disabled").length;
-        if ( nselected > 0 && (event.keyCode == backspace || event.keyCode == del) ) {
-            $("#delete_modal").modal();
+        else{
+            var nselected = $("div.card-body ul.list-group li[class ~= bg-primary]").not(".disabled").length;
+            if ( nselected > 0 && event.keyCode == del ) {
+                $("#delete_modal").modal();
+            }
         }
     });
 
