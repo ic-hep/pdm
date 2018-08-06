@@ -151,7 +151,7 @@ class WorkqueueService(object):
                   description="Token not valid for element %d of job %d" % (element_id, job_id))
         current_app.log.debug("Received data from worker for job.element %s.%s: %s",
                               job_id, element_id, pformat(request.data))
-        require_attrs('returncode', 'host', 'log', 'timestamp')
+        require_attrs('returncode', 'host', 'log', 'timestamp', 'monitoring')
 
         # Update job status.
         JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
@@ -161,6 +161,7 @@ class WorkqueueService(object):
             element.listing = request.data['listing']
         element.attempts += 1
         element.status = JobStatus.DONE if request.data['returncode'] == 0 else JobStatus.FAILED
+        element.monitoring_info = request.data['monitoring']
         element.update()
 
 #    Job = request.db.tables.Job
@@ -481,4 +482,8 @@ class WorkqueueService(object):
         return jsonify({'jobid': element.job_id,
                         'elementid': element.id,
                         'status': JobStatus(element.status).name,
-                        'attempts': element.attempts})
+                        'attempts': element.attempts,
+                        'transferred': element.monitoring_info.get('transferred', 'N/A'),
+                        'instant': element.monitoring_info.get('instant', 'N/A'),
+                        'average': element.monitoring_info.get('average', 'N/A'),
+                        'elapsed': element.monitoring_info.get('elapsed', 'N/A')})
