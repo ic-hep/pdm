@@ -113,7 +113,7 @@ def pdm_gfal_long_list_dir(ctx, root, result, max_depth=-1, depth=1):
     """
     Recursively list files and directories of root (if root is a directory).
     Use opendir method, so file or directory names are obtained together
-    with their stat information in one go.
+    with their stat information in one go. Skip '.' and '..' directories.
     :param ctx: gfal2 context
     :param root: root directory to start from
     :param result: result dictionary for root:
@@ -133,6 +133,8 @@ def pdm_gfal_long_list_dir(ctx, root, result, max_depth=-1, depth=1):
             (dirent, stats) = dirp.readpp()
             if dirent is None:
                 break
+            if dirent.d_name =='.' or dirent.d_name =='..':
+                continue
             dir_entry = {k: getattr(stats, k) for k, _ in
                          inspect.getmembers(stats.__class__, lambda x: isinstance(x, property))}
             dir_entry['name'] = dirent.d_name
