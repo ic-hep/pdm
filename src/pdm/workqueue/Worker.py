@@ -11,6 +11,8 @@ import subprocess
 import shutil
 import asyncore
 import logging
+from cStringIO import StringIO
+from collections import defaultdict
 from pprint import pformat
 from datetime import datetime
 from contextlib import contextmanager
@@ -126,6 +128,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._buffer = ''
         self._monitoring_dict = {}
+        self._log_dict = defaultdict(StringIO)
 
     def writable(self):
         """Writeable status of fd."""
@@ -154,19 +157,22 @@ class StdOutDispatcher(asyncore.file_dispatcher):
                 return
 
             element_id = done_element['id']
-            log = ''
             if 'domain' in done_element:
-                log += '{domain} -- {stage} -- {desc}'.format(**done_element)
+                self._log_dict[element_id].write('{domain} -- {stage} -- {desc}\n'
+                                                 .format(**done_element))
             elif 'transferred' in done_element:
                 self._monitoring_dict[element_id] = done_element
             elif 'Code' in done_element:
-                log += self._stderr_dispatcher.buffer
+                log = self._log_dict.pop(element_id, StringIO())
+                log.write(self._stderr_dispatcher.buffer)
+                log.write('\n')
                 returncode = done_element['Code']
-                data = {'log': log,
+                data = {'log': log.getvalue(),
                         'returncode': returncode,
                         'timestamp': datetime.utcnow().isoformat(),
                         'host': socket.gethostbyaddr(socket.getfqdn()),
                         'monitoring': self._monitoring_dict.get(element_id, {})}
+                log.close()
 
                 if returncode:
                     self._logger.warning("Subprocess for job.element %s failed with exit code %s",
