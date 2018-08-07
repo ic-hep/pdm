@@ -43,7 +43,7 @@ def monitor_callback(src, dst, average, instant, transferred, elapsed):  # pylin
 
 def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False,
                   # pylint: disable=too-many-arguments, too-many-locals
-                  parent=True, nbstreams=1,
+                  parent=True, nbstreams=1, timeout=300,
                   verbosity=logging.INFO):
     """
     Copy a single source file to a target file.
@@ -82,6 +82,7 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     params.overwrite = overwrite
     params.create_parent = parent
     params.nbstreams = nbstreams
+    params.timeout = timeout
     params.event_callback = event_callback
     params.monitor_callback = monitor_callback
 

@@ -96,6 +96,7 @@ class UserCommand(object):
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('src_site', type=str)
         user_parser.add_argument('dst_site', type=str)
+        user_parser.add_argument('-T', '--timeout', type=int, help='gfal2 copy timeout')
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
         user_parser.add_argument('-b', '--block', action='store_true')
