@@ -269,7 +269,7 @@ class UserCommand(object):
             client = HRClient()
             client.set_token(token)
             client.del_user()
-            os.remove(args.token)
+            os.remove(os.path.expanduser(args.token))
             print "User unregistered. Token deleted."
         else:
             print "Unregister operation failed."
