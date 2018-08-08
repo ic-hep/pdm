@@ -127,6 +127,7 @@ class ACLManager(object):
                                                  request.uuid, exp_str)
                             return "403 Expired Token", 403
                 request.token = token_value
+                request.raw_token = raw_token
                 request.token_ok = True
             except ValueError:
                 # Token decoding failed, it is probably corrupt or has been
