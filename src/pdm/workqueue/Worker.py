@@ -283,7 +283,6 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                 src_endpoints = src_endpoint_dict['endpoints']
                 if 'cas' in src_endpoint_dict:
                     cas.extend(src_endpoint_dict['cas'])
-                    template_ca_dir = None
 
                 if job['type'] in (JobType.COPY, JobType.RENAME):
                     dst_endpoint_dict = self._site_client.get_endpoints(job['dst_siteid'])
@@ -294,7 +293,10 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                     template_ca_dir = self._system_ca_dir
                     if 'cas' in dst_endpoint_dict:
                         cas.extend(dst_endpoint_dict['cas'])
-                        template_ca_dir = None
+
+                # We need template_ca_dir unless both ends have certs
+                if len(cas) >= 2:
+                    template_ca_dir = None
 
                 # Set up element id/token map and job stdin data
                 token_map = {}
