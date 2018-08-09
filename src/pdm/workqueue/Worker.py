@@ -164,8 +164,8 @@ class StdOutDispatcher(asyncore.file_dispatcher):
                 if token is None:
                     self._logger.error("No token found for job %s", element_id)
                     continue
-                self._callback('worker/jobs/%s/elements/%s/monitoring' % element_id.split('.'),
-                               token=token, data=done_element)
+                self._callback('worker/jobs/{0[0]}/elements/{0[1]}/monitoring'.format(element_id.split('.')),
+                               *element_id.split('.'), token=token, data=done_element)
             elif 'Code' in done_element:
                 log = self._log_dict.pop(element_id, StringIO())
                 log.write(self._stderr_dispatcher.buffer)
@@ -186,8 +186,8 @@ class StdOutDispatcher(asyncore.file_dispatcher):
                     for element_id, token in self._tokens.iteritems():
                         self._logger.info("Uploading output log for job.element %s "
                                           "to WorkqueueService.", element_id)
-                        self._callback('worker/jobs/%s/elements/%s' % element_id.split('.'),
-                                       token=token, data=data)
+                        self._callback('worker/jobs/{0[0]}/elements/{0[1]}'.format(element_id.split('.')),
+                                       *element_id.split('.'), token=token, data=data)
                     self._tokens.clear()  # will cause readable to close fd on next iteration.
                     return
 
@@ -201,8 +201,8 @@ class StdOutDispatcher(asyncore.file_dispatcher):
                 token = self._tokens.pop(element_id)
                 self._logger.info("Uploading output log for job.element %s to WorkqueueService.",
                                   element_id)
-                self._callback('worker/jobs/%s/elements/%s' % element_id.split('.'),
-                               token=token, data=data)
+                self._callback('worker/jobs/{0[0]}/elements/{0[1]}'.format(element_id.split('.')),
+                               *element_id.split('.'), token=token, data=data)
             else:
                 self._logger.error("Unknown dictionary type returned from script: %s", done_element)
 
