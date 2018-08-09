@@ -127,7 +127,6 @@ class StdOutDispatcher(asyncore.file_dispatcher):
         self._callback = callback
         self._logger = logging.getLogger(self.__class__.__name__)
         self._buffer = ''
-        self._monitoring_dict = {}
         self._log_dict = defaultdict(StringIO)
 
     def writable(self):
@@ -161,7 +160,12 @@ class StdOutDispatcher(asyncore.file_dispatcher):
                 self._log_dict[element_id].write('{domain} -- {stage} -- {desc}\n'
                                                  .format(**done_element))
             elif 'transferred' in done_element:
-                self._monitoring_dict[element_id] = done_element
+                token = self._tokens.get(element_id)
+                if token is None:
+                    self._logger.error("No token found for job %s", element_id)
+                    continue
+                self._callback('worker/jobs/%s/elements/%s/monitoring' % element_id.split('.'),
+                               token=token, data=done_element)
             elif 'Code' in done_element:
                 log = self._log_dict.pop(element_id, StringIO())
                 log.write(self._stderr_dispatcher.buffer)
@@ -170,8 +174,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
                 data = {'log': log.getvalue(),
                         'returncode': returncode,
                         'timestamp': datetime.utcnow().isoformat(),
-                        'host': socket.gethostbyaddr(socket.getfqdn()),
-                        'monitoring': self._monitoring_dict.get(element_id, {})}
+                        'host': socket.gethostbyaddr(socket.getfqdn())}
                 log.close()
 
                 if returncode:
@@ -181,7 +184,10 @@ class StdOutDispatcher(asyncore.file_dispatcher):
 
                 if not element_id:  # whole job failure
                     for element_id, token in self._tokens.iteritems():
-                        self._callback(*element_id.split('.'), token=token, data=data)
+                        self._logger.info("Uploading output log for job.element %s "
+                                          "to WorkqueueService.", element_id)
+                        self._callback('worker/jobs/%s/elements/%s' % element_id.split('.'),
+                                       token=token, data=data)
                     self._tokens.clear()  # will cause readable to close fd on next iteration.
                     return
 
@@ -193,7 +199,10 @@ class StdOutDispatcher(asyncore.file_dispatcher):
                             root = root.lstrip('/')
                         data['listing'][root] = listing
                 token = self._tokens.pop(element_id)
-                self._callback(*element_id.split('.'), token=token, data=data)
+                self._logger.info("Uploading output log for job.element %s to WorkqueueService.",
+                                  element_id)
+                self._callback('worker/jobs/%s/elements/%s' % element_id.split('.'),
+                               token=token, data=data)
             else:
                 self._logger.error("Unknown dictionary type returned from script: %s", done_element)
 
@@ -246,15 +255,13 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
         if self._current_process is not None:
             self._current_process.terminate()
 
-    def _upload(self, job_id, element_id, token, data):
+    def _upload(self, target, job_id, element_id, token, data):
         """Upload results to WorkqueueService."""
-        self._logger.info("Uploading output log for job.element %s.%s to WorkqueueService.",
-                          job_id, element_id)
         self._logger.debug("Uploading following data for job.element %s.%s to WorkqueueService: %s",
                            job_id, element_id, pformat(data))
         self.set_token(token)
         try:
-            self.put('worker/jobs/%s/elements/%s' % (job_id, element_id), data=data)
+            self.put(target, data=data)
         except RESTException:
             self._logger.exception("Error trying to PUT back output from subcommand.")
         finally:

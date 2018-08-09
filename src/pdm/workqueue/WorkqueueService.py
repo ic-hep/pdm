@@ -138,6 +138,25 @@ class WorkqueueService(object):
         current_app.log.debug("Sending worker job batch: %s", pformat(work))
         return jsonify(work)
 
+    @staticmethod
+    @export_ext('worker/jobs/<int:job_id>/elements/<int:element_id>/monitoring', ['PUT'])
+    @decode_json_data
+    def return_monitoring_info(job_id, element_id):
+        """Return monitoring information about a job."""
+        if not request.token_ok:
+            abort(403, description="Invalid token")
+        if request.token != '%d.%d' % (job_id, element_id):
+            abort(403,
+                  description="Token not valid for element %d of job %d" % (element_id, job_id))
+        current_app.log.debug("Received data from worker for job.element %s.%s: %s",
+                              job_id, element_id, pformat(request.data))
+        require_attrs('transferred', 'elapsed', 'instant', 'average')
+        JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
+        element = JobElement.query.get_or_404((element_id, job_id))
+        element.monitoring_info = request.data
+        element.update()
+        return '', 200
+
     # pylint: disable=too-many-branches, too-many-locals, too-many-statements
     @staticmethod
     @export_ext('worker/jobs/<int:job_id>/elements/<int:element_id>', ['PUT'])
@@ -151,7 +170,7 @@ class WorkqueueService(object):
                   description="Token not valid for element %d of job %d" % (element_id, job_id))
         current_app.log.debug("Received data from worker for job.element %s.%s: %s",
                               job_id, element_id, pformat(request.data))
-        require_attrs('returncode', 'host', 'log', 'timestamp', 'monitoring')
+        require_attrs('returncode', 'host', 'log', 'timestamp')
 
         # Update job status.
         JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
@@ -161,7 +180,6 @@ class WorkqueueService(object):
             element.listing = request.data['listing']
         element.attempts += 1
         element.status = JobStatus.DONE if request.data['returncode'] == 0 else JobStatus.FAILED
-        element.monitoring_info = request.data['monitoring']
         element.update()
 
 #    Job = request.db.tables.Job
