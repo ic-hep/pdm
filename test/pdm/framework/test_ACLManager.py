@@ -72,6 +72,7 @@ class TestACLManager(unittest.TestCase):
                 elif auth_mode == ACLManager.AUTH_MODE_TOKEN:
                     if token_ok:
                         self.assertEqual(request.token, auth_data)
+                        self.assertEqual(request.raw_token, json.dumps(auth_data))
                         self.assertTrue(request.token_ok)
                     else:
                         self.assertFalse(request.token_ok)
@@ -255,6 +256,7 @@ class TestACLManager(unittest.TestCase):
                 self.assertEqual(request.dn, norm_dn)
             elif auth_mode == ACLManager.AUTH_MODE_TOKEN:
                 self.assertEqual(request.token, auth_data)
+                self.assertEqual(request.raw_token, auth_data)
                 self.assertTrue(request.token_ok)
             elif auth_mode == ACLManager.AUTH_MODE_SESSION:
                 self.assertTrue(request.session_ok)

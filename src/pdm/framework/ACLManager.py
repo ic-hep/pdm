@@ -147,6 +147,7 @@ class ACLManager(object):
             request.dn = X509Utils.normalise_dn(self.__test_data)
         elif self.__test_mode == ACLManager.AUTH_MODE_TOKEN:
             request.token = self.__test_data
+            request.raw_token = self.__test_data
             request.token_ok = True
         elif self.__test_mode == ACLManager.AUTH_MODE_SESSION:
             request.session_ok = True
@@ -279,6 +280,7 @@ class ACLManager(object):
             abort(404)
         request.dn = None
         request.token = None
+        request.raw_token = None
         request.token_ok = False
         request.session_ok = False
         if self.__test_mode == ACLManager.AUTH_MODE_NONE:
