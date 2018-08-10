@@ -112,6 +112,8 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 /workqueue/api/v1.0/worker/jobs%POST = "@worker"
 # Return job status information
 /workqueue/api/v1.0/worker/jobs/?/elements/?%PUT = "@worker"
+# Return job monitoring information
+/workqueue/api/v1.0/worker/jobs/?/elements/?/monitoring%PUT = "@worker"
 
 [auth/site]
 # Get public service details

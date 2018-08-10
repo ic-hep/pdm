@@ -292,6 +292,7 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
             src_filepath = SmartColumn(TEXT, nullable=False, required=True, allowed=True)
             dst_filepath = SmartColumn(TEXT, allowed=True)
             listing = Column(PickleType, nullable=True)
+            monitoring_info = Column(PickleType, nullable=True)
             size = SmartColumn(Integer, nullable=False, default=0, allowed=True)
             max_tries = SmartColumn(SmallInteger, nullable=False, default=2, allowed=True)
             attempts = Column(SmallInteger, nullable=False, default=0)

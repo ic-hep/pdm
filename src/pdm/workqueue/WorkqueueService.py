@@ -138,6 +138,25 @@ class WorkqueueService(object):
         current_app.log.debug("Sending worker job batch: %s", pformat(work))
         return jsonify(work)
 
+    @staticmethod
+    @export_ext('worker/jobs/<int:job_id>/elements/<int:element_id>/monitoring', ['PUT'])
+    @decode_json_data
+    def return_monitoring_info(job_id, element_id):
+        """Return monitoring information about a job."""
+        if not request.token_ok:
+            abort(403, description="Invalid token")
+        if request.token != '%d.%d' % (job_id, element_id):
+            abort(403,
+                  description="Token not valid for element %d of job %d" % (element_id, job_id))
+        current_app.log.debug("Received data from worker for job.element %s.%s: %s",
+                              job_id, element_id, pformat(request.data))
+        require_attrs('transferred', 'elapsed', 'instant', 'average')
+        JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
+        element = JobElement.query.get_or_404((element_id, job_id))
+        element.monitoring_info = request.data
+        element.update()
+        return '', 200
+
     # pylint: disable=too-many-branches, too-many-locals, too-many-statements
     @staticmethod
     @export_ext('worker/jobs/<int:job_id>/elements/<int:element_id>', ['PUT'])
@@ -478,7 +497,12 @@ class WorkqueueService(object):
                                   .filter_by(user_id=HRService.check_token())\
                                   .first_or_404()
         # pylint: disable=no-member
+        monitoring_info = getattr(element_id, 'monitoring_info', {})
         return jsonify({'jobid': element.job_id,
                         'elementid': element.id,
                         'status': JobStatus(element.status).name,
-                        'attempts': element.attempts})
+                        'attempts': element.attempts,
+                        'transferred': monitoring_info.get('transferred', 'N/A'),
+                        'instant': monitoring_info.get('instant', 'N/A'),
+                        'average': monitoring_info.get('average', 'N/A'),
+                        'elapsed': monitoring_info.get('elapsed', 'N/A')})
