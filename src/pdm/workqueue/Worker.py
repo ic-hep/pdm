@@ -11,6 +11,8 @@ import subprocess
 import shutil
 import asyncore
 import logging
+from cStringIO import StringIO
+from collections import defaultdict
 from pprint import pformat
 from datetime import datetime
 from contextlib import contextmanager
@@ -125,6 +127,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
         self._callback = callback
         self._logger = logging.getLogger(self.__class__.__name__)
         self._buffer = ''
+        self._log_dict = defaultdict(StringIO)
 
     def writable(self):
         """Writeable status of fd."""
@@ -152,34 +155,58 @@ class StdOutDispatcher(asyncore.file_dispatcher):
                 self.close()
                 return
 
-            log = self._stderr_dispatcher.buffer
-            returncode = done_element['Code']
-            data = {'log': log,
-                    'returncode': returncode,
-                    'timestamp': datetime.utcnow().isoformat(),
-                    'host': socket.gethostbyaddr(socket.getfqdn())}
             element_id = done_element['id']
+            if 'domain' in done_element:
+                self._log_dict[element_id].write('{domain} -- {stage} -- {desc}\n'
+                                                 .format(**done_element))
+            elif 'transferred' in done_element:
+                token = self._tokens.get(element_id)
+                if token is None:
+                    self._logger.error("No token found for job %s", element_id)
+                    continue
+                self._logger.info("Uploading monitoring info for job.element %s "
+                                  "to WorkqueueService.", element_id)
+                self._callback('worker/jobs/{job_id}/elements/{element_id}/monitoring',
+                               *element_id.split('.'), token=token, data=done_element)
+            elif 'Code' in done_element:
+                log = self._log_dict.pop(element_id, StringIO())
+                log.write(self._stderr_dispatcher.buffer)
+                log.write('\n')
+                returncode = done_element['Code']
+                data = {'log': log.getvalue(),
+                        'returncode': returncode,
+                        'timestamp': datetime.utcnow().isoformat(),
+                        'host': socket.gethostbyaddr(socket.getfqdn())}
+                log.close()
 
-            if returncode:
-                self._logger.warning("Subprocess for job.element %s failed with exit code %s",
-                                     element_id, returncode)
-            self._logger.debug("Subprocess output for job.element %s: %s", element_id, log)
+                if returncode:
+                    self._logger.warning("Subprocess for job.element %s failed with exit code %s",
+                                         element_id, returncode)
+                self._logger.debug("Subprocess output for job.element %s: %s", element_id, log)
 
-            if not element_id:  # whole job failure
-                for element_id, token in self._tokens.iteritems():
-                    self._callback(*element_id.split('.'), token=token, data=data)
-                self._tokens.clear()  # will cause readable to close fd on next iteration.
-                return
+                if not element_id:  # whole job failure
+                    for element_id, token in self._tokens.iteritems():
+                        self._logger.info("Uploading output log for job.element %s "
+                                          "to WorkqueueService.", element_id)
+                        self._callback('worker/jobs/{job_id}/elements/{element_id}',
+                                       *element_id.split('.'), token=token, data=data)
+                    self._tokens.clear()  # will cause readable to close fd on next iteration.
+                    return
 
-            if 'Listing' in done_element:
-                data['listing'] = {}
-                for root, listing in done_element['Listing'].iteritems():
-                    root = urlsplit(root).path
-                    if root.startswith('/~'):
-                        root = root.lstrip('/')
-                    data['listing'][root] = listing
-            token = self._tokens.pop(element_id)
-            self._callback(*element_id.split('.'), token=token, data=data)
+                if 'Listing' in done_element:
+                    data['listing'] = {}
+                    for root, listing in done_element['Listing'].iteritems():
+                        root = urlsplit(root).path
+                        if root.startswith('/~'):
+                            root = root.lstrip('/')
+                        data['listing'][root] = listing
+                token = self._tokens.pop(element_id)
+                self._logger.info("Uploading output log for job.element %s to WorkqueueService.",
+                                  element_id)
+                self._callback('worker/jobs/{job_id}/elements/{element_id}',
+                               *element_id.split('.'), token=token, data=data)
+            else:
+                self._logger.error("Unknown dictionary type returned from script: %s", done_element)
 
 
 class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attributes
@@ -230,15 +257,13 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
         if self._current_process is not None:
             self._current_process.terminate()
 
-    def _upload(self, job_id, element_id, token, data):
+    def _upload(self, target, job_id, element_id, token, data):
         """Upload results to WorkqueueService."""
-        self._logger.info("Uploading output log for job.element %s.%s to WorkqueueService.",
-                          job_id, element_id)
         self._logger.debug("Uploading following data for job.element %s.%s to WorkqueueService: %s",
                            job_id, element_id, pformat(data))
         self.set_token(token)
         try:
-            self.put('worker/jobs/%s/elements/%s' % (job_id, element_id), data=data)
+            self.put(target.format(job_id=job_id, element_id=element_id), data=data)
         except RESTException:
             self._logger.exception("Error trying to PUT back output from subcommand.")
         finally:
@@ -294,7 +319,8 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                     template_ca_dir = self._system_ca_dir
                     if 'cas' in dst_endpoint_dict:
                         cas.extend(dst_endpoint_dict['cas'])
-                        template_ca_dir = None
+                        if 'cas' in src_endpoint_dict:
+                            template_ca_dir = None
 
                 # Set up element id/token map and job stdin data
                 token_map = {}

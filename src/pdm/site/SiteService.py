@@ -28,7 +28,7 @@ class SiteService(object):
         # TODO: Find a better way to access the token
         return request.token['id']
 
-    URI_FORMAT = re.compile(r'^[a-z][a-z0-9.-]+:[0-9]+$')
+    URI_FORMAT = re.compile(r'^[a-z0-9][a-z0-9.-]+:[0-9]+$')
 
     @staticmethod
     def check_uri(uri):

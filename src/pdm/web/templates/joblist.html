@@ -1,6 +1,7 @@
 {% extends "dashboard.html" %}
 {% block head %}
-<link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css" />
+<!--conflicts with bootstrap datatables giving two sort arrows and original datatables like table layout -->
+<!--<link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css" />-->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.1.1/css/bootstrap.css" />
 <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap4.min.css" />
 <style>
@@ -18,9 +19,11 @@ status_colour_map = {DONE: "success", SUBMITTED: "warning", FAILED: "danger"};
 type_elements_column_map = {COPY: [{'title': 'ID', 'data': 'id', 'width': '5%'},
                                    {'title': 'From', 'data': 'src_filepath'},
                                    {'title': 'To', 'data': 'dst_filepath'},
+                                   {'title': 'Progress', 'data': 'monitoring_info'},
                                    {'title': 'Status', 'data': 'status', 'width': '5%'}],
                             REMOVE: [{'title': 'ID', 'data': 'id', 'width': '5%'},
                                      {'title': 'Target', 'data': 'src_filepath'},
+                                     {'title': 'Progress', 'data': 'monitoring_info'},
                                      {'title': 'Status', 'data': 'status', 'width': '5%'}]}
 
 function preprocess_subtabledata(data, job_id){
@@ -30,6 +33,40 @@ function preprocess_subtabledata(data, job_id){
         if (element.type == "LIST"){
             return;
         }
+
+        // progress bar
+        var width = 100;
+        var text = "N/A";
+        var colour = "bg-success";
+        var progress_wrapper = $("<div/>");
+        var progressbar = $("<div>", {class: "progress"});
+        if (element.status === "DONE"){
+            text = Math.floor(element.size/1e6) + " Mb";
+        }
+        else if (element.status === "FAILED"){
+            text = "N/A";
+            colour = "bg-secondary";
+        }
+        else if (typeof element.monitoring_info === "undefined" || element.monitoring_info === null){
+            text = "No monitoring info!";
+            colour = "bg-secondary";
+        }
+        else if(element.status === "SUBMITTED"){
+            width = 100 * element.monitoring_info.transferred / Math.floor(element.size/1e6);
+            text = element.monitoring_info.transferred;
+            colour += "progress-bar-striped progress-bar-animated";
+        }
+        else{
+            text = "Unknown Error!";
+            colour = "bg-secondary";
+        }
+        var bar = $("<div>", {class: `progress-bar ${colour}`,
+                              role: "progressbar",
+                              style: `width: ${width}%`});
+        bar.text(`${text}`);
+        progressbar.append(bar);
+        progress_wrapper.append(progressbar);
+        element.monitoring_info = progress_wrapper.html();
 
         // id number
         element.id = [job_id, element.id].join('.');

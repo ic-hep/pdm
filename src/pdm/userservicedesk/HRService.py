@@ -230,6 +230,7 @@ class HRService(object):
 
         try:
             db.session.delete(user)
+            current_app.site_client.set_token(request.raw_token)
             current_app.site_client.del_user(user_id)
             db.session.commit()
             HRService._logger.info(" User %s deleted successfully", user_id)
