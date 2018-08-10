@@ -625,7 +625,11 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(returned_dict, {'jobid': 3,
                                          'elementid': 0,
                                          'status': 'NEW',
-                                         'attempts': 0})
+                                         'attempts': 0,
+                                         'transferred': 'N/A',
+                                         'instant': 'N/A',
+                                         'average': 'N/A',
+                                         'elapsed': 'N/A'})
 
     @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
     def test_get_output(self, mock_hrservice):

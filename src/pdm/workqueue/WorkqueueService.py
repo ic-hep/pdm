@@ -497,11 +497,12 @@ class WorkqueueService(object):
                                   .filter_by(user_id=HRService.check_token())\
                                   .first_or_404()
         # pylint: disable=no-member
+        monitoring_info = getattr(element_id, 'monitoring_info', {})
         return jsonify({'jobid': element.job_id,
                         'elementid': element.id,
                         'status': JobStatus(element.status).name,
                         'attempts': element.attempts,
-                        'transferred': element.monitoring_info.get('transferred', 'N/A'),
-                        'instant': element.monitoring_info.get('instant', 'N/A'),
-                        'average': element.monitoring_info.get('average', 'N/A'),
-                        'elapsed': element.monitoring_info.get('elapsed', 'N/A')})
+                        'transferred': monitoring_info.get('transferred', 'N/A'),
+                        'instant': monitoring_info.get('instant', 'N/A'),
+                        'average': monitoring_info.get('average', 'N/A'),
+                        'elapsed': monitoring_info.get('elapsed', 'N/A')})
