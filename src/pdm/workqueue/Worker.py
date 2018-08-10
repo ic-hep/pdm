@@ -164,7 +164,9 @@ class StdOutDispatcher(asyncore.file_dispatcher):
                 if token is None:
                     self._logger.error("No token found for job %s", element_id)
                     continue
-                self._callback('worker/jobs/{0[0]}/elements/{0[1]}/monitoring'.format(element_id.split('.')),
+                self._logger.info("Uploading monitoring info for job.element %s "
+                                  "to WorkqueueService.", element_id)
+                self._callback('worker/jobs/{job_id}/elements/{element_id}/monitoring',
                                *element_id.split('.'), token=token, data=done_element)
             elif 'Code' in done_element:
                 log = self._log_dict.pop(element_id, StringIO())
@@ -186,7 +188,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
                     for element_id, token in self._tokens.iteritems():
                         self._logger.info("Uploading output log for job.element %s "
                                           "to WorkqueueService.", element_id)
-                        self._callback('worker/jobs/{0[0]}/elements/{0[1]}'.format(element_id.split('.')),
+                        self._callback('worker/jobs/{job_id}/elements/{element_id}',
                                        *element_id.split('.'), token=token, data=data)
                     self._tokens.clear()  # will cause readable to close fd on next iteration.
                     return
@@ -201,7 +203,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
                 token = self._tokens.pop(element_id)
                 self._logger.info("Uploading output log for job.element %s to WorkqueueService.",
                                   element_id)
-                self._callback('worker/jobs/{0[0]}/elements/{0[1]}'.format(element_id.split('.')),
+                self._callback('worker/jobs/{job_id}/elements/{element_id}',
                                *element_id.split('.'), token=token, data=data)
             else:
                 self._logger.error("Unknown dictionary type returned from script: %s", done_element)
@@ -261,7 +263,7 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                            job_id, element_id, pformat(data))
         self.set_token(token)
         try:
-            self.put(target, data=data)
+            self.put(target.format(job_id=job_id, element_id=element_id), data=data)
         except RESTException:
             self._logger.exception("Error trying to PUT back output from subcommand.")
         finally:
