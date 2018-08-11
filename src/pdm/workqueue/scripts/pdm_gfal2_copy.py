@@ -2,6 +2,7 @@
 """ PDM gfal2-copy wrapper """
 import os
 import sys
+from functools import partial
 import json
 import logging
 import gfal2
@@ -15,30 +16,36 @@ logging.basicConfig()
 _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def event_callback(event):
+def event_callback(jobid, event):
     """
-    gfal-copy event callback. Print event information to sys.stderr
+    gfal-copy event callback. Dump json  event information to stout.
+    :param jobid: job id
     :param event:
     :return:
     """
-    print >> sys.stderr, "[%s] %s %s %s" % \
-                         (event.timestamp, event.domain, event.stage, event.description)
+    # print >> sys.stderr, "[%s] %s %s %s" % \
+    #                     (event.timestamp, event.domain, event.stage, event.description)
+    dump_and_flush({'id': jobid, 'timestamp': event.timestamp, 'domain': event.domain, 'stage': event.stage,
+                    'desc': event.description})
 
 
-def monitor_callback(src, dst, average, instant, transferred, elapsed):  # pylint: disable=too-many-arguments
+def monitor_callback(jobid, src, dst, average, instant, transferred, elapsed):  # pylint: disable=too-many-arguments
     """
-    gfal-copy monitor callback. Print Monitoring information to sys.stderr
+    gfal-copy monitor callback. Dump json Monitoring information to stdout.
+    :param jobid: job id
     :param src: source file
     :param dst: dest file
     :param average: average speed in kB/s
-    :param instant:
+    :param instant: instant speed in kB/s
     :param transferred: MB transferred
     :param elapsed: time in seconds
     :return:
     """
-    print >> sys.stderr, "MONITOR src: %s [%4d] %.2fMB (%.2fKB/s)\n" % (
-        src, elapsed, transferred / 1048576, average / 1024),
-    sys.stderr.flush()
+    # print >> sys.stderr, "MONITOR src: %s [%4d] %.2fMB (%.2fKB/s)\n" % (
+    #    src, elapsed, transferred / 1048576, average / 1024),
+    # sys.stderr.flush()
+    dump_and_flush({'id': jobid, 'average': average / 1024, 'instant': instant / 1024,
+                    'transferred': transferred / 1048576, 'elapsed': elapsed})
 
 
 def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False,
@@ -82,6 +89,7 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     params.overwrite = overwrite
     params.create_parent = parent
     params.nbstreams = nbstreams
+
     if timeout is not None:
         params.timeout = timeout
     params.event_callback = event_callback
@@ -101,6 +109,8 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     # result = []
     for jobid, source_file, dest_file in copy_list:
         try:
+            params.event_callback = partial(event_callback, jobid)
+            params.monitor_callback = partial(monitor_callback, jobid)
             res = ctx.filecopy(params, str(source_file), str(dest_file))
             dump_and_flush({'Code': res, 'Reason': 'OK', 'id': jobid})
         except gfal2.GError as gerror:
