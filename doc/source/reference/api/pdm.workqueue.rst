@@ -266,7 +266,7 @@ pdm.workqueue.WorkqueueService module
 
 .. http:get:: /jobs/<int:job_id>/output
 
-   Get the latest available output of all elements for a job with given `job_id`.
+   Get the output from all attempts of all elements for a job with given `job_id`.
 
    .. note:: Only *LIST* type jobs get an extra listing key (see example below).
 
@@ -279,7 +279,6 @@ pdm.workqueue.WorkqueueService module
    :>jsonarr object listing: listing of a root directory in the form {"root": ["file1", "file2",],} (**Only** for *LIST* type jobs)
    :statuscode 200: no error
    :statuscode 404: no job with id `job_id` found
-   :statuscode 500: couldn't find the requested output file on disk.
 
    **Example request**:
 
@@ -296,43 +295,53 @@ pdm.workqueue.WorkqueueService module
       HTTP/1.1 200 OK
       Content-Type: application/json
 
-      [
-        {
-          "jobid": 12,
-          "elementid": 0,
-          "attempt": 1,
-          "type": "LIST",
-          "status": "DONE",
-          "log": "The output from the list command run on the worker",
-          "listing": {"root": ["file1", "file2"]}
-        },
-        {
-          "jobid": 12,
-          "elementid": 1,
-          "attempt": 2,
-          "type": "COPY",
-          "status": "DONE",
-          "log": "The output from the copy command for file1 run on the worker"
-        },	
-      ]
+      {
+        "12.0": [
+                  {
+                    "jobid": 12,
+                    "elementid": 1,
+                    "attempt": 2,
+                    "type": "COPY",
+                    "status": "DONE",
+                    "log": "The output from the copy command for file1 run on the worker"
+                  },
+                ],
+        "12.1": [
+                  {
+                    "jobid": 12,
+                    "elementid": 1,
+                    "attempt": 1,
+                    "type": "COPY",
+                    "status": "FAILED",
+                    "log": "The output from the copy command run on the worker"
+                  },
+                  {
+                    "jobid": 12,
+                    "elementid": 1,
+                    "attempt": 2,
+                    "type": "COPY",
+                    "status": "DONE",
+                    "log": "The output from the copy command run on the worker"
+                  },
+                ],
+      }
+
 
 .. http:get:: /jobs/<int:job_id>/elements/<int:element_id>/output
 
-   Get the latest available output for element `element_id` of a job with given `job_id`
+   Get the output from all attempts for element `element_id` of a job with given `job_id`
 
    .. note:: Only *LIST* type jobs get an extra listing key (see example below).
 
-   :>json int jobid: the id of the parent job requested, this will be `job_id`
-   :>json int elementid: the id of the element, this will be `element_id`
-   :>json int attempt: the latest attempt number
-   :>json string type: the job element's type (see :class:`pdm.workqueue.WorkqueueDB.JobType`)
-   :>json string status: the job element's status (see :class:`pdm.workqueue.WorkqueueDB.JobStatus`)
-   :>json string log: the job element's output (comming from the command execution script run on the worker)
-   :>json object listing: listing of a root directory in the form {"root": ["file1", "file2",],} (**Only** for *LIST* type jobs)
+   :>jsonarr int jobid: the id of the parent job requested, this will be `job_id`
+   :>jsonarr int elementid: the id of the element, this will be `element_id`
+   :>jsonarr int attempt: the attempt number
+   :>jsonarr string type: the job element's type (see :class:`pdm.workqueue.WorkqueueDB.JobType`)
+   :>jsonarr string status: the job element's status (see :class:`pdm.workqueue.WorkqueueDB.JobStatus`)
+   :>jsonarr string log: the job element's output (comming from the command execution script run on the worker)
+   :>jsonarr object listing: listing of a root directory in the form {"root": ["file1", "file2",],} (**Only** for *LIST* type jobs)
    :statuscode 200: no error
-   :statuscode 400: element output not yet ready
-   :statuscode 404: no job with id `job_id` or element with id `element_id` found
-   :statuscode 500: couldn't find the requested output file on disk.
+   :statuscode 404: no job with id `job_id` or element with id `element_id` found. Also returned if no attempts have yet been made for specified element
 
    **Example request**:
 
@@ -349,14 +358,24 @@ pdm.workqueue.WorkqueueService module
       HTTP/1.1 200 OK
       Content-Type: application/json
 
-      {
-        "jobid": 12,
-        "elementid": 1,
-        "attempt": 2,
-        "type": "COPY",
-        "status": "DONE",
-        "log": "The output from the copy command run on the worker"
-      }	
+      [
+        {
+          "jobid": 12,
+          "elementid": 1,
+          "attempt": 1,
+          "type": "COPY",
+          "status": "FAILED",
+          "log": "The output from the copy command run on the worker"
+        },
+        {
+          "jobid": 12,
+          "elementid": 1,
+          "attempt": 2,
+          "type": "COPY",
+          "status": "DONE",
+          "log": "The output from the copy command run on the worker"
+        },
+      ]
 
 .. http:get:: /jobs/<int:job_id>/elements/<int:element_id>/output/<int:attempt>
 
@@ -372,9 +391,8 @@ pdm.workqueue.WorkqueueService module
    :>json string log: the job element's output (comming from the command execution script run on the worker)
    :>json object listing: listing of a root directory in the form {"root": ["file1", "file2",],} (**Only** for *LIST* type jobs)
    :statuscode 200: no error
-   :statuscode 400: element output not yet ready or invalid attempt
-   :statuscode 404: no job with id `job_id` or element with id `element_id` found
-   :statuscode 500: couldn't find the requested output file on disk.
+   :statuscode 404: no job with id `job_id` or element with id `element_id` or attempt `attempt` found. Also returned if no attempts have yet been made for specified element
+   :statuscode 500: couldn't find the requested output file for attempt `attempt` on disk.
 
    **Example request**:
 

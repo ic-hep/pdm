@@ -647,7 +647,7 @@ class TestWorkqueueService(unittest.TestCase):
 
         mock_hrservice.return_value = 1
         request = self.__test.get('/workqueue/api/v1.0/jobs/1/elements/0/output')
-        self.assertEqual(request.status_code, 400, "Status other than DONE or FAILED gives 400")
+        self.assertEqual(request.status_code, 404, "Status other than DONE or FAILED gives 404")
 
         db = self.__service.test_db()
         session = db.session
@@ -659,7 +659,7 @@ class TestWorkqueueService(unittest.TestCase):
         list_job.status = JobStatus.DONE
         remove_job.status = JobStatus.FAILED
         list_job.elements[0].status = JobStatus.DONE
-        remove_job.elements[0].status = JobStatus.FAILED
+        remove_job.elements[0].status = JobStatus.DONE
         remove_job.elements[1].status = JobStatus.FAILED
         session.merge(list_job)
         session.merge(remove_job)
@@ -669,7 +669,7 @@ class TestWorkqueueService(unittest.TestCase):
 
         mock_hrservice.return_value = 1
         request = self.__test.get('/workqueue/api/v1.0/jobs/1/elements/0/output')
-        self.assertEqual(request.status_code, 400, "Element with 0 attempts is not yet ready, should give 400")
+        self.assertEqual(request.status_code, 404, "Element with 0 attempts is not yet ready, should give 404")
 
         list_job.elements[0].attempts = 1
         remove_job.elements[0].attempts = 1
@@ -682,7 +682,7 @@ class TestWorkqueueService(unittest.TestCase):
 
         mock_hrservice.return_value = 1
         request = self.__test.get('/workqueue/api/v1.0/jobs/1/elements/0/output/9')
-        self.assertEqual(request.status_code, 400, "Invalid attempt should give 400")
+        self.assertEqual(request.status_code, 404, "Invalid attempt should give 404")
 
         mock_hrservice.return_value = 1
         request = self.__test.get('/workqueue/api/v1.0/jobs/1/elements/0/output/1')
@@ -717,32 +717,36 @@ class TestWorkqueueService(unittest.TestCase):
         request = self.__test.get('/workqueue/api/v1.0/jobs/2/output')
         self.assertEqual(request.status_code, 200)
         returned_dict = json.loads(request.data)
-        self.assertEqual(returned_dict, [{'status': 'FAILED', 'attempt': 1, 'log': 'blah blah\n', 'jobid': 2, 'listing': {'root': [{'name': 'somefile'}]}, 'type': 'LIST', 'elementid': 0},
-                                         {'status': 'FAILED', 'attempt': 1, 'log': 'tralala\n', 'jobid': 2, 'type': 'REMOVE', 'elementid': 1}])
+        self.assertEqual(returned_dict, {'2.0': [{'status': 'DONE', 'attempt': 1, 'log': 'blah blah\n', 'jobid': 2, 'listing': {'root': [{'name': 'somefile'}]}, 'type': 'LIST', 'elementid': 0}],
+                                         '2.1': [{'status': 'FAILED', 'attempt': 1, 'log': 'tralala\n', 'jobid': 2, 'type': 'REMOVE', 'elementid': 1}],
+                                         '2.2': [],
+                                         '2.3': [],
+                                         '2.4': [],
+                                         '2.5': []})
 
         request = self.__test.get('/workqueue/api/v1.0/jobs/2/elements/0/output')
         self.assertEqual(request.status_code, 200)
         returned_dict = json.loads(request.data)
-        self.assertEqual(returned_dict, {'jobid': 2, 'elementid': 0, 'type': 'LIST', 'attempt': 1, 'status': 'FAILED',
-                                         'log': 'blah blah\n', 'listing': {'root': [{'name': 'somefile'}]}})
+        self.assertEqual(returned_dict, [{'jobid': 2, 'elementid': 0, 'type': 'LIST', 'attempt': 1, 'status': 'DONE',
+                                          'log': 'blah blah\n', 'listing': {'root': [{'name': 'somefile'}]}}])
 
         request = self.__test.get('/workqueue/api/v1.0/jobs/2/elements/0/output/1')
         self.assertEqual(request.status_code, 200)
         returned_dict = json.loads(request.data)
-        self.assertEqual(returned_dict, {'jobid': 2, 'elementid': 0, 'type': 'LIST', 'attempt': 1, 'status': 'FAILED',
+        self.assertEqual(returned_dict, {'jobid': 2, 'elementid': 0, 'type': 'LIST', 'attempt': 1, 'status': 'DONE',
                                          'log': 'blah blah\n', 'listing': {'root': [{'name': 'somefile'}]}})
 
         request = self.__test.get('/workqueue/api/v1.0/jobs/2/elements/1/output')
         self.assertEqual(request.status_code, 200)
         returned_dict = json.loads(request.data)
-        self.assertEqual(returned_dict, {'jobid': 2, 'elementid': 1, 'type': 'REMOVE', 'attempt': 1,
-                                         'status': 'FAILED', 'log': 'tralala\n'})
+        self.assertEqual(returned_dict, [{'jobid': 2, 'elementid': 1, 'type': 'REMOVE', 'attempt': 1,
+                                          'status': 'FAILED', 'log': 'tralala\n'}])
 
         mock_hrservice.return_value = 1
         request = self.__test.get('/workqueue/api/v1.0/jobs/1/output')
         self.assertEqual(request.status_code, 200)
         returned_dict = json.loads(request.data)
-        self.assertEqual(returned_dict, [{'status': 'DONE', 'attempt': 1, 'log': 'la la la\n', 'jobid': 1, 'listing': {'root': [{'name': 'somefile'}]}, 'type': 'LIST', 'elementid': 0}])
+        self.assertEqual(returned_dict, {'1.0': [{'status': 'DONE', 'attempt': 1, 'log': 'la la la\n', 'jobid': 1, 'listing': {'root': [{'name': 'somefile'}]}, 'type': 'LIST', 'elementid': 0}]})
 
 ## check jobs in status
 ## check check_token is called
