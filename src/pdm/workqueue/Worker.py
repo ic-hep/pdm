@@ -319,7 +319,8 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                     template_ca_dir = self._system_ca_dir
                     if 'cas' in dst_endpoint_dict:
                         cas.extend(dst_endpoint_dict['cas'])
-                        template_ca_dir = None
+                        if 'cas' in src_endpoint_dict:
+                            template_ca_dir = None
 
                 # Set up element id/token map and job stdin data
                 token_map = {}

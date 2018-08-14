@@ -64,6 +64,7 @@ class test_SiteService(unittest.TestCase):
         # OK
         self.assertTrue(SiteService.check_uri("localhost:12345"))
         self.assertTrue(SiteService.check_uri("www.google.com:12345"))
+        self.assertTrue(SiteService.check_uri("127.0.0.1:12345"))
         # Missing Port
         self.assertFalse(SiteService.check_uri("localhost:"))
         # Missing seperator
@@ -72,7 +73,6 @@ class test_SiteService(unittest.TestCase):
         self.assertFalse(SiteService.check_uri("localhost@12345"))
         # Starts with invalid char
         self.assertFalse(SiteService.check_uri("_localhost:12345"))
-        self.assertFalse(SiteService.check_uri("0localhost:12345"))
         self.assertFalse(SiteService.check_uri(".localhost:12345"))
         # Non-numeric port
         self.assertFalse(SiteService.check_uri("localhost:bah"))
