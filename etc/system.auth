@@ -28,6 +28,7 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 /web/js/mkdir%POST = "SESSION"
 /web/js/jobs%GET = "SESSION"
 /web/js/jobs/?/elements%GET = "SESSION"
+/web/js/jobs/?/elements/?/output%GET = "SESSION"
 
 [auth/users]
 # Add user
