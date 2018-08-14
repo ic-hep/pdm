@@ -53,14 +53,14 @@ class TransferClient(object):
             return response
         return src_siteid  # an empty list
 
-    def output(self, job_id, attempt=None):
+    def output(self, job_id, element_id=None, attempt=None):
         """
         Get job output.
 
         :param job_id: job id
         :return: output as specified by workqueue client
         """
-        response = self.__wq_client.output(job_id, attempt)
+        response = self.__wq_client.output(job_id, element_id=element_id, attempt=attempt)
         return response
 
     def status(self, job_id):
