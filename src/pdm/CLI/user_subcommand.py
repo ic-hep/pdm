@@ -150,6 +150,10 @@ class UserCommand(object):
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('job', type=int, help="job id as obtained"
                                                        " from copy, remove or list.")
+        user_parser.add_argument('-e', '--element', type=int,
+                                 help="Job element number to display the log for.")
+        user_parser.add_argument('-a', '--attempt', type=int,
+                                 help="attempt number (missing: last attempt).")
         user_parser.set_defaults(func=self.log)
         # site list
         user_parser = subparsers.add_parser('sites',
@@ -594,8 +598,8 @@ class UserCommand(object):
             job_id = int(args.job)
             client = TransferClientFacade(token)
             status = self._status(job_id, client, block=True)
-            for element in client.output(job_id):
-                log_listing = element['log']
+            for element in client.output(job_id, element_id=args.element, attempt=args.attempt):
+                log_listing = element.get('log')
                 if args.verbosity == logging.DEBUG:
                     pprint(element)
                 else:
