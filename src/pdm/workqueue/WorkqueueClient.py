@@ -210,25 +210,27 @@ class WorkqueueClient(RESTClient):
         """
         Get job output.
 
-        Gets the latest output for all elements of the given job if they are ready. The optional
-        parameter element_id allows the user to get the latest output for a given job element, while
-        attempt allows the user to get the output for a given attempt of a specific element.
-        Note that specifying attempt without an element_id is an error and will not return that
-        attempt for all elements but will instead be ignored and the user will get the latest
-        output for all elements.
+        Gets the output for all attempts, for all elements of the given job if they are ready. The
+        optional parameter element_id allows the user to get the output for a given job element,
+        while attempt allows the user to get the output for a given attempt of a specific element.
+
+        Note:
+             Specifying attempt without an element_id is an error and will not return that attempt
+             for all elements but will instead be ignored and the user will get the output for all
+             attempts, for all elements.
 
         Args:
             job_id (int): The id number of the job to fetch latest output from.
             element_id (int): The id number of the job element to fetch latest output from.
                               (default: None = all)
-            attempt (int): The attempt number to get the output from. (default: None = latest)
+            attempt (int): The attempt number to get the output from. (default: None = all)
 
         Returns:
-            dict: Representation of the output with keys (jobid, elementid, attempt, type, status,
-                  log, (listing)).
-                  log is the contents of the job elements log file. If the job element in question
-                  was a LIST type job then there will be the additional key "listing" which will be
-                  a JSON encoded dictionary of form {directory: [files],...}.
+            list/dict: Representation of the output with keys (jobid, elementid, attempt, type,
+                       status, log, (listing)). Log is the contents of the job elements log file.
+                       If the job element in question was a LIST type job then there will be the
+                       additional key "listing" which will be a JSON encoded dictionary of form
+                       {directory: [files],...}.
         """
         if element_id is None:
             return self.get('jobs/%s/output' % job_id)
