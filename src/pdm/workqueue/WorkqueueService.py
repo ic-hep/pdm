@@ -412,7 +412,7 @@ class WorkqueueService(object):
                                     job.log_uid[:2],
                                     job.log_uid)
 
-        elements_dict = {}
+        elements_list = []
         for element in job.elements:
             # pylint: disable=no-member
             attempt_output = {'jobid': job_id,
@@ -447,8 +447,8 @@ class WorkqueueService(object):
                 if status == JobStatus.DONE and element.type == JobType.LIST:
                     last_output.update(listing=element.listing)
                 attempt_list.append(last_output)
-            elements_dict['%d.%d' % (job_id, element.id)] = attempt_list
-        return jsonify(elements_dict)
+            elements_list.append(attempt_list)
+        return jsonify(elements_list)
 
     @staticmethod
     @export_ext('jobs/<int:job_id>/elements/<int:element_id>/output', ['GET'])

@@ -266,7 +266,7 @@ pdm.workqueue.WorkqueueService module
 
 .. http:get:: /jobs/<int:job_id>/output
 
-   Get the output from all attempts of all elements for a job with given `job_id`.
+   Get the output from all attempts of all elements for a job with given `job_id`. Outer array is list of elements while inner array is list of attempts as JSON objects.
 
    .. note:: Only *LIST* type jobs get an extra listing key (see example below).
 
@@ -295,36 +295,37 @@ pdm.workqueue.WorkqueueService module
       HTTP/1.1 200 OK
       Content-Type: application/json
 
-      {
-        "12.0": [
-                  {
-                    "jobid": 12,
-                    "elementid": 1,
-                    "attempt": 2,
-                    "type": "COPY",
-                    "status": "DONE",
-                    "log": "The output from the copy command for file1 run on the worker"
-                  },
-                ],
-        "12.1": [
-                  {
-                    "jobid": 12,
-                    "elementid": 1,
-                    "attempt": 1,
-                    "type": "COPY",
-                    "status": "FAILED",
-                    "log": "The output from the copy command run on the worker"
-                  },
-                  {
-                    "jobid": 12,
-                    "elementid": 1,
-                    "attempt": 2,
-                    "type": "COPY",
-                    "status": "DONE",
-                    "log": "The output from the copy command run on the worker"
-                  },
-                ],
-      }
+      [
+        [
+          {
+            "jobid": 12,
+            "elementid": 0,
+            "attempt": 1,
+            "type": "LIST",
+            "status": "DONE",
+            "log": "The output from the LIST command for file1 run on the worker",
+            "listing": {"root": ["file1", "file2"]}
+          }
+        ],
+        [
+          {
+            "jobid": 12,
+            "elementid": 1,
+            "attempt": 1,
+            "type": "COPY",
+            "status": "FAILED",
+            "log": "The output from the COPY command run on the worker"
+          },
+          {
+            "jobid": 12,
+            "elementid": 1,
+            "attempt": 2,
+            "type": "COPY",
+            "status": "DONE",
+            "log": "The output from the COPY command run on the worker"
+          }
+        ]
+      ]
 
 
 .. http:get:: /jobs/<int:job_id>/elements/<int:element_id>/output
