@@ -226,14 +226,86 @@ class WorkqueueClient(RESTClient):
             attempt (int): The attempt number to get the output from. (default: None = all)
 
         Returns:
-            list/dict: Representation of the output with keys (jobid, elementid, attempt, type,
-                       status, log, (listing)). Log is the contents of the job elements log file.
-                       If the job element in question was a LIST type job then there will be the
-                       additional key "listing" which will be a JSON encoded dictionary of form
-                       {directory: [files],...}.
+            list: List of lists with the outer list being the list of elements for the given job,
+                  or a single element if element_id is specified. The inner list represents the
+                  attempts, or a single attempt if attempt is given. Each attempt is a dictionary
+                  with keys (jobid, elementid, attempt, type, status, log, (listing)). Log is the
+                  contents of the log file for that attempt. If the job element in question was a
+                  LIST type job then there will be the additional key "listing" which will be a JSON
+                  encoded dictionary of form {directory: [files],...}.
+
+        Examples:
+            >>> WorkqueueClient().output(12)
+            [
+              [
+                {
+                  "jobid": 12,
+                  "elementid": 0,
+                  "attempt": 1,
+                  "type": "LIST",
+                  "status": "DONE",
+                  "log": "The output from the LIST command for file1 run on the worker",
+                  "listing": {"root": ["file1", "file2"]}
+                }
+              ],
+              [
+                {
+                  "jobid": 12,
+                  "elementid": 1,
+                  "attempt": 1,
+                  "type": "COPY",
+                  "status": "FAILED",
+                  "log": "The output from the COPY command run on the worker"
+                },
+                {
+                  "jobid": 12,
+                  "elementid": 1,
+                  "attempt": 2,
+                  "type": "COPY",
+                  "status": "DONE",
+                  "log": "The output from the COPY command run on the worker"
+                }
+              ]
+            ]
+
+            >>> WorkqueueClient().output(12, 1)
+            [
+              [
+                {
+                  "jobid": 12,
+                  "elementid": 1,
+                  "attempt": 1,
+                  "type": "COPY",
+                  "status": "FAILED",
+                  "log": "The output from the COPY command run on the worker"
+                },
+                {
+                  "jobid": 12,
+                  "elementid": 1,
+                  "attempt": 2,
+                  "type": "COPY",
+                  "status": "DONE",
+                  "log": "The output from the COPY command run on the worker"
+                }
+              ]
+            ]
+
+            >>> WorkqueueClient().output(12, 1, 1)
+            [
+              [
+                {
+                  "jobid": 12,
+                  "elementid": 1,
+                  "attempt": 1,
+                  "type": "COPY",
+                  "status": "FAILED",
+                  "log": "The output from the COPY command run on the worker"
+                }
+              ]
+            ]
         """
         if element_id is None:
             return self.get('jobs/%s/output' % job_id)
         if attempt is None:
-            return self.get('jobs/%s/elements/%s/output' % (job_id, element_id))
-        return self.get('jobs/%s/elements/%s/output/%s' % (job_id, element_id, attempt))
+            return [self.get('jobs/%s/elements/%s/output' % (job_id, element_id))]
+        return [[self.get('jobs/%s/elements/%s/output/%s' % (job_id, element_id, attempt))]]
