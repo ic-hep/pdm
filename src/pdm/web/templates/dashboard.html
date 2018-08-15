@@ -162,6 +162,11 @@ function listing(sitename, filepath, panel){
             console.log(`Successfully got listing of site ${sitename}.`);
             var list_group = $("<ul>", {class: "list-group text-left",
                                         directory: filepath});
+            var up_dir = $("<li>", {class: "list-group-item"});
+            up_dir.append($("<span>", {class: "oi oi-folder text-warning pr-2 disabled"}));
+            up_dir.prop("disabled", true);
+            up_dir.append("..");
+            list_group.append(up_dir);
             for(var i = 0; i < response.length; i++){
                 var element = $("<li>", {class: `list-group-item ui-widget-content ${draggable_name}`});
                 element.draggable({addClasses: false, helper: "clone", iframeFix: true, zIndex: 100, appendTo: "body"});
@@ -340,7 +345,12 @@ $(document).ready(function(){
             var panel = element.closest("div.card-body");
             var sitename = panel.prev("select.sitelist").val();
             var root = element.parent("ul.list-group").attr("directory");
-            listing(sitename, `${root}/${element.text()}`, panel)
+            var last_slash_index = root.lastIndexOf("/");
+            var new_path = `${root}/${element.text()}`
+            if(element.text() === ".." && last_slash_index > 0){
+                new_path = root.substring(0, last_slash_index);
+            }
+            listing(sitename, new_path, panel)
         }
     });
 
