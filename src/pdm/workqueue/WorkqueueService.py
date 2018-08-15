@@ -363,6 +363,7 @@ class WorkqueueService(object):
             status_counter = Counter(element.status for element in elements)
             new_job = job.encode_for_json()
             new_job.update(num_elements=len(elements),
+                           num_new=status_counter[JobStatus.NEW],
                            num_done=status_counter[JobStatus.DONE],
                            num_failed=status_counter[JobStatus.FAILED],
                            num_submitted=status_counter[JobStatus.SUBMITTED])
