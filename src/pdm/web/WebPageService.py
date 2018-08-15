@@ -310,7 +310,7 @@ class WebPageService(object):
 
             if status['status'] == 'DONE':
                 listing_output = [dict(f, is_dir=stat.S_ISDIR(f['st_mode'])) for f in
-                                  tclient.output(jobinfo['id'], 0)[-1]['listing'].values()[0]]
+                                  tclient.output(jobinfo['id'], 0, -1)[0][0]['listing'].values()[0]]
             elif jobinfo['status'] == 'FAILED':
                 current_app.log.error("Failed to obtain a listing for job %d", jobinfo['id'])
             else:
