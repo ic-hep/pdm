@@ -103,12 +103,12 @@ class TestUsercommand(unittest.TestCase):
         mocked_list = mocked_facade.return_value.list
         mocked_list.return_value = {'status': 'DONE', 'id': 1}
         mocked_output = mocked_facade.return_value.output
-        mocked_output.return_value = [{  # listing is the element 0 of the list
-                                         'listing': list_dicts}]
+        mocked_output.return_value = [[{  # listing is the element 0 of the list
+                                         'listing': list_dicts}]]
         args = self._parser.parse_args('list source  -m 3 -t  {}'.format(self._tmp_file.name).split())
         args.func(args)
 
-        mocked_output.assert_called_with(1)
+        mocked_output.assert_called_with(1, 0, -1)
         mocked_list.assert_called_with('source', max_tries=3, depth=0)
 
         mocked_output.reset_mock()
