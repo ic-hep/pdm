@@ -380,7 +380,7 @@ pdm.workqueue.WorkqueueService module
 
 .. http:get:: /jobs/<int:job_id>/elements/<int:element_id>/output/<int:attempt>
 
-   Get the output of attempt `attempt` for element `element_id` of a job with given `job_id`
+   Get the output of attempt `attempt` for element `element_id` of a job with given `job_id`. `attempt` may be a negative integer in order to index from the back.
 
    .. note:: Only *LIST* type jobs get an extra listing key (see example below).
 
@@ -392,6 +392,7 @@ pdm.workqueue.WorkqueueService module
    :>json string log: the job element's output (comming from the command execution script run on the worker)
    :>json object listing: listing of a root directory in the form {"root": ["file1", "file2",],} (**Only** for *LIST* type jobs)
    :statuscode 200: no error
+   :statuscode 400: attempt is not an integer
    :statuscode 404: no job with id `job_id` or element with id `element_id` or attempt `attempt` found. Also returned if no attempts have yet been made for specified element
    :statuscode 500: couldn't find the requested output file for attempt `attempt` on disk.
 

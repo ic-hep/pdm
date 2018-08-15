@@ -223,7 +223,8 @@ class WorkqueueClient(RESTClient):
             job_id (int): The id number of the job to fetch latest output from.
             element_id (int): The id number of the job element to fetch latest output from.
                               (default: None = all)
-            attempt (int): The attempt number to get the output from. (default: None = all)
+            attempt (int): The attempt number to get the output from. This may be negative in order
+                           to index from the back. (default: None = all)
 
         Returns:
             list: List of lists with the outer list being the list of elements for the given job,
