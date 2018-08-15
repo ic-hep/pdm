@@ -717,12 +717,12 @@ class TestWorkqueueService(unittest.TestCase):
         request = self.__test.get('/workqueue/api/v1.0/jobs/2/output')
         self.assertEqual(request.status_code, 200)
         returned_dict = json.loads(request.data)
-        self.assertEqual(returned_dict, {'2.0': [{'status': 'DONE', 'attempt': 1, 'log': 'blah blah\n', 'jobid': 2, 'listing': {'root': [{'name': 'somefile'}]}, 'type': 'LIST', 'elementid': 0}],
-                                         '2.1': [{'status': 'FAILED', 'attempt': 1, 'log': 'tralala\n', 'jobid': 2, 'type': 'REMOVE', 'elementid': 1}],
-                                         '2.2': [],
-                                         '2.3': [],
-                                         '2.4': [],
-                                         '2.5': []})
+        self.assertEqual(returned_dict, [[{'status': 'DONE', 'attempt': 1, 'log': 'blah blah\n', 'jobid': 2, 'listing': {'root': [{'name': 'somefile'}]}, 'type': 'LIST', 'elementid': 0}],
+                                         [{'status': 'FAILED', 'attempt': 1, 'log': 'tralala\n', 'jobid': 2, 'type': 'REMOVE', 'elementid': 1}],
+                                         [],
+                                         [],
+                                         [],
+                                         []])
 
         request = self.__test.get('/workqueue/api/v1.0/jobs/2/elements/0/output')
         self.assertEqual(request.status_code, 200)
@@ -746,7 +746,7 @@ class TestWorkqueueService(unittest.TestCase):
         request = self.__test.get('/workqueue/api/v1.0/jobs/1/output')
         self.assertEqual(request.status_code, 200)
         returned_dict = json.loads(request.data)
-        self.assertEqual(returned_dict, {'1.0': [{'status': 'DONE', 'attempt': 1, 'log': 'la la la\n', 'jobid': 1, 'listing': {'root': [{'name': 'somefile'}]}, 'type': 'LIST', 'elementid': 0}]})
+        self.assertEqual(returned_dict, [[{'status': 'DONE', 'attempt': 1, 'log': 'la la la\n', 'jobid': 1, 'listing': {'root': [{'name': 'somefile'}]}, 'type': 'LIST', 'elementid': 0}]])
 
 ## check jobs in status
 ## check check_token is called

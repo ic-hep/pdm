@@ -105,22 +105,35 @@ function preprocess_tabledata(data){
         var num_elements = job.num_elements;
         var progress_wrapper = $("<div/>");
         var progressbar = $("<div>", {class: "progress"});
-        var done_bar = $("<div>", {class: `progress-bar bg-success`,
-                                   role: "progressbar",
-                                   style: `width: ${100*(job.num_done - 1)/(num_elements - 1)}%`});
-        done_bar.text(job.num_done - 1);
-        var submitted_bar = $("<div>", {class: `progress-bar progress-bar-striped progress-bar-animated bg-warning`,
-                                        role: "progressbar",
-                                        style: `width: ${100*job.num_submitted/(num_elements - 1)}%`});
-        submitted_bar.text(job.num_submitted);
-        var failed_bar = $("<div>", {class: `progress-bar bg-danger`,
-                                     role: "progressbar",
-                                     style: `width: ${100*job.num_failed/(num_elements - 1)}%`});
-        failed_bar.text(job.num_failed);
-
-        progressbar.append(done_bar);
-        progressbar.append(submitted_bar);
-        progressbar.append(failed_bar);
+        if(num_elements > 1 && job.num_done >= 1){
+            var done_bar = $("<div>", {class: `progress-bar bg-success`,
+                                       role: "progressbar",
+                                       style: `width: ${100*(job.num_done - 1)/(num_elements - 1)}%`});
+            done_bar.text(job.num_done - 1);
+            var submitted_bar = $("<div>", {class: `progress-bar progress-bar-striped progress-bar-animated bg-warning`,
+                                            role: "progressbar",
+                                            style: `width: ${100*job.num_submitted/(num_elements - 1)}%`});
+            submitted_bar.text(job.num_submitted);
+            var failed_bar = $("<div>", {class: `progress-bar bg-danger`,
+                                         role: "progressbar",
+                                         style: `width: ${100*job.num_failed/(num_elements - 1)}%`});
+            failed_bar.text(job.num_failed);
+            var new_bar = $("<div>", {class: `progress-bar bg-secondary`,
+                                      role: "progressbar",
+                                      style: `width: ${100*job.num_new/(num_elements - 1)}%`});
+            new_bar.text(job.num_new);
+            progressbar.append(done_bar);
+            progressbar.append(submitted_bar);
+            progressbar.append(failed_bar);
+            progressbar.append(new_bar);
+        }
+        else{
+            var wait_bar = $("<div>", {class: `progress-bar progress-bar-striped progress-bar-animated bg-secondary`,
+                                       role: "progressbar",
+                                       style: "width: 100%"});
+            wait_bar.append($("<span>", {class: "oi oi-timer text-light"}));
+            progressbar.append(wait_bar);
+        }
         progress_wrapper.append(progressbar);
         job.progress = progress_wrapper.html();
 
