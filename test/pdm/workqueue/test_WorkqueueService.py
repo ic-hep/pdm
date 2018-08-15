@@ -736,6 +736,12 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(returned_dict, {'jobid': 2, 'elementid': 0, 'type': 'LIST', 'attempt': 1, 'status': 'DONE',
                                          'log': 'blah blah\n', 'listing': {'root': [{'name': 'somefile'}]}})
 
+        request = self.__test.get('/workqueue/api/v1.0/jobs/2/elements/0/output/-1')
+        self.assertEqual(request.status_code, 200)
+        returned_dict = json.loads(request.data)
+        self.assertEqual(returned_dict, {'jobid': 2, 'elementid': 0, 'type': 'LIST', 'attempt': 1, 'status': 'DONE',
+                                         'log': 'blah blah\n', 'listing': {'root': [{'name': 'somefile'}]}})
+
         request = self.__test.get('/workqueue/api/v1.0/jobs/2/elements/1/output')
         self.assertEqual(request.status_code, 200)
         returned_dict = json.loads(request.data)

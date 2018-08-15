@@ -453,7 +453,7 @@ class WorkqueueService(object):
 
     @staticmethod
     @export_ext('jobs/<int:job_id>/elements/<int:element_id>/output', ['GET'])
-    @export_ext('jobs/<int:job_id>/elements/<int:element_id>/output/<int:attempt>', ['GET'])
+    @export_ext('jobs/<int:job_id>/elements/<int:element_id>/output/<attempt>', ['GET'])
     def get_element_output(job_id, element_id, attempt=None):  # pylint: disable=too-many-branches
         """Get job element output."""
         Job = request.db.tables.Job  # pylint: disable=invalid-name
@@ -478,6 +478,12 @@ class WorkqueueService(object):
                           'type': JobType(element.type).name}
 
         if attempt is not None:
+            try:
+                attempt = int(attempt)  # can't use the flask <int:attempt> converter with negatives
+            except ValueError:
+                abort(400, description="bad attempt, expected an integer.")
+            if attempt < 0:
+                attempt = element.attempts + attempt + 1
             if attempt not in xrange(1, element.attempts + 1):
                 abort(404, description="Invalid attempt '%s', job.element %s.%s has been tried %s "
                                        "time(s)" % (attempt, job_id, element_id, element.attempts))
