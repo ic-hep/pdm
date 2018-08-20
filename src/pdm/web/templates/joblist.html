@@ -156,12 +156,7 @@ function preprocess_tabledata(data){
     return processed_data;
 }
 
-$(document).ready(function(){
-    // placeholder spinning pdm image
-    var jobs_table = $("#jobs_table");
-    jobs_table.append($("<img>", {src: '/static/images/pdm_animation.gif', class: "w-50"}));
-
-
+function refresh_table(jobs_table){
     $.ajax({
         url: "/web/js/jobs",
         type: "GET",
@@ -192,8 +187,18 @@ $(document).ready(function(){
             $(table_container).addClass("w-100");
         }
     });
+}
 
-    $('#jobs_table').on('click', 'tbody tr td span.oi-terminal', function (){
+$(document).ready(function(){
+    // placeholder spinning pdm image
+    var jobs_table = $("#jobs_table");
+    jobs_table.append($("<img>", {src: '/static/images/pdm_animation.gif', class: "w-50"}));
+
+    // Reload table ajax every 2 mins
+    /////////////////////////////////////////////////////
+    setInterval(refresh_table(jobs_table), 120000); // 2 mins
+
+    jobs_table.on('click', 'tbody tr td span.oi-terminal', function (){
         var id = $(this).closest("tr").find("td.element_id").text().split(".");
         var job_id = id[0];
         var element_id = id[1];
@@ -205,7 +210,7 @@ $(document).ready(function(){
     });
 
     // Add event listener for opening and closing details
-    $('#jobs_table').on('click', 'tbody tr td.details-control span.oi', function (){
+    jobs_table.on('click', 'tbody tr td.details-control span.oi', function (){
         var details_control = $(this);
         var tr = details_control.closest('tr');
         var row = jobs_table.DataTable().row(tr);
