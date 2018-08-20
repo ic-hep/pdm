@@ -26,13 +26,13 @@
 <script>
 
 status_colour_map = {DONE: "success", SUBMITTED: "warning", FAILED: "danger"};
-type_elements_column_map = {COPY: [{'title': 'ID', 'data': 'id', 'className': 'element_id', 'width': '5%'},
+type_elements_column_map = {COPY: [{'title': 'ID', 'data': 'id', 'className': 'element_id', 'width': '5%', 'sType': 'date'},
                                    {'title': 'From', 'data': 'src_filepath'},
                                    {'title': 'To', 'data': 'dst_filepath'},
                                    {'title': 'Progress', 'data': 'monitoring_info'},
                                    {'title': 'Status', 'data': 'status', 'width': '5%'},
                                    {'data': null, 'defaultContent':'<span class="oi oi-terminal text-primary"></span>', 'width': '1%', "orderable": false}],
-                            REMOVE: [{'title': 'ID', 'data': 'id', 'className': 'element_id', 'width': '5%'},
+                            REMOVE: [{'title': 'ID', 'data': 'id', 'className': 'element_id', 'width': '5%', 'sType': 'date'},
                                      {'title': 'Target', 'data': 'src_filepath'},
                                      {'title': 'Progress', 'data': 'monitoring_info'},
                                      {'title': 'Status', 'data': 'status', 'width': '5%'},
