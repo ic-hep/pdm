@@ -209,9 +209,9 @@ function copy(src_site, src_listing, dst_site, dst_listing){
         var is_dir = $(this).children("span.oi").hasClass("oi-folder")
         console.log(`${filename}: is_dir = ${is_dir}`)
         var dst_path = `${dst_root}/${filename}`;
-        if (is_dir){
-            dst_path = dst_root;
-        }
+//        if (is_dir){  // This used to work. Why was this needed then but not now?
+//            dst_path = dst_root;
+//        }
         $.ajax({
             url: "/web/js/copy",
             type: "POST",

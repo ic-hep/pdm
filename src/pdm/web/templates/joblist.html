@@ -65,7 +65,7 @@ function preprocess_subtabledata(data, job_id){
         }
         else if(element.status === "SUBMITTED"){
             width = 100 * element.monitoring_info.transferred / Math.floor(element.size/1e6);
-            text = element.monitoring_info.transferred;
+            text = element.monitoring_info.transferred + " Mb";
             colour += "progress-bar-striped progress-bar-animated";
         }
         else{
