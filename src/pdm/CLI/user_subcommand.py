@@ -404,7 +404,7 @@ class UserCommand(object):
                         break
 
                 if status['status'] == 'DONE':
-                    listing_output = client.output(resp['id'])[0]  # listing is element 0
+                    listing_output = client.output(resp['id'], 0, -1)[0][0]  # listing is 0, last attempt
                     listing_d_value = listing_output['listing']
                     root, listing = listing_d_value.items()[0]  # top root
                     self._print_formatted_listing(root, listing_d_value)
@@ -598,12 +598,16 @@ class UserCommand(object):
             job_id = int(args.job)
             client = TransferClientFacade(token)
             status = self._status(job_id, client, block=True)
-            for element in client.output(job_id, element_id=args.element, attempt=args.attempt):
-                log_listing = element.get('log')
-                if args.verbosity == logging.DEBUG:
-                    pprint(element)
-                else:
-                    print log_listing
+            try:
+                for element in client.output(job_id, element_id=args.element, attempt=args.attempt):
+                    for attempt in element:
+                        log_listing = attempt.get('log')
+                        if args.verbosity == logging.DEBUG:
+                            pprint(attempt)
+                        else:
+                            print log_listing
+            except RESTException as rexc:
+                print str(rexc)
 
     def jobs(self, args):
         """

@@ -205,6 +205,19 @@ class WebPageService(object):
         return json.dumps(elements)
 
     @staticmethod
+    @export_ext("js/jobs/<int:job_id>/elements/<int:element_id>/output")
+    def element_output(job_id, element_id):
+        """Get output for element from a given user's job."""
+        token = flask.session['token']
+        tclient = TransferClient(token)
+        attempts = []
+        try:
+            attempts = tclient.output(job_id, element_id)[0]
+        except RESTException:
+            flash("no attempts", "warning")
+        return render_template("output_carousel.html", attempts=attempts)
+
+    @staticmethod
     @export_ext("js/sites")
     def js_sites():
         """List all registered sites."""

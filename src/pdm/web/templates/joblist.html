@@ -5,7 +5,17 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.1.1/css/bootstrap.css" />
 <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap4.min.css" />
 <style>
-    span.oi-chevron-top, span.oi-chevron-bottom {cursor: pointer;}
+    span.oi-chevron-top, span.oi-chevron-bottom, span.oi-terminal {cursor: pointer;}
+    .fancybox-slide--iframe .fancybox-content {
+	    width  : 800px;
+	    height : 600px;
+	    max-width  : 80%;
+	    max-height : 80%;
+	    margin: 0;
+        -moz-border-radius:10px 10px 10px 10px;
+        border-radius:10px 10px 10px 10px;
+        -webkit-border-radius: 10px 10px 10px 10px;
+    }
 </style>
 {% endblock %}
 {% block navjobsactive %}active{% endblock %}
@@ -16,15 +26,17 @@
 <script>
 
 status_colour_map = {DONE: "success", SUBMITTED: "warning", FAILED: "danger"};
-type_elements_column_map = {COPY: [{'title': 'ID', 'data': 'id', 'width': '5%'},
+type_elements_column_map = {COPY: [{'title': 'ID', 'data': 'id', 'className': 'element_id', 'width': '5%', 'sType': 'date'},
                                    {'title': 'From', 'data': 'src_filepath'},
                                    {'title': 'To', 'data': 'dst_filepath'},
                                    {'title': 'Progress', 'data': 'monitoring_info'},
-                                   {'title': 'Status', 'data': 'status', 'width': '5%'}],
-                            REMOVE: [{'title': 'ID', 'data': 'id', 'width': '5%'},
+                                   {'title': 'Status', 'data': 'status', 'width': '5%'},
+                                   {'data': null, 'defaultContent':'<span class="oi oi-terminal text-primary"></span>', 'width': '1%', "orderable": false}],
+                            REMOVE: [{'title': 'ID', 'data': 'id', 'className': 'element_id', 'width': '5%', 'sType': 'date'},
                                      {'title': 'Target', 'data': 'src_filepath'},
                                      {'title': 'Progress', 'data': 'monitoring_info'},
-                                     {'title': 'Status', 'data': 'status', 'width': '5%'}]}
+                                     {'title': 'Status', 'data': 'status', 'width': '5%'},
+                                     {'data': null, 'defaultContent':'<span class="oi oi-terminal text-primary"></span>', 'width': '1%', "orderable": false}]}
 
 function preprocess_subtabledata(data, job_id){
     var processed_data = []  //cant just modify data inplace as need to filter (delete from) it.
@@ -53,7 +65,7 @@ function preprocess_subtabledata(data, job_id){
         }
         else if(element.status === "SUBMITTED"){
             width = 100 * element.monitoring_info.transferred / Math.floor(element.size/1e6);
-            text = element.monitoring_info.transferred;
+            text = element.monitoring_info.transferred + " Mb";
             colour += "progress-bar-striped progress-bar-animated";
         }
         else{
@@ -144,12 +156,7 @@ function preprocess_tabledata(data){
     return processed_data;
 }
 
-$(document).ready(function(){
-    // placeholder spinning pdm image
-    var jobs_table = $("#jobs_table");
-    jobs_table.append($("<img>", {src: '/static/images/pdm_animation.gif', class: "w-50"}));
-
-
+function refresh_table(jobs_table){
     $.ajax({
         url: "/web/js/jobs",
         type: "GET",
@@ -180,9 +187,30 @@ $(document).ready(function(){
             $(table_container).addClass("w-100");
         }
     });
+}
+
+$(document).ready(function(){
+    // placeholder spinning pdm image
+    var jobs_table = $("#jobs_table");
+    jobs_table.append($("<img>", {src: '/static/images/pdm_animation.gif', class: "w-50"}));
+
+    // Reload table ajax every 2 mins
+    /////////////////////////////////////////////////////
+    setInterval(refresh_table(jobs_table), 120000); // 2 mins
+
+    jobs_table.on('click', 'tbody tr td span.oi-terminal', function (){
+        var id = $(this).closest("tr").find("td.element_id").text().split(".");
+        var job_id = id[0];
+        var element_id = id[1];
+        $.fancybox.open({
+            src  : `/web/js/jobs/${job_id}/elements/${element_id}/output`,
+            type : 'iframe',
+            title: `Output for element ${id}`
+        });
+    });
 
     // Add event listener for opening and closing details
-    $('#jobs_table').on('click', 'tbody tr td.details-control span.oi', function (){
+    jobs_table.on('click', 'tbody tr td.details-control span.oi', function (){
         var details_control = $(this);
         var tr = details_control.closest('tr');
         var row = jobs_table.DataTable().row(tr);
@@ -213,7 +241,8 @@ $(document).ready(function(){
                 var subtable = $("<table>", {class: "compact w-100"});
                 subtable.DataTable({data: preprocess_subtabledata(response, job_id),
                                     columns: type_elements_column_map[job_type],
-                                    order: [[0, "asc"]]});
+                                    order: [[0, "asc"]],
+                                    lengthMenu: [[-1], ["All"]]});
                 loading_image.replaceWith(subtable);
             }
         });

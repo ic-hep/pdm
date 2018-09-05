@@ -240,14 +240,9 @@ class WorkqueueService(object):
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
             element_counter = 0
-            top_root = None
             for root, listing in sorted(element.listing.iteritems(),
                                         key=lambda item: len(item[0]), reverse=True):
-                entries = sorted((entry for entry in listing if entry['name'] not in ('.', '..')),
-                                 key=lambda x: stat.S_ISDIR(int(x['st_mode'])))
-                if len(entries) != len(listing):  # when removing a single file this is false.
-                    top_root = root
-                for entry in entries:
+                for entry in sorted(listing, key=lambda x: stat.S_ISDIR(int(x['st_mode']))):
                     element_counter += 1
                     name = entry['name']
                     if stat.S_ISDIR(int(entry['st_mode'])):
@@ -258,10 +253,10 @@ class WorkqueueService(object):
                                                    type=job.type,
                                                    size=int(entry["st_size"])))
             # Need to remove top level directory
-            if top_root is not None:
+            if root.rstrip('/') == element.src_filepath.rstrip('/'):
                 element_counter += 1
                 job.elements.append(JobElement(id=element_counter,
-                                               src_filepath=top_root.rstrip('/') + '/',
+                                               src_filepath=root.rstrip('/') + '/',
                                                max_tries=element.max_tries,
                                                type=job.type,
                                                size=0))  # work out size better
