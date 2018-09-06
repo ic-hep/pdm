@@ -209,28 +209,23 @@ class WorkqueueService(object):
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
             element_counter = 0
+            element_listing = sorted(element.listing.iteritems(), key=lambda item: len(item[0]))
             dir_copy = False
-            for root, listing in sorted(element.listing.iteritems(), key=lambda item: len(item[0])):
-                # is int cast necessary?
-                files = [file_ for file_ in listing if stat.S_ISREG(int(file_['st_mode'])) and
-                         file_['name'] not in ('.', '..')]  # gfal treats . and .. as files??!
-                if len(files) != len(listing):
-                    dir_copy = True
-                for file_ in files:
+            if element_listing and element_listing[0][0].rstrip('/') == job.src_filepath.rstrip('/'):
+                dir_copy = True
+            for root, listing in element_listing:
+                for file_ in listing:
+                    # is int cast necessary?
+                    if not stat.S_ISREG(int(file_['st_mode'])):
+                        continue
                     element_counter += 1
                     src_filepath = os.path.join(root, file_['name'])
-                    common_prefix_length = len(os.path.commonprefix((src_filepath,
-                                                                     job.src_filepath)))
-                    rel_filepath = src_filepath[common_prefix_length:].lstrip('/')
                     dst_filepath = job.dst_filepath
-                    if rel_filepath and dir_copy:
-                        dst_filepath = os.path.join(job.dst_filepath,
-                                                    os.path.basename(job.src_filepath.rstrip('/')),
-                                                    rel_filepath)
-                    elif rel_filepath:
+                    if dir_copy:
+                        rel_filepath = os.path.relpath(src_filepath, element.src_filepath)
                         dst_filepath = os.path.join(job.dst_filepath, rel_filepath)
                     job.elements.append(JobElement(id=element_counter,
-                                                   src_filepath=os.path.join(root, file_['name']),
+                                                   src_filepath=src_filepath,
                                                    dst_filepath=dst_filepath,
                                                    max_tries=element.max_tries,
                                                    type=job.type,
