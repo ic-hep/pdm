@@ -446,6 +446,9 @@ class UserCommand(object):
         indent = 4
 
         listing = full_listing[root]
+        if not listing:
+            print "<empty>"
+            return
 
         size_len = len(str(max(d['st_size'] for d in listing)))
         links_len = max(d['st_nlink'] for d in listing)
