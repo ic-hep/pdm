@@ -42,9 +42,8 @@ class UserCommand(object):
         user_parser = subparsers.add_parser('unregister', help="Delete a user from the PDM.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
-        # TODO due to a bug in the SiteService, commented out
-        # user_parser.set_defaults(func=self.unregister)
-        user_parser.set_defaults(func=self.not_implemented)
+        user_parser.set_defaults(func=self.unregister)
+        #user_parser.set_defaults(func=self.not_implemented)
         # login
         user_parser = subparsers.add_parser('login', help="User login procedure.")
         user_parser.add_argument('email', nargs='?', type=str)
