@@ -11,6 +11,7 @@ import subprocess
 import shutil
 import asyncore
 import logging
+import threading
 from cStringIO import StringIO
 from collections import defaultdict
 from pprint import pformat
@@ -141,6 +142,24 @@ class StdOutDispatcher(asyncore.file_dispatcher):
             return False
         return True
 
+    def force_fail(self, returncode):
+        """Force the """
+        data = {'returncode': returncode,
+                'timestamp': datetime.utcnow().isoformat(),
+                'host': socket.gethostbyaddr(socket.getfqdn())}
+        stderr = self._stderr_dispatcher.buffer
+        for element_id, token in self._tokens.iteritems():
+            log = self._log_dict.pop(element_id, StringIO())
+            log.write(stderr)
+            log.write('\n')
+            data.update(log=log.getvalue())
+            log.close()
+            self._logger.info("Uploading output log for job.element %s "
+                              "to WorkqueueService.", element_id)
+            self._callback('worker/jobs/{job_id}/elements/{element_id}',
+                           *element_id.split('.'), token=token, data=data)
+        self._tokens.clear()  # will cause readable to close fd on next iteration.
+
     def handle_read(self):
         """Handle read events."""
         self._buffer += self.recv(8192)
@@ -185,12 +204,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
                 self._logger.debug("Subprocess output for job.element %s: %s", element_id, log)
 
                 if not element_id:  # whole job failure
-                    for element_id, token in self._tokens.iteritems():
-                        self._logger.info("Uploading output log for job.element %s "
-                                          "to WorkqueueService.", element_id)
-                        self._callback('worker/jobs/{job_id}/elements/{element_id}',
-                                       *element_id.split('.'), token=token, data=data)
-                    self._tokens.clear()  # will cause readable to close fd on next iteration.
+                    self.force_fail(returncode=returncode)
                     return
 
                 if 'Listing' in done_element:
@@ -228,6 +242,13 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
         self._alg = conf.pop('algorithm', 'BY_NUMBER').upper()
         self._alg_args = conf.pop('algorithm.args', {})
         self._interpoll_sleep_time = conf.pop('poll_time', 2)
+        self._timeouts = {JobType.LIST: 120,
+                          JobType.COPY: 3600,
+                          JobType.REMOVE: 120,
+                          JobType.MKDIR: 120,
+                          JobType.RENAME: 120}
+        self._timeouts.update({JobType[type_.upper()]: timeout
+                               for type_, timeout in conf.pop('timeouts', {})})
         self._system_ca_dir = conf.pop('system_ca_dir',
                                        os.environ.get('X509_CERT_DIR',
                                                       '/etc/grid-security/certificates'))
@@ -383,9 +404,17 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                     # Otherwise it assumes there may be more data and hangs...
                     self._current_process.stdin.close()
                     stderr_dispatcher = BufferingDispatcher(self._current_process.stderr)
-                    StdOutDispatcher(self._current_process.stdout, token_map,
-                                     stderr_dispatcher, self._upload)
+                    stdout_dispatcher = StdOutDispatcher(self._current_process.stdout, token_map,
+                                                         stderr_dispatcher, self._upload)
+
+                    timeout = self._timeouts[job['type']]
+                    kill_timer = threading.Timer(timeout, self._current_process.kill)
+                    if isinstance(timeout, (int, float)):
+                        kill_timer.start()
                     asyncore.loop(timeout=2)
+                    kill_timer.cancel()
                     if self._current_process.wait():
-                        self._logger.error("Job %s failed", job['id'])
+                        returncode = self._current_process.returncode
+                        stdout_dispatcher.force_fail(returncode=returncode)
+                        self._logger.error("Job %s failed with return: %s", job['id'], returncode)
                         self._logger.info("Job stderr:\n%s", stderr_dispatcher.buffer)
