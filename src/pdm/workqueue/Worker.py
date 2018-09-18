@@ -11,6 +11,7 @@ import subprocess
 import shutil
 import asyncore
 import logging
+import threading
 from cStringIO import StringIO
 from collections import defaultdict
 from pprint import pformat
@@ -228,6 +229,8 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
         self._alg = conf.pop('algorithm', 'BY_NUMBER').upper()
         self._alg_args = conf.pop('algorithm.args', {})
         self._interpoll_sleep_time = conf.pop('poll_time', 2)
+        self._timeouts = {'LIST': 4, 'COPY': 4, 'REMOVE': 4, 'MKDIR': 4, 'RENAME': 4}
+        self._timeouts.update(conf.pop('timeouts', {}))
         self._system_ca_dir = conf.pop('system_ca_dir',
                                        os.environ.get('X509_CERT_DIR',
                                                       '/etc/grid-security/certificates'))
@@ -385,7 +388,9 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                     stderr_dispatcher = BufferingDispatcher(self._current_process.stderr)
                     StdOutDispatcher(self._current_process.stdout, token_map,
                                      stderr_dispatcher, self._upload)
+                    kill_timer = threading.Timer(self._timeouts.get(JobType[job.type].name, 3), self._current_process.kill)
                     asyncore.loop(timeout=2)
+                    kill_timer.cancel()
                     if self._current_process.wait():
-                        self._logger.error("Job %s failed", job['id'])
+                        self._logger.error("Job %s failed with return: %s", job['id'], self._current_process.returncode)
                         self._logger.info("Job stderr:\n%s", stderr_dispatcher.buffer)
