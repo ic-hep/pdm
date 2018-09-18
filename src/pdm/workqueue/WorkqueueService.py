@@ -1,13 +1,13 @@
 """Workqueue Service."""
 import os
 import stat
-from enum import Enum
 from functools import partial
 from itertools import groupby
 from operator import attrgetter
 from collections import Counter
 from pprint import pformat
 
+from enum import Enum
 from flask import request, abort, current_app
 # from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
@@ -211,7 +211,8 @@ class WorkqueueService(object):
             element_counter = 0
             element_listing = sorted(element.listing.iteritems(), key=lambda item: len(item[0]))
             dir_copy = False
-            if element_listing and element_listing[0][0].rstrip('/') == job.src_filepath.rstrip('/'):
+            if element_listing and \
+                    element_listing[0][0].rstrip('/') == job.src_filepath.rstrip('/'):
                 dir_copy = True
             for root, listing in element_listing:
                 for file_ in listing:
@@ -226,7 +227,7 @@ class WorkqueueService(object):
                         dst_filepath = os.path.join(job.dst_filepath, rel_filepath)
                     job.elements.append(JobElement(id=element_counter,
                                                    src_filepath=src_filepath,
-                                                   dst_filepath=dst_filepath,
+                                                   dst_filepath=os.path.normpath(dst_filepath),
                                                    max_tries=element.max_tries,
                                                    type=job.type,
                                                    size=int(file_["st_size"])))  # int cast needed?
