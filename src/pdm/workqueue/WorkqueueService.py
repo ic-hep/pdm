@@ -153,6 +153,7 @@ class WorkqueueService(object):
         require_attrs('transferred', 'elapsed', 'instant', 'average')
         JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
         element = JobElement.query.get_or_404((element_id, job_id))
+        element.status = JobStatus.RUNNING
         element.monitoring_info = request.data
         element.update()
         return '', 200
