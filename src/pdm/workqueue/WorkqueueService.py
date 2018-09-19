@@ -156,6 +156,10 @@ class WorkqueueService(object):
         element.status = JobStatus.RUNNING
         element.monitoring_info = request.data
         element.update()
+
+        job = element.job
+        job.status = max(ele.status for ele in job.elements)
+        job.update()
         return '', 200
 
     # pylint: disable=too-many-branches, too-many-locals, too-many-statements
