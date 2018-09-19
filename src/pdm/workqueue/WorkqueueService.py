@@ -200,8 +200,10 @@ class WorkqueueService(object):
         if not os.path.exists(dir_):
             os.makedirs(dir_)
         with open(os.path.join(dir_, 'attempt%i.log' % element.attempts), 'wb') as logfile:
-            logfile.write("Job run on host: %s, timestamp: %s\n" % (request.data['host'],
-                                                                    request.data['timestamp']))
+            logfile.write("Job run on host: %s, returncode: %s, timestamp: %s\n"
+                          % (request.data['host'],
+                             request.data['returncode'],
+                             request.data['timestamp']))
             logfile.write(request.data['log'])
 
         # Expand listing for COPY or REMOVE jobs.
@@ -418,7 +420,7 @@ class WorkqueueService(object):
                 log_filename = os.path.join(element_log_filebase, "attempt%i.log" % attempt)
                 log = "log directory/file %s not found for job.element %s.%s."\
                       % (log_filename, job_id, element.id)
-                if not os.path.exists(log_filename):
+                if os.path.exists(log_filename):
                     with open(log_filename, 'rb') as logfile:
                         log = logfile.read()
                 failed_output.update(log=log)
