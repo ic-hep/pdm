@@ -21,7 +21,7 @@ _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 ID = None
 
 
-def pdm_gfal_ls(root, depth=-1, verbosity=logging.INFO):
+def pdm_gfal_ls(root, depth=-1, timeout=None, verbosity=logging.INFO):
     """
     Get a directory listing of a given depth. Depth = -1 list the filesystem for all levels
     """
@@ -34,6 +34,11 @@ def pdm_gfal_ls(root, depth=-1, verbosity=logging.INFO):
     max_depth = max(-1, depth)
 
     ctx = gfal2.creat_context()
+    params = ctx.transfer_parameters()
+
+    if timeout is not None:
+        params.timeout = timeout
+
     result = OrderedDict()
     # determine if the path point to a file, no recursion if True
     try:
@@ -133,7 +138,7 @@ def pdm_gfal_long_list_dir(ctx, root, result, max_depth=-1, depth=1):
             (dirent, stats) = dirp.readpp()
             if dirent is None:
                 break
-            if dirent.d_name =='.' or dirent.d_name =='..':
+            if dirent.d_name == '.' or dirent.d_name == '..':
                 continue
             dir_entry = {k: getattr(stats, k) for k, _ in
                          inspect.getmembers(stats.__class__, lambda x: isinstance(x, property))}
