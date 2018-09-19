@@ -389,6 +389,7 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                     StdOutDispatcher(self._current_process.stdout, token_map,
                                      stderr_dispatcher, self._upload)
                     kill_timer = threading.Timer(self._timeouts.get(JobType[job.type].name, 3), self._current_process.kill)
+                    kill_timer.start()
                     asyncore.loop(timeout=2)
                     kill_timer.cancel()
                     if self._current_process.wait():
