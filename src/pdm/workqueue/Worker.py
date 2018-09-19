@@ -142,11 +142,23 @@ class StdOutDispatcher(asyncore.file_dispatcher):
             return False
         return True
 
-    def force_fail(self, return_code):
+    def force_fail(self, returncode):
         """Force the """
-        self._buffer += json.dumps({'Code': return_code, 'id': ''})
-        self._buffer += '\n'
-        self.handle_read()
+        data = {'returncode': returncode,
+                'timestamp': datetime.utcnow().isoformat(),
+                'host': socket.gethostbyaddr(socket.getfqdn())}
+        stderr = self._stderr_dispatcher.buffer
+        for element_id, token in self._tokens.iteritems():
+            log = self._log_dict.pop(element_id, StringIO())
+            log.write(stderr)
+            log.write('\n')
+            data.update(log=log.getvalue())
+            log.close()
+            self._logger.info("Uploading output log for job.element %s "
+                              "to WorkqueueService.", element_id)
+            self._callback('worker/jobs/{job_id}/elements/{element_id}',
+                           *element_id.split('.'), token=token, data=data)
+        self._tokens.clear()  # will cause readable to close fd on next iteration.
 
     def handle_read(self):
         """Handle read events."""
@@ -192,12 +204,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
                 self._logger.debug("Subprocess output for job.element %s: %s", element_id, log)
 
                 if not element_id:  # whole job failure
-                    for element_id, token in self._tokens.iteritems():
-                        self._logger.info("Uploading output log for job.element %s "
-                                          "to WorkqueueService.", element_id)
-                        self._callback('worker/jobs/{job_id}/elements/{element_id}',
-                                       *element_id.split('.'), token=token, data=data)
-                    self._tokens.clear()  # will cause readable to close fd on next iteration.
+                    self.force_fail(returncode=returncode)
                     return
 
                 if 'Listing' in done_element:
@@ -399,11 +406,13 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                     stderr_dispatcher = BufferingDispatcher(self._current_process.stderr)
                     stdout_dispatcher = StdOutDispatcher(self._current_process.stdout, token_map,
                                                          stderr_dispatcher, self._upload)
-                    kill_timer = threading.Timer(self._timeouts[job['type']], self._current_process.kill)
+                    kill_timer = threading.Timer(self._timeouts[job['type']],
+                                                 self._current_process.kill)
                     kill_timer.start()
                     asyncore.loop(timeout=2)
                     kill_timer.cancel()
                     if self._current_process.wait():
-                        stdout_dispatcher.force_fail(self._current_process.returncode)
-                        self._logger.error("Job %s failed with return: %s", job['id'], self._current_process.returncode)
+                        returncode = self._current_process.returncode
+                        stdout_dispatcher.force_fail(returncode=returncode)
+                        self._logger.error("Job %s failed with return: %s", job['id'], returncode)
                         self._logger.info("Job stderr:\n%s", stderr_dispatcher.buffer)
