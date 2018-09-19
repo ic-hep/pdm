@@ -142,8 +142,8 @@ class StdOutDispatcher(asyncore.file_dispatcher):
             return False
         return True
 
-    def force_fail(self, returncode):
-        """Force the """
+    def force_complete(self, returncode):
+        """Force the return of all outstanding elements with given returncode."""
         data = {'returncode': returncode,
                 'timestamp': datetime.utcnow().isoformat(),
                 'host': socket.gethostbyaddr(socket.getfqdn())}
@@ -204,7 +204,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
                 self._logger.debug("Subprocess output for job.element %s: %s", element_id, log)
 
                 if not element_id:  # whole job failure
-                    self.force_fail(returncode=returncode)
+                    self.force_complete(returncode=returncode)
                     return
 
                 if 'Listing' in done_element:
@@ -242,11 +242,11 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
         self._alg = conf.pop('algorithm', 'BY_NUMBER').upper()
         self._alg_args = conf.pop('algorithm.args', {})
         self._interpoll_sleep_time = conf.pop('poll_time', 2)
-        self._timeouts = {JobType.LIST: 4,
-                          JobType.COPY: 4,
-                          JobType.REMOVE: 4,
-                          JobType.MKDIR: 4,
-                          JobType.RENAME: 4}
+        self._timeouts = {JobType.LIST: 120,
+                          JobType.COPY: 3600,
+                          JobType.REMOVE: 120,
+                          JobType.MKDIR: 120,
+                          JobType.RENAME: 120}
         self._timeouts.update({JobType[type_.upper()]: timeout
                                for type_, timeout in conf.pop('timeouts', {})})
         self._system_ca_dir = conf.pop('system_ca_dir',
@@ -406,13 +406,15 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                     stderr_dispatcher = BufferingDispatcher(self._current_process.stderr)
                     stdout_dispatcher = StdOutDispatcher(self._current_process.stdout, token_map,
                                                          stderr_dispatcher, self._upload)
-                    kill_timer = threading.Timer(self._timeouts[job['type']],
-                                                 self._current_process.kill)
-                    kill_timer.start()
+
+                    timeout = self._timeouts[job['type']]
+                    kill_timer = threading.Timer(timeout, self._current_process.kill)
+                    if isinstance(timeout, (int, float)):
+                        kill_timer.start()
                     asyncore.loop(timeout=2)
                     kill_timer.cancel()
                     if self._current_process.wait():
                         returncode = self._current_process.returncode
-                        stdout_dispatcher.force_fail(returncode=returncode)
+                        stdout_dispatcher.force_complete(returncode=returncode)
                         self._logger.error("Job %s failed with return: %s", job['id'], returncode)
                         self._logger.info("Job stderr:\n%s", stderr_dispatcher.buffer)
