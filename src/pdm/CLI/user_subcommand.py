@@ -72,6 +72,7 @@ class UserCommand(object):
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('site', type=str)
+        user_parser.add_argument('-T', '--timeout', type=int, help='gfal2 ls timeout')
         user_parser.add_argument('-m', '--max_tries', type=int, help='max tries')
         user_parser.add_argument('-p', '--priority', type=int, help='priority')
         user_parser.add_argument('-s', '--protocol', type=str, help='protocol')
