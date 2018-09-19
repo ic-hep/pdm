@@ -142,8 +142,8 @@ class StdOutDispatcher(asyncore.file_dispatcher):
             return False
         return True
 
-    def force_fail(self, returncode):
-        """Force the """
+    def force_complete(self, returncode):
+        """Force the return of all outstanding elements with given returncode."""
         data = {'returncode': returncode,
                 'timestamp': datetime.utcnow().isoformat(),
                 'host': socket.gethostbyaddr(socket.getfqdn())}
@@ -204,7 +204,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
                 self._logger.debug("Subprocess output for job.element %s: %s", element_id, log)
 
                 if not element_id:  # whole job failure
-                    self.force_fail(returncode=returncode)
+                    self.force_complete(returncode=returncode)
                     return
 
                 if 'Listing' in done_element:
@@ -415,6 +415,6 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                     kill_timer.cancel()
                     if self._current_process.wait():
                         returncode = self._current_process.returncode
-                        stdout_dispatcher.force_fail(returncode=returncode)
+                        stdout_dispatcher.force_complete(returncode=returncode)
                         self._logger.error("Job %s failed with return: %s", job['id'], returncode)
                         self._logger.info("Job stderr:\n%s", stderr_dispatcher.buffer)
