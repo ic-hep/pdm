@@ -7,16 +7,30 @@ The following instructions assume you are installing PDM in a standard system-wi
 
 Requirements
 ------------
+You (the installer) must be registered with the instance you wish to register the endpoint with.
+
 The installer has currently only been tested on CentOS7, the following packages should be installed before running the installer script:
  * python-requests
  * globus-gridftp-server-progs
  * globus-gridmap-verify-myproxy-callout
  * myproxy-server
+ * wget
 
 Some of these packages required the EPEL repository to be enabled on the node. You can install them with the following commands:
 ```
 yum -y install epel-release
-yum -y install python-requests globus-gridftp-server-progs globus-gridmap-verify-myproxy-callout myproxy-server
+yum -y install python-requests globus-gridftp-server-progs globus-gridmap-verify-myproxy-callout myproxy-server wget
+```
+
+Getting started
+----------
+* System hostname must be set to a publicly resolvable hostname, otherwise use IP address instead of hostname for configuration.
+* System clock must be set correctly (chrony, ntpd).
+* Download the configuration scripts:
+```
+wget https://raw.githubusercontent.com/ic-hep/pdm/master/src/pdm/installer/install_pdm.py
+wget https://raw.githubusercontent.com/ic-hep/pdm/master/src/pdm/installer/build_pdm_ca.sh
+chmod u+x install_pdm.py build_pdm_ca.sh
 ```
 
 Usage

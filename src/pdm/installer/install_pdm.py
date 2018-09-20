@@ -70,7 +70,8 @@ def read_config(fname):
                 'myproxy_path', 'service_url', 'sitename',
                 'sitedesc'):
         if conf.has_option('DEFAULT', opt):
-            OPTS[opt] = conf.get('DEFAULT', opt)
+            # Also strip " around the field at this point
+            OPTS[opt] = conf.get('DEFAULT', opt).strip('"')
     for opt in ('myproxy_port', 'cert_hours',
                 'gridpftp_port', 'gridftp_low', 'gridftp_high'):
         if conf.has_option('DEFAULT', opt):
@@ -214,6 +215,7 @@ def login_user():
     # We need to get the users URL
     print "[*] Preparing to login to central service..."
     full_url = "%s/service" % OPTS['service_url']
+    full_url = full_url.replace("//", "/")
     res = requests.get(full_url, verify=OPTS['ssl_ca'])
     data = res.json()
     if not 'user_ep' in data:
@@ -377,6 +379,7 @@ def main():
 INSTALLER_CONF = """\
 # PDM Node Config
 # This file configures how PDM is deployed at this site.
+# All entries set to <none> must be specified.
 
 [DEFAULT]
 #conf_dir = %(conf_dir)s
@@ -385,9 +388,18 @@ INSTALLER_CONF = """\
 #gridftpd_path = <auto>
 #myproxy_path = <auto>
 
+# specify central server, e.g. 
+# https://example.grid.hep.ph.ic.ac.uk:5445/site/api/v1.0
 #service_url = <none>
+
+# Specify your site name, e.g. 
+# IMPERIAL-HEP
 #sitename = <none>
+
+# Site description, e.g. "Imperial Test Endpoint"
 #sitedesc = <none>
+
+# Set this to True if Endpoint should be visible to others
 #public = %(public)s
 
 #myproxy_port = %(myproxy_port)u
