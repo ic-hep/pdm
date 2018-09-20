@@ -377,6 +377,7 @@ def main():
 INSTALLER_CONF = """\
 # PDM Node Config
 # This file configures how PDM is deployed at this site.
+# All entries set to <none> must be specified.
 
 [DEFAULT]
 #conf_dir = %(conf_dir)s
@@ -385,9 +386,18 @@ INSTALLER_CONF = """\
 #gridftpd_path = <auto>
 #myproxy_path = <auto>
 
+# specify central server, e.g. 
+# https://example.grid.hep.ph.ic.ac.uk:5445/site/api/v1.0
 #service_url = <none>
+
+# Specify your site name, e.g. 
+# IMPERIAL-HEP
 #sitename = <none>
+
+# Site description, e.g. "Imperial Test Endpoint"
 #sitedesc = <none>
+
+# Set this to True if Endpoint should be visible to others
 #public = %(public)s
 
 #myproxy_port = %(myproxy_port)u
