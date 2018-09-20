@@ -70,7 +70,8 @@ def read_config(fname):
                 'myproxy_path', 'service_url', 'sitename',
                 'sitedesc'):
         if conf.has_option('DEFAULT', opt):
-            OPTS[opt] = conf.get('DEFAULT', opt)
+            # Also strip " around the field at this point
+            OPTS[opt] = conf.get('DEFAULT', opt).strip('"')
     for opt in ('myproxy_port', 'cert_hours',
                 'gridpftp_port', 'gridftp_low', 'gridftp_high'):
         if conf.has_option('DEFAULT', opt):
