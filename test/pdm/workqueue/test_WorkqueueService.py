@@ -159,7 +159,7 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertTrue(os.path.isfile(logfile))
 
         expected_log = dedent("""
-        Job run on host: somehost.domain, timestamp: timestamp
+        Job run on host: somehost.domain, returncode: 1, timestamp: timestamp
         blah blah
         """).strip()
         with open(logfile, 'rb') as log:
@@ -181,6 +181,10 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(j.status, JobStatus.DONE)
         logfile = os.path.join('/tmp/workers', j.log_uid[:2], j.log_uid, str(je.id), 'attempt2.log')
         self.assertTrue(os.path.isfile(logfile))
+        expected_log = dedent("""
+        Job run on host: somehost.domain, returncode: 0, timestamp: timestamp
+        blah blah
+        """).strip()
         with open(logfile, 'rb') as log:
             self.assertEqual(log.read(), expected_log)
         self.assertEqual(je.listing, {'root': []})

@@ -162,7 +162,10 @@ class StdOutDispatcher(asyncore.file_dispatcher):
             self._callback('worker/jobs/{job_id}/elements/{element_id}',
                            *element_id.split('.'), token=token, data=data)
         self._tokens.clear()  # will cause readable to close fd on next iteration.
-        self.close()
+        try:
+            self.close()  # fd possibly already closed
+        except OSError:
+            pass
 
     def handle_read(self):
         """Handle read events."""
