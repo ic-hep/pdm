@@ -482,27 +482,42 @@ class UserCommand(object):
         """
         token = UserCommand._get_token(args.token)
         block = args.block
-        job_id = int(args.job)
+        job_id = args.job
+        element_id = None
+
+        if '.' in job_id:
+            job_id, element_id = args.job.split('.')
+        job_id = int(job_id)
+
+        if element_id is not None:
+            element_id = int(element_id)
+
         if token:
             client = TransferClientFacade(token)
-            self._status(job_id, client, block=block)
+            self._status(job_id, client, element_id, block=block)
 
-    def _status(self, job_id, client, block=False):
+    def _status(self, job_id, client, element_id=None, block=False):
 
-        status = client.status(job_id)
+        status = client.status(job_id, element_id)
         sleep(self.__nap)  # seconds
 
         if block:
             while status['status'] not in ('DONE', 'FAILED'):
                 sleep(self.__nap)  # seconds
-                status = client.status(job_id)
+                status = client.status(job_id, element_id)
                 self.__count += 1
                 if self.__count >= self.__max_iter:
                     print "Timeout .."
                     break
                 print "(%2d) job id: %d status: %s " % (self.__count, job_id, status['status'])
 
-        print "Job id: %d status: %s " % (job_id, status['status'])
+        if element_id is None:
+            print "Job id: %d status: %s " % (job_id, status['status'])
+        else:
+            print "Job id: %d.%d status: %s " % (job_id, element_id, status['status'])
+            print "\tattempts: {attempts} transferred[MB]: {transferred}\n\t" \
+                  "instant[kB/s]: {instant} average[kB/s]:" \
+                  " {average} elapsed[s]: {elapsed}".format(**status)
         return status
 
     def remove(self, args):  # pylint: disable=no-self-use

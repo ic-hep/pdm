@@ -63,14 +63,14 @@ class TransferClient(object):
         response = self.__wq_client.output(job_id, element_id=element_id, attempt=attempt)
         return response
 
-    def status(self, job_id):
+    def status(self, job_id, element_id=None):
         """
         Return status of a job.
 
         :param job_id: job id to get the status of.
         :return: forward response from :func:`pdm.workqueue.WorkqueueClient.WorkqueueClient.status`.
         """
-        response = self.__wq_client.status(job_id)
+        response = self.__wq_client.status(job_id, element_id)
         return response
 
     def list_sites(self):
