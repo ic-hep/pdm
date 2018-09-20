@@ -25,7 +25,10 @@
 <script src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap4.min.js"></script>
 <script>
 
-status_colour_map = {DONE: "success", SUBMITTED: "warning", FAILED: "danger"};
+status_colour_map = {DONE: "success",
+                     SUBMITTED: "warning progress-bar-striped progress-bar-animated",
+                     RUNNING: "success progress-bar-striped progress-bar-animated",
+                     FAILED: "danger"};
 type_elements_column_map = {COPY: [{'title': 'ID', 'data': 'id', 'className': 'element_id', 'width': '5%', 'sType': 'date'},
                                    {'title': 'From', 'data': 'src_filepath'},
                                    {'title': 'To', 'data': 'dst_filepath'},
@@ -59,20 +62,24 @@ function preprocess_subtabledata(data, job_id){
             text = "N/A";
             colour = "bg-secondary";
         }
+        else if(element.status === "SUBMITTED"){
+            text = "No monitoring info yet"
+            colour = "bg-warning progress-bar-striped progress-bar-animated";
+        }
         else if (typeof element.monitoring_info === "undefined" || element.monitoring_info === null){
             text = "No monitoring info!";
             colour = "bg-secondary";
         }
-        else if(element.status === "SUBMITTED"){
+        else if(element.status === "RUNNING"){
             width = 100 * element.monitoring_info.transferred / Math.floor(element.size/1e6);
             text = element.monitoring_info.transferred + " Mb";
-            colour += "progress-bar-striped progress-bar-animated";
+            colour = "bg-success progress-bar-striped progress-bar-animated";
         }
         else{
             text = "Unknown Error!";
             colour = "bg-secondary";
         }
-        var bar = $("<div>", {class: `progress-bar ${colour}`,
+        var bar = $("<div>", {class: `progress-bar text-light ${colour}`,
                               role: "progressbar",
                               style: `width: ${width}%`});
         bar.text(`${text}`);
@@ -122,21 +129,26 @@ function preprocess_tabledata(data){
                                        role: "progressbar",
                                        style: `width: ${100*(job.num_done - 1)/(num_elements - 1)}%`});
             done_bar.text(job.num_done - 1);
-            var submitted_bar = $("<div>", {class: `progress-bar progress-bar-striped progress-bar-animated bg-warning`,
-                                            role: "progressbar",
-                                            style: `width: ${100*job.num_submitted/(num_elements - 1)}%`});
-            submitted_bar.text(job.num_submitted);
             var failed_bar = $("<div>", {class: `progress-bar bg-danger`,
                                          role: "progressbar",
                                          style: `width: ${100*job.num_failed/(num_elements - 1)}%`});
             failed_bar.text(job.num_failed);
+            var submitted_bar = $("<div>", {class: `progress-bar progress-bar-striped progress-bar-animated bg-warning`,
+                                            role: "progressbar",
+                                            style: `width: ${100*job.num_submitted/(num_elements - 1)}%`});
+            submitted_bar.text(job.num_submitted);
+            var running_bar = $("<div>", {class: `progress-bar progress-bar-striped progress-bar-animated bg-success`,
+                                          role: "progressbar",
+                                          style: `width: ${100*job.num_running/(num_elements - 1)}%`});
+            running_bar.text(job.num_running);
             var new_bar = $("<div>", {class: `progress-bar bg-secondary`,
                                       role: "progressbar",
                                       style: `width: ${100*job.num_new/(num_elements - 1)}%`});
             new_bar.text(job.num_new);
             progressbar.append(done_bar);
-            progressbar.append(submitted_bar);
             progressbar.append(failed_bar);
+            progressbar.append(submitted_bar);
+            progressbar.append(running_bar);
             progressbar.append(new_bar);
         }
         else{
@@ -194,9 +206,12 @@ $(document).ready(function(){
     var jobs_table = $("#jobs_table");
     jobs_table.append($("<img>", {src: '/static/images/pdm_animation.gif', class: "w-50"}));
 
+    refresh_table(jobs_table);
     // Reload table ajax every 2 mins
     /////////////////////////////////////////////////////
-    setInterval(refresh_table(jobs_table), 120000); // 2 mins
+    setInterval(function(){
+        refresh_table(jobs_table);
+    }, 120000); // 2 mins
 
     jobs_table.on('click', 'tbody tr td span.oi-terminal', function (){
         var id = $(this).closest("tr").find("td.element_id").text().split(".");

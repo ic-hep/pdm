@@ -55,6 +55,7 @@ class JobStatus(EnumBase):
     DONE = 1
     FAILED = 2
     SUBMITTED = 3
+    RUNNING = 4
 
 
 @unique

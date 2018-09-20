@@ -153,8 +153,13 @@ class WorkqueueService(object):
         require_attrs('transferred', 'elapsed', 'instant', 'average')
         JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
         element = JobElement.query.get_or_404((element_id, job_id))
+        element.status = JobStatus.RUNNING
         element.monitoring_info = request.data
         element.update()
+
+        job = element.job
+        job.status = max(ele.status for ele in job.elements)
+        job.update()
         return '', 200
 
     # pylint: disable=too-many-branches, too-many-locals, too-many-statements
@@ -357,7 +362,8 @@ class WorkqueueService(object):
                            num_new=status_counter[JobStatus.NEW],
                            num_done=status_counter[JobStatus.DONE],
                            num_failed=status_counter[JobStatus.FAILED],
-                           num_submitted=status_counter[JobStatus.SUBMITTED])
+                           num_submitted=status_counter[JobStatus.SUBMITTED],
+                           num_running=status_counter[JobStatus.RUNNING])
             jobs.append(new_job)
         return jsonify(jobs)
 
