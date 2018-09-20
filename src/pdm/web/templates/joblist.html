@@ -206,10 +206,11 @@ $(document).ready(function(){
     var jobs_table = $("#jobs_table");
     jobs_table.append($("<img>", {src: '/static/images/pdm_animation.gif', class: "w-50"}));
 
+    refresh_table(jobs_table);
     // Reload table ajax every 2 mins
     /////////////////////////////////////////////////////
     setInterval(function(){
-        refresh_table(jobs_table)
+        refresh_table(jobs_table);
     }, 120000); // 2 mins
 
     jobs_table.on('click', 'tbody tr td span.oi-terminal', function (){
