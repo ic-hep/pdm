@@ -214,6 +214,7 @@ def login_user():
     # We need to get the users URL
     print "[*] Preparing to login to central service..."
     full_url = "%s/service" % OPTS['service_url']
+    full_url = full_url.replace("//", "/")
     res = requests.get(full_url, verify=OPTS['ssl_ca'])
     data = res.json()
     if not 'user_ep' in data:
