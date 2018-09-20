@@ -142,7 +142,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
             return False
         return True
 
-    def force_complete(self, returncode):
+    def force_complete(self, returncode, extra_log=''):
         """Force the return of all outstanding elements with given returncode."""
         data = {'returncode': returncode,
                 'timestamp': datetime.utcnow().isoformat(),
@@ -152,6 +152,9 @@ class StdOutDispatcher(asyncore.file_dispatcher):
             log = self._log_dict.pop(element_id, StringIO())
             log.write(stderr)
             log.write('\n')
+            if extra_log:
+                log.write(extra_log)
+                log.write('\n')
             data.update(log=log.getvalue())
             log.close()
             self._logger.info("Uploading output log for job.element %s "
@@ -159,6 +162,10 @@ class StdOutDispatcher(asyncore.file_dispatcher):
             self._callback('worker/jobs/{job_id}/elements/{element_id}',
                            *element_id.split('.'), token=token, data=data)
         self._tokens.clear()  # will cause readable to close fd on next iteration.
+        try:
+            self.close()  # fd possibly already closed
+        except OSError:
+            pass
 
     def handle_read(self):
         """Handle read events."""
@@ -415,6 +422,9 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                     kill_timer.cancel()
                     if self._current_process.wait():
                         returncode = self._current_process.returncode
-                        stdout_dispatcher.force_complete(returncode=returncode)
+                        extra_log = ''
+                        if returncode == -9:
+                            extra_log = 'Operation timed out!'
+                        stdout_dispatcher.force_complete(returncode=returncode, extra_log=extra_log)
                         self._logger.error("Job %s failed with return: %s", job['id'], returncode)
                         self._logger.info("Job stderr:\n%s", stderr_dispatcher.buffer)
