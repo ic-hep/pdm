@@ -362,7 +362,8 @@ class WorkqueueService(object):
                            num_new=status_counter[JobStatus.NEW],
                            num_done=status_counter[JobStatus.DONE],
                            num_failed=status_counter[JobStatus.FAILED],
-                           num_submitted=status_counter[JobStatus.SUBMITTED])
+                           num_submitted=status_counter[JobStatus.SUBMITTED],
+                           num_running=status_counter[JobStatus.RUNNING])
             jobs.append(new_job)
         return jsonify(jobs)
 
