@@ -3,6 +3,7 @@
 """
 
 import os
+import re
 import sys
 import socket
 import getpass
@@ -215,7 +216,8 @@ def login_user():
     # We need to get the users URL
     print "[*] Preparing to login to central service..."
     full_url = "%s/service" % OPTS['service_url']
-    full_url = full_url.replace("//", "/")
+    # Replace double-slash, but avoid breaking https://
+    full_url = re.sub("([^:]/)/", "\\1", full_url)
     res = requests.get(full_url, verify=OPTS['ssl_ca'])
     data = res.json()
     if not 'user_ep' in data:
