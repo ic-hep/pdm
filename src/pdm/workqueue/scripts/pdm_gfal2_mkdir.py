@@ -14,12 +14,13 @@ logging.basicConfig()
 _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def pdm_gfal_mkdir(data, permissions=0o755, verbosity=logging.INFO):
+def pdm_gfal_mkdir(data, permissions=0o755, verbosity=logging.INFO, timeout=None):
     """
     Create a new directory.
     :param data: json-loaded dict with data {"dirs": [jobid, url]}
     :param permissions: directory permissions mapped from {"options":{"permissions":int}}
     :param verbosity: mapped from {"options":{"verbosity":logging level}}
+    :param timeout: global gfal2 timeout for all operations
     :return: dict of a form {'Code': return code, 'Reason': reason, 'id': jobid})
     """
 
@@ -32,6 +33,8 @@ def pdm_gfal_mkdir(data, permissions=0o755, verbosity=logging.INFO):
         return
 
     ctx = gfal2.creat_context()
+    if timeout is not None:
+        ctx.set_opt_integer("CORE","NAMESPACE_TIMEOUT", timeout)
 
     for jobid, elem in mkdir_list:
         try:

@@ -14,12 +14,13 @@ logging.basicConfig()
 _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def pdm_gfal_chmod(data, permissions, verbosity=logging.INFO):
+def pdm_gfal_chmod(data, permissions, verbosity=logging.INFO, timeout=None):
     """
     Change directory/file permissions
     :param data: json-loaded dict with data {"source": url}
     :param permissions: permissions mapped from {"options":{"permissions":int}}
     :param verbosity: mapped from {"options":{"verbosity":logging level}}
+    :param timeout: global gfal2 timeout for all operations
     :return: dict of a form {'Code': return code, 'Reason': reason, 'id': jobid})
     """
     _logger.setLevel(verbosity)
@@ -31,6 +32,9 @@ def pdm_gfal_chmod(data, permissions, verbosity=logging.INFO):
         return
 
     ctx = gfal2.creat_context()
+    if timeout is not None:
+        ctx.set_opt_integer("CORE","NAMESPACE_TIMEOUT", timeout)
+
     for jobid, src in chmod_list:
         try:
             res = ctx.chmod(str(src), permissions)

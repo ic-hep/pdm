@@ -14,11 +14,12 @@ logging.basicConfig()
 _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def pdm_gfal_rename(data, verbosity=logging.INFO):
+def pdm_gfal_rename(data, verbosity=logging.INFO, timeout=None):
     """
     Rename file or directory.
     :param data: json-loaded dict with data {"source": url}
     :param verbosity: mapped from "options":{"verbosity":logging level}
+    :param timeout: global gfal2 timeout for all operations
     :return: dict of a form {'Code': return code, 'Reason': reason, 'id': jobid})
     """
     _logger.setLevel(verbosity)
@@ -30,6 +31,8 @@ def pdm_gfal_rename(data, verbosity=logging.INFO):
         return
 
     ctx = gfal2.creat_context()
+    if timeout is not None:
+        ctx.set_opt_integer("CORE","NAMESPACE_TIMEOUT", timeout)
 
     for jobid, src, dst in rename_list:
         try:
