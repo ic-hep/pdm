@@ -43,7 +43,7 @@ class UserCommand(object):
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.set_defaults(func=self.unregister)
-        #user_parser.set_defaults(func=self.not_implemented)
+        # user_parser.set_defaults(func=self.not_implemented)
         # login
         user_parser = subparsers.add_parser('login', help="User login procedure.")
         user_parser.add_argument('email', nargs='?', type=str)
@@ -72,11 +72,15 @@ class UserCommand(object):
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('site', type=str)
+        user_parser.add_argument('-T', '--timeout', type=int, help='gfal2 CORE (global) '
+                                                                   'timeout for listing')
         user_parser.add_argument('-m', '--max_tries', type=int, help='max tries')
         user_parser.add_argument('-p', '--priority', type=int, help='priority')
         user_parser.add_argument('-s', '--protocol', type=str, help='protocol')
         user_parser.add_argument('-d', '--depth', type=int, default=0,
                                  help='listing depths. Default: current level')
+        user_parser.add_argument('-w', '--wait', type=int, help='client-side timeout (in seconds)'
+                                 , default=10)
         user_parser.set_defaults(func=self.list)
         # remove
         user_parser = subparsers.add_parser('remove', help="remove files from remote site.")
@@ -87,6 +91,8 @@ class UserCommand(object):
         user_parser.add_argument('-p', '--priority', type=int)
         user_parser.add_argument('-b', '--block', action='store_true')
         user_parser.add_argument('-s', '--protocol', type=str, help='protocol')
+        user_parser.add_argument('-T', '--timeout', type=int, help='gfal2 CORE (global) '
+                                                                   'timeout for remove')
         user_parser.set_defaults(func=self.remove)
         # copy
         user_parser = subparsers.add_parser('copy',
@@ -108,6 +114,8 @@ class UserCommand(object):
         user_parser.add_argument('newname', type=str, help="path_to_file to rename to")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
+        user_parser.add_argument('-T', '--timeout', type=int, help='gfal2 CORE (global) '
+                                                                   'timeout for rename')
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
         user_parser.add_argument('-b', '--block', action='store_true')
@@ -119,6 +127,8 @@ class UserCommand(object):
         user_parser.add_argument('site', type=str)
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
+        user_parser.add_argument('-T', '--timeout', type=int, help='gfal2 CORE (global) '
+                                                                   'timeout for mkdir')
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
         user_parser.add_argument('-b', '--block', action='store_true')
@@ -380,9 +390,10 @@ class UserCommand(object):
         :param args: parser arguments.
         :return: None
         """
-        max_iter = 50
+
         nap = 0.2
         count = 1
+        max_iter = max(1, int(args.wait/nap))
         #
         token = UserCommand._get_token(args.token)
         if token and self._session_ok(args.site, token):
@@ -390,7 +401,7 @@ class UserCommand(object):
             # remove None values, position args, func and token from the kwargs:
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
                              value is not None and key not in ('func', 'site', 'token',
-                                                               'config', 'verbosity')}
+                                                               'config', 'verbosity', 'wait')}
             resp = client.list(args.site, **accepted_args)  # max_tries, priority, depth)
             # resp and status both carry job id:
             if resp:

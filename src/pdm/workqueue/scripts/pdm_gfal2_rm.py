@@ -17,14 +17,19 @@ logging.basicConfig()
 _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def pdm_gfal_rm(rmdict, verbosity=logging.INFO):
+def pdm_gfal_rm(rmdict, verbosity=logging.INFO, timeout=None):
     """
     Remove files and directories. Print json string immediately after a file is removed.
+    :param rmdict: json-loaded dict with data {"source": url}
+    :param verbosity: mapped from "options":{"verbosity":logging level}
+    :param timeout: global gfal2 timeout for all operations
     """
     # _logger.addHandler(logging.StreamHandler())
     _logger.setLevel(verbosity)
 
     ctx = gfal2.creat_context()
+    if timeout is not None:
+        ctx.set_opt_integer("CORE","NAMESPACE_TIMEOUT", timeout)
 
     # files
     file_list = rmdict.get('files', [])  # list of dublets: (jobid, filename)
