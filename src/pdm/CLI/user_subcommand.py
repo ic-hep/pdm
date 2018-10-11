@@ -91,6 +91,8 @@ class UserCommand(object):
         user_parser.add_argument('-p', '--priority', type=int)
         user_parser.add_argument('-b', '--block', action='store_true')
         user_parser.add_argument('-s', '--protocol', type=str, help='protocol')
+        user_parser.add_argument('-T', '--timeout', type=int, help='gfal2 CORE (global) '
+                                                                   'timeout for remove')
         user_parser.set_defaults(func=self.remove)
         # copy
         user_parser = subparsers.add_parser('copy',
@@ -112,6 +114,8 @@ class UserCommand(object):
         user_parser.add_argument('newname', type=str, help="path_to_file to rename to")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
+        user_parser.add_argument('-T', '--timeout', type=int, help='gfal2 CORE (global) '
+                                                                   'timeout for rename')
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
         user_parser.add_argument('-b', '--block', action='store_true')
@@ -123,6 +127,8 @@ class UserCommand(object):
         user_parser.add_argument('site', type=str)
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
+        user_parser.add_argument('-T', '--timeout', type=int, help='gfal2 CORE (global) '
+                                                                   'timeout for mkdir')
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
         user_parser.add_argument('-b', '--block', action='store_true')
