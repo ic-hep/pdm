@@ -46,7 +46,7 @@ class TestUsercommand(unittest.TestCase):
         args = self._parser.parse_args('copy source:aaa dest:bbb -m 3 -t {}'.format(self._tmp_file.name).split())
         args.func(args)
 
-        mocked_copy.assert_called_with('source:aaa', 'dest:bbb', max_tries=3)
+        mocked_copy.assert_called_with('source:aaa', 'dest:bbb', max_tries=3, overwrite=False)
         assert mocked_facade.return_value.status.call_count == 1
         # NEW, only once:
         mocked_facade.return_value.status.reset_mock()

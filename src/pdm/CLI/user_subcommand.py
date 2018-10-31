@@ -105,6 +105,7 @@ class UserCommand(object):
         user_parser.add_argument('-m', '--max_tries', type=int)
         user_parser.add_argument('-p', '--priority', type=int)
         user_parser.add_argument('-b', '--block', action='store_true')
+        user_parser.add_argument('-o', '--overwrite', action='store_true')
         user_parser.add_argument('-s', '--protocol', type=str, help='protocol')
         user_parser.set_defaults(func=self.copy)
         # rename
