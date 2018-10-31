@@ -326,9 +326,26 @@ $(document).ready(function(){
         }
     });
 
+    var last_clicked = null;
     $("div.card-body").on("click", "ul.list-group li", function(event){
-        $(this).toggleClass("bg-primary text-light");
-        $("span.oi", $(this)).toggleClass("text-light");
+        var clicked = $(this);
+        if (event.shiftKey && last_clicked !== null){
+            if (clicked.prevAll().filter(last_clicked).length !== 0){
+                clicked.prevUntil(last_clicked).addClass("bg-primary text-light");
+                clicked.prevUntil(last_clicked).find("span.oi").addClass("text-light");
+            }
+            else if (clicked.nextAll().filter(last_clicked).length !== 0){
+                clicked.nextUntil(last_clicked).addClass("bg-primary text-light");
+                clicked.nextUntil(last_clicked).find("span.oi").addClass("text-light");
+            }
+        }
+        else{
+            var selected_siblings = clicked.siblings("[class ~= bg-primary]").not(".disabled");
+            selected_siblings.toggleClass("bg-primary text-light");
+            $("span.oi", selected_siblings).toggleClass("text-light");
+        }
+        clicked.toggleClass("bg-primary text-light");
+        $("span.oi", clicked).toggleClass("text-light");
 /*        if (event.ctrlKey){  // TODO
         }
         else if (event.shiftKey){
@@ -337,6 +354,7 @@ $(document).ready(function(){
             $("li", $(this).parent()).removeClass("bg-primary text-light");
             $(this).toggleClass("bg-primary text-light");
         }*/
+        last_clicked = clicked;
     });
 
     $("div.card-body").on("dblclick", "ul.list-group li", function(){
