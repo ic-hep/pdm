@@ -71,8 +71,8 @@ function preprocess_subtabledata(data, job_id){
             colour = "bg-secondary";
         }
         else if(element.status === "RUNNING"){
-            width = 100 * element.monitoring_info.transferred / Math.floor(element.size/1e6);
-            text = element.monitoring_info.transferred + " Mb";
+            width = 100 * element.monitoring_info.transferred / Math.floor(element.size/(1048576));
+            text = element.monitoring_info.transferred + " MiB";
             colour = "bg-success progress-bar-striped progress-bar-animated";
         }
         else{
