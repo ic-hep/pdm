@@ -339,7 +339,7 @@ $(document).ready(function(){
                 clicked.nextUntil(last_clicked).find("span.oi").addClass("text-light");
             }
         }
-        else{
+        else if (!event.ctrlKey){
             var selected_siblings = clicked.siblings("[class ~= bg-primary]").not(".disabled");
             selected_siblings.toggleClass("bg-primary text-light");
             $("span.oi", selected_siblings).toggleClass("text-light");
