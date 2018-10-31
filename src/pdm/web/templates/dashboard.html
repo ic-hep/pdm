@@ -168,15 +168,28 @@ function listing(sitename, filepath, panel){
             up_dir.append("..");
             list_group.append(up_dir);
             for(var i = 0; i < response.length; i++){
-                var element = $("<li>", {class: `list-group-item ui-widget-content ${draggable_name}`});
+                var size = response[i].st_size;
+                var size_label = ["", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"]
+                var size_counter = 0;
+                while(size >= 1024){
+                    size = Math.floor(size/1024);
+                    size_counter += 1;
+                }
+                size = size + " " + size_label[size_counter];
+
+                var element = $("<li>", {class: `list-group-item ui-widget-content ${draggable_name} d-flex justify-content-between`});
                 element.draggable({addClasses: false, helper: "clone", iframeFix: true, zIndex: 100, appendTo: "body"});
+                var wrapper = $("<span>");
+                element.append(wrapper);
                 if (response[i].is_dir){
-                    element.append($("<span>", {class: "oi oi-folder text-warning pr-2"}));
+                    wrapper.append($("<span>", {class: "oi oi-folder text-warning pr-2"}));
+                    element.append("Folder");
                 }
                 else{
-                    element.append($("<span>", {class: "oi oi-file text-primary pr-2"}));
+                    wrapper.append($("<span>", {class: "oi oi-file text-primary pr-2"}));
+                    element.append(size);
                 }
-                element.append(response[i].name);
+                wrapper.append(response[i].name);
                 list_group.append(element);
             }
             directory_input.attr("value", filepath);
@@ -205,8 +218,8 @@ function copy(src_site, src_listing, dst_site, dst_listing){
     }
     var selected = $("li[class ~= bg-primary]", src_listing).not(".disabled");
     selected.each(function(){
-        var filename = $(this).text();
-        var is_dir = $(this).children("span.oi").hasClass("oi-folder")
+        var filename = $(this).children("span").text();
+        var is_dir = $(this).find("span.oi").hasClass("oi-folder");
         console.log(`${filename}: is_dir = ${is_dir}`)
         var dst_path = `${dst_root}/${filename}`;
 //        if (is_dir){  // This used to work. Why was this needed then but not now?
@@ -340,17 +353,19 @@ $(document).ready(function(){
     });
 
     $("div.card-body").on("dblclick", "ul.list-group li", function(){
-        element = $(this);
-        if (element.children("span.oi").hasClass("oi-folder")){  // is dir
+        var element = $(this);
+        var is_dir = element.find("span.oi").hasClass("oi-folder");
+        var dir_name = element.children("span").text();
+        if (element.find("span.oi").hasClass("oi-folder")){  // is dir
             var panel = element.closest("div.card-body");
             var sitename = panel.prev("select.sitelist").val();
             var root = element.parent("ul.list-group").attr("directory");
             var last_slash_index = root.lastIndexOf("/");
-            var new_path = `${root}/${element.text()}`
+            var new_path = `${root}/${dir_name}`
             if(element.text() === ".." && last_slash_index > 0){
                 new_path = root.substring(0, last_slash_index);
             }
-            listing(sitename, new_path, panel)
+            listing(sitename, new_path, panel);
         }
     });
 
@@ -424,7 +439,7 @@ $(document).ready(function(){
     });
 
     $("#context_rename").click(function(){
-        var selected = $("div.card-body ul.list-group li[class ~= bg-primary]").not(".disabled");
+        var selected = $("div.card-body ul.list-group li[class ~= bg-primary]").not(".disabled").children("span");
         var icon = $("span.oi", selected);
         var name = selected.text();
         var name_input = $("<input>", {type: "text", value: name, api_type: "rename", src_name: name})
@@ -545,8 +560,12 @@ $(document).ready(function(){
         var failed_items = [];
         var selected = $("div.card-body ul.list-group li[class ~= bg-primary]").not(".disabled");
         selected.each(function(){
-            var filename = $(this).text();
-            var listing = $(this).parent("ul.list-group")
+            var list_item = $(this);
+            var span = list_item.children("span");
+            var filename = span.text();
+            list_item.empty();
+            list_item.append(span);
+            var listing = list_item.parent("ul.list-group");
             var src_root = listing.attr("directory");
             var src_site = listing.parent("div.card-body").prev("select.sitelist").val()
             if ($.type(src_root) === "undefined") {
