@@ -344,10 +344,15 @@ $(document).ready(function(){
         success: function(response, status, request){
             console.log("Successfully got list of sites.");
             for(var i = 0; i < response.length; i++){
+                var def_path = response[i].def_path;
+                if (def_path == "/~"){
+                    def_path = "~";
+                }
                 var option = $('<option>', {"value": response[i].site_name,
                                             "data-toggle": "tooltip",
                                             "data-placement": "right",
-                                            "title": response[i].site_desc});
+                                            "title": response[i].site_desc,
+                                            "data-def-path": def_path});
                 option.text(response[i].site_name);
                 $(".sitelist").append(option);
             }
@@ -355,7 +360,8 @@ $(document).ready(function(){
     });
 
     $(".sitelist").change(function(){
-        listing($(this).val(), "~", $(this).next('div.card-body'));
+        var def_path = $("option:checked", $(this)).data("def-path");
+        listing($(this).val(), def_path, $(this).next('div.card-body'));
     });
 
 
