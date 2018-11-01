@@ -58,6 +58,35 @@
     </div>
 </div>
 
+<!-- Modal -->
+<div class="modal fade" id="copy_modal" tabindex="-1" role="dialog" aria-labelledby="copy_modal_label" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="copy_modal_label">Copy Warning!</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span class="oi oi-circle-x" aria-hidden="true"></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Note: registering the current copy job will result in some
+                failures. This is because you are attempting to copy a file/directory
+                to a destination which already containes a file/directory with that name and
+                the copy operation does NOT overwrite by default.
+                <p></p>
+                To activate overwrite mode, hold the shift key before clicking on the copy button.
+                <p></p>
+                <hr>
+                Do you want to continue with the current copy job registration?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button id="copy_modal_ok" type="button" class="btn btn-danger" data-dismiss="modal">Continue</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <nav id="title_bar" class="navbar navbar-expand-lg navbar-dark bg-primary d-flex justify-content-between">
     <a class="navbar-brand" href="#">
         The DataMover
@@ -202,7 +231,7 @@ function listing(sitename, filepath, panel){
     });
 }
 
-function copy(src_site, src_listing, dst_site, dst_listing){
+function copy(src_site, src_listing, dst_site, dst_listing, overwrite){
     var failed_items = [];
     var dst_root = dst_listing.attr("directory");
     if ($.type(dst_root) === "undefined") {
@@ -231,7 +260,8 @@ function copy(src_site, src_listing, dst_site, dst_listing){
             data: JSON.stringify({src_sitename: src_site,
                                   src_filepath: `${src_root}/${filename}`,
                                   dst_sitename: dst_site,
-                                  dst_filepath: dst_path}),
+                                  dst_filepath: dst_path,
+                                  overwrite: overwrite}),
             contentType: "application/json; charset=utf-8",
             error: function(request, status, error){
                 console.error(`Error registering copy job for ${filename}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
@@ -468,7 +498,7 @@ $(document).ready(function(){
         var name = $(this).val();
         var listing = $(this).closest("ul.list-group");
         listing.children("li").each(function(){
-            existing_names.push($(this).text());
+            existing_names.push($(this).children("span").text());
         });
 
         $(this).closest("li").prop("disabled", false);
@@ -524,17 +554,77 @@ $(document).ready(function(){
     });
 
     $("#src_dst_copy").click(function(){
+        var src_listing = $("#src_panel ul.list-group");
+        var dst_listing = $("#dst_panel ul.list-group");
+        var overwrite = $(this).hasClass("btn-danger");
+        var selected = $("li[class ~= bg-primary]", src_listing).not(".disabled");
+        if (!overwrite) {
+            var existing_names = [];
+            $.each($("li", dst_listing).not(".disabled"), function(){
+                existing_names.push($(this).children("span").text());
+            });
+            overwriting_files = [];
+            selected.each(function(){
+                var filename = $(this).children("span").text();
+                if ($.inArray(filename, existing_names) !== -1){
+                    overwriting_files.push(filename);
+                }
+            });
+            if (overwriting_files.length){
+                $("#copy_modal_ok").off("click");
+                $("#copy_modal_ok").on("click", function(){
+                   copy($("#src_site").val(),
+                        src_listing,
+                        $("#dst_site").val(),
+                        dst_listing,
+                        overwrite);
+                });
+                $("#copy_modal").modal();
+                return;
+            }
+        }
         copy($("#src_site").val(),
-             $("#src_panel ul.list-group"),
+             src_listing,
              $("#dst_site").val(),
-             $("#dst_panel ul.list-group"));
+             dst_listing,
+             overwrite);
     });
 
     $("#dst_src_copy").click(function(){
+        var src_listing = $("#dst_panel ul.list-group");
+        var dst_listing = $("#src_panel ul.list-group");
+        var overwrite = $(this).hasClass("btn-danger");
+        var selected = $("li[class ~= bg-primary]", src_listing).not(".disabled");
+        if (!overwrite) {
+            var existing_names = [];
+            $.each($("li", dst_listing).not(".disabled"), function(){
+                existing_names.push($(this).children("span").text());
+            });
+            overwriting_files = [];
+            selected.each(function(){
+                var filename = $(this).children("span").text();
+                if ($.inArray(filename, existing_names) !== -1){
+                    overwriting_files.push(filename);
+                }
+            });
+            if (overwriting_files.length){
+                $("#copy_modal_ok").off("click");
+                $("#copy_modal_ok").on("click", function(){
+                   copy($("#src_site").val(),
+                        src_listing,
+                        $("#dst_site").val(),
+                        dst_listing,
+                        overwrite);
+                });
+                $("#copy_modal").modal();
+                return;
+            }
+        }
         copy($("#dst_site").val(),
-             $("#dst_panel ul.list-group"),
+             src_listing,
              $("#src_site").val(),
-             $("#src_panel ul.list-group"));
+             dst_listing,
+             overwrite);
     });
 
     $("#remove").click(function(){
@@ -542,6 +632,26 @@ $(document).ready(function(){
         if ( nselected > 0 ) {
             $("#delete_modal").modal();
         }
+    });
+
+    var ovrt = $("<span>", {class: "text-danger font-weight-bold"});
+    ovrt.text("OVRT");
+    $("body").keydown(function(event){
+        if (event.shiftKey){
+            $("#src_dst_copy").addClass("btn-danger");
+            $("#src_dst_copy").removeClass("btn-primary");
+            $("#dst_src_copy").addClass("btn-danger");
+            $("#dst_src_copy").removeClass("btn-primary");
+            $("#src_dst_copy").parent().prepend(ovrt);
+        }
+    });
+
+    $("body").keyup(function(event){
+          $("#src_dst_copy").addClass("btn-primary");
+          $("#src_dst_copy").removeClass("btn-danger");
+          $("#dst_src_copy").addClass("btn-primary");
+          $("#dst_src_copy").removeClass("btn-danger");
+          ovrt.remove();
     });
 
     $("body").keypress(function(event){
