@@ -243,7 +243,8 @@ class WebPageService(object):
         tclient.copy(src_site,
                      request.data['src_filepath'],
                      dst_site,
-                     request.data['dst_filepath'])
+                     request.data['dst_filepath'],
+                     overwrite=request.data.get("overwrite", False))
         return '', 200
 
     @staticmethod

@@ -202,7 +202,7 @@ function listing(sitename, filepath, panel){
     });
 }
 
-function copy(src_site, src_listing, dst_site, dst_listing){
+function copy(src_site, src_listing, dst_site, dst_listing, overwrite){
     var failed_items = [];
     var dst_root = dst_listing.attr("directory");
     if ($.type(dst_root) === "undefined") {
@@ -231,7 +231,8 @@ function copy(src_site, src_listing, dst_site, dst_listing){
             data: JSON.stringify({src_sitename: src_site,
                                   src_filepath: `${src_root}/${filename}`,
                                   dst_sitename: dst_site,
-                                  dst_filepath: dst_path}),
+                                  dst_filepath: dst_path,
+                                  overwrite: overwrite}),
             contentType: "application/json; charset=utf-8",
             error: function(request, status, error){
                 console.error(`Error registering copy job for ${filename}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
@@ -517,14 +518,16 @@ $(document).ready(function(){
         copy($("#src_site").val(),
              $("#src_panel ul.list-group"),
              $("#dst_site").val(),
-             $("#dst_panel ul.list-group"));
+             $("#dst_panel ul.list-group"),
+             $(this).hasClass("btn-danger"));
     });
 
     $("#dst_src_copy").click(function(){
         copy($("#dst_site").val(),
              $("#dst_panel ul.list-group"),
              $("#src_site").val(),
-             $("#src_panel ul.list-group"));
+             $("#src_panel ul.list-group"),
+             $(this).hasClass("btn-danger"));
     });
 
     $("#remove").click(function(){
@@ -532,6 +535,26 @@ $(document).ready(function(){
         if ( nselected > 0 ) {
             $("#delete_modal").modal();
         }
+    });
+
+    var ovrt = $("<span>", {class: "text-danger font-weight-bold"});
+    ovrt.text("OVRT");
+    $("body").keydown(function(event){
+        if (event.shiftKey){
+            $("#src_dst_copy").addClass("btn-danger");
+            $("#src_dst_copy").removeClass("btn-primary");
+            $("#dst_src_copy").addClass("btn-danger");
+            $("#dst_src_copy").removeClass("btn-primary");
+            $("#src_dst_copy").parent().prepend(ovrt);
+        }
+    });
+
+    $("body").keyup(function(event){
+          $("#src_dst_copy").addClass("btn-primary");
+          $("#src_dst_copy").removeClass("btn-danger");
+          $("#dst_src_copy").addClass("btn-primary");
+          $("#dst_src_copy").removeClass("btn-danger");
+          ovrt.remove();
     });
 
     $("body").keypress(function(event){
