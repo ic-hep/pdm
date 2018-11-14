@@ -57,6 +57,9 @@ function preprocess_subtabledata(data, job_id){
         var progressbar = $("<div>", {class: "progress"});
         if (element.status === "DONE"){
             text = Math.floor(element.size/1e6) + " Mb";
+            if (typeof element.monitoring_info !== "undefined" && element.monitoring_info !== null){
+                text += " (" + element.monitoring_info.average +"KiB/s)";
+            }
         }
         else if (element.status === "FAILED"){
             text = "N/A";
@@ -64,7 +67,7 @@ function preprocess_subtabledata(data, job_id){
         }
         else if(element.status === "SUBMITTED"){
             text = "No monitoring info yet"
-            colour = "bg-warning progress-bar-striped progress-bar-animated";
+            colour = "bg-warning progress-bar-striped progress-bar-animated text-dark";
         }
         else if (typeof element.monitoring_info === "undefined" || element.monitoring_info === null){
             text = "No monitoring info!";
@@ -72,8 +75,8 @@ function preprocess_subtabledata(data, job_id){
         }
         else if(element.status === "RUNNING"){
             width = 100 * element.monitoring_info.transferred / Math.floor(element.size/(1048576));
-            text = element.monitoring_info.transferred + " MiB";
-            colour = "bg-success progress-bar-striped progress-bar-animated";
+            text = element.monitoring_info.transferred + " MiB (" + element.monitoring_info.average +"KiB/s)";
+            colour = "bg-success progress-bar-striped progress-bar-animated text-dark";
         }
         else{
             text = "Unknown Error!";
