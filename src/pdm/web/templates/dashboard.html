@@ -19,10 +19,11 @@
         #identicon { width: 30px; height: 30px; }
         #notification { position: fixed; top:0; width: 100%; z-index: 1000 }
         #context_menu { display: none; }
-        li.list-group-item { cursor: pointer; height: 1.5em; padding: 0.5% 2%; }
+        li.list-group-item { cursor: pointer; height: 1.5em; padding: 0.5% 2%; border: 0px;}
         .clickable { cursor: pointer }
         .listing-window { width: 45%; height: 70%; }
         .oi-reload { cursor: pointer }
+        .oi-eye { cursor: pointer }
         span.newdir { cursor: pointer }
         .list-group {
             max-height: 400px;
@@ -150,6 +151,23 @@ function bootstrap_alert(level, status, message){
     alert.fadeIn("slow").delay(2000).fadeOut("slow", function(){alert.remove();});
 };
 
+
+function listing_sort(listing_A, listing_B){
+    var filename_A = $(listing_A).children("span").text();
+    var is_dir_A = $(listing_A).find("span.oi").hasClass("oi-folder");
+    var filename_B = $(listing_B).children("span").text();
+    var is_dir_B = $(listing_B).find("span.oi").hasClass("oi-folder");
+
+    if (is_dir_A && !is_dir_B){
+        return -1;
+    }
+    if (is_dir_B && !is_dir_A){
+        return 1;
+    }
+    return filename_A > filename_B
+}
+
+var full_listings = {src: [], dst: []};
 function listing(sitename, filepath, panel){
     if (sitename == ""){
         console.warn("Invalid site selected.");
@@ -158,6 +176,8 @@ function listing(sitename, filepath, panel){
     var draggable_name = panel.attr('id').replace("panel", "draggable");
     var directory_panel = panel.children("div.directory_input");
     var directory_input = directory_panel.children("input.form-control");
+    var src_dst = panel.prop("id").substring(0, 3);
+    var hide_button = panel.next("div.card-footer").find("span.oi-eye");
     panel.empty();
     panel.append($("<img/>", {src:"/static/images/ajax-loader.gif", alt:"Loading..."}));  // Thanks to http://www.ajaxload.info/
     $.ajax({
@@ -196,6 +216,7 @@ function listing(sitename, filepath, panel){
             up_dir.prop("disabled", true);
             up_dir.append("..");
             list_group.append(up_dir);
+            full_listings[src_dst] = [];
             for(var i = 0; i < response.length; i++){
                 var size = response[i].st_size;
                 var size_label = ["", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"]
@@ -219,8 +240,15 @@ function listing(sitename, filepath, panel){
                     element.append(size);
                 }
                 wrapper.append(response[i].name);
-                list_group.append(element);
+                full_listings[src_dst].push(element);
             }
+            full_listings[src_dst].sort(listing_sort);
+            $.each(full_listings[src_dst], function(index, list_element){
+                if (!hide_button.hasClass("text-primary") && list_element.children("span").text().startsWith(".")){
+                    return true;  // = continue within $.each
+                }
+                list_group.append(list_element);
+            });
             directory_input.attr("value", filepath);
             directory_input.attr("placeholder", filepath);
             directory_panel.prop("hidden", false);
@@ -466,6 +494,25 @@ $(document).ready(function(){
         var directory = listing_window.find("ul.list-group").attr("directory");
         var panel = listing_window.find("div.card-body");
         listing(sitename, directory, panel);
+    });
+
+    $("span.oi-eye").click(function(){
+        $(this).toggleClass("text-primary");
+        var id = $(this).prop("id").substring(0, 3);
+        var list_group = $(this).parent().siblings("div.card-body").find("ul.list-group");
+        if (!$(this).hasClass("text-primary")){
+            var entries = $("li.list-group-item", list_group);
+            entries.each(function(){
+                if($(this).children("span").text().startsWith(".")){
+                    $(this).detach();
+                }
+            });
+        }
+        else{
+            $.each(full_listings[id], function(index, list_element){
+                list_group.append(list_element);
+            });
+        }
     });
 
     $("body").click(function(){
