@@ -2,11 +2,13 @@
 """ PDM gfal2-copy wrapper """
 import os
 import sys
+import time
 from functools import partial
 import json
 import logging
 import gfal2
 import imp
+
 
 dump_and_flush = imp.load_module('stdout_dump_helper',
                                  *imp.find_module('stdout_dump_helper',
@@ -15,6 +17,7 @@ dump_and_flush = imp.load_module('stdout_dump_helper',
 logging.basicConfig()
 _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+monitoring_fired = {}   # {jobid, True/False}
 
 def event_callback(jobid, event):
     """
@@ -44,6 +47,10 @@ def monitor_callback(jobid, src, dst, average, instant, transferred, elapsed):  
     # print >> sys.stderr, "MONITOR src: %s [%4d] %.2fMB (%.2fKB/s)\n" % (
     #    src, elapsed, transferred / 1048576, average / 1024),
     # sys.stderr.flush()
+
+    global monitoring_fired
+    monitoring_fired[jobid] = True
+
     dump_and_flush({'id': jobid, 'average': average / 1024, 'instant': instant / 1024,
                     'transferred': transferred / 1048576, 'elapsed': elapsed})
 
@@ -107,14 +114,27 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     gfal2.cred_set(ctx, d_root, t_cred)
 
     # result = []
+
+    global monitoring_fired
+
     for jobid, source_file, dest_file in copy_list:
         try:
             params.event_callback = partial(event_callback, jobid)
             params.monitor_callback = partial(monitor_callback, jobid)
+            start_time = time.time()
+            monitoring_fired[jobid] = False
             res = ctx.filecopy(params, str(source_file), str(dest_file))
+
+            if not monitoring_fired[jobid]:
+                elapsed = time.time() -  start_time
+                dump_and_flush({'id': jobid, 'transferred': -1, 'elapsed': elapsed,
+                                'average': -1, 'instant': -1})
+
             dump_and_flush({'Code': res, 'Reason': 'OK', 'id': jobid})
+
         except gfal2.GError as gerror:
             dump_and_flush({'Code': 1, 'Reason': str(gerror), 'id': jobid}, _logger, str(gerror))
+    monitoring_fired = {} # for safety
     return  # result
 
 
