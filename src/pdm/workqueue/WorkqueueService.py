@@ -154,6 +154,9 @@ class WorkqueueService(object):
         JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
         element = JobElement.query.get_or_404((element_id, job_id))
         element.status = JobStatus.RUNNING
+        if request.data['transferred'] == -1:
+            request.data['transferred'] = element.size / 1048576.  # MiB
+            request.data['average'] = element.size / request.data['elapsed'] / 1024.  # KiB/s
         element.monitoring_info = request.data
         element.update()
 
