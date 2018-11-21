@@ -9,7 +9,6 @@ import logging
 import gfal2
 import imp
 
-
 dump_and_flush = imp.load_module('stdout_dump_helper',
                                  *imp.find_module('stdout_dump_helper',
                                                   [os.path.dirname(__file__)])).dump_and_flush
@@ -17,30 +16,31 @@ dump_and_flush = imp.load_module('stdout_dump_helper',
 logging.basicConfig()
 _logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-monitoring_fired = {}   # {jobid, True/False}
 
-def event_callback(jobid, event):
+# job = {'jobid': jobid, 'monitor': True or False}
+
+def event_callback(job, event):
     """
     gfal-copy event callback. Dump json  event information to stout.
-    :param jobid: job id
+    :param job: a dictionary {'jobid': jobid, 'monitor': bool}
     :param event:
     :return:
     """
     # print >> sys.stderr, "[%s] %s %s %s" % \
     #                     (event.timestamp, event.domain, event.stage, event.description)
-    dump_and_flush({'id': jobid, 'timestamp': event.timestamp, 'domain': event.domain, 'stage': event.stage,
+    dump_and_flush({'id': job['jobid'], 'timestamp': event.timestamp, 'domain': event.domain, 'stage': event.stage,
                     'desc': event.description})
 
 
-def monitor_callback(jobid, src, dst, average, instant, transferred, elapsed):  # pylint: disable=too-many-arguments
+def monitor_callback(job, src, dst, average, instant, transferred, elapsed):  # pylint: disable=too-many-arguments
     """
     gfal-copy monitor callback. Dump json Monitoring information to stdout.
-    :param jobid: job id
+    :param job: a dictionary {'jobid': jobid, 'monitor': bool}
     :param src: source file
     :param dst: dest file
-    :param average: average speed in kB/s
-    :param instant: instant speed in kB/s
-    :param transferred: MB transferred
+    :param average: average speed in Byte/s
+    :param instant: instant speed in Byte/s
+    :param transferred: Bytes transferred
     :param elapsed: time in seconds
     :return:
     """
@@ -48,11 +48,11 @@ def monitor_callback(jobid, src, dst, average, instant, transferred, elapsed):  
     #    src, elapsed, transferred / 1048576, average / 1024),
     # sys.stderr.flush()
 
-    global monitoring_fired
-    monitoring_fired[jobid] = True
+    jobid = job['jobid']
+    job['monitor'] = True
 
-    dump_and_flush({'id': jobid, 'average': average / 1024, 'instant': instant / 1024,
-                    'transferred': transferred / 1048576, 'elapsed': elapsed})
+    dump_and_flush({'id': jobid, 'average': average, 'instant': instant,
+                    'transferred': transferred, 'elapsed': elapsed})
 
 
 def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False,
@@ -99,9 +99,7 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
 
     if timeout is not None:
         params.timeout = timeout
-    params.event_callback = event_callback
-    params.monitor_callback = monitor_callback
-
+  
     # unzip:
     _, src_l, dst_l = zip(*copy_list)  # don't care about jobid
     s_root = str(os.path.dirname(os.path.commonprefix(src_l)))
@@ -113,20 +111,16 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     gfal2.cred_set(ctx, s_root, s_cred)
     gfal2.cred_set(ctx, d_root, t_cred)
 
-    # result = []
-
-    global monitoring_fired
-
     for jobid, source_file, dest_file in copy_list:
         try:
-            params.event_callback = partial(event_callback, jobid)
-            params.monitor_callback = partial(monitor_callback, jobid)
+            job = {'jobid': jobid, 'monitor': False}
+            params.event_callback = partial(event_callback, job)
+            params.monitor_callback = partial(monitor_callback, job)
             start_time = time.time()
-            monitoring_fired[jobid] = False
             res = ctx.filecopy(params, str(source_file), str(dest_file))
 
-            if not monitoring_fired[jobid]:
-                elapsed = time.time() -  start_time
+            if not job['monitor']:  # pseudo-monitoring
+                elapsed = time.time() - start_time
                 dump_and_flush({'id': jobid, 'transferred': -1, 'elapsed': elapsed,
                                 'average': -1, 'instant': -1})
 
@@ -134,8 +128,7 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
 
         except gfal2.GError as gerror:
             dump_and_flush({'Code': 1, 'Reason': str(gerror), 'id': jobid}, _logger, str(gerror))
-    monitoring_fired = {} # for safety
-    return  # result
+    return
 
 
 def _get_cred(cred_file):
