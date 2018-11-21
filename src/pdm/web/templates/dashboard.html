@@ -222,10 +222,10 @@ function listing(sitename, filepath, panel){
                 var size_label = ["", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"]
                 var size_counter = 0;
                 while(size >= 1024){
-                    size = Math.floor(size/1024);
+                    size = size/1024.;
                     size_counter += 1;
                 }
-                size = size + " " + size_label[size_counter];
+                size = size.toPrecision(3) + " " + size_label[size_counter];
 
                 var element = $("<li>", {class: `list-group-item ui-widget-content ${draggable_name} d-flex justify-content-between`});
                 element.draggable({addClasses: false, helper: "clone", iframeFix: true, zIndex: 100, appendTo: "body"});
