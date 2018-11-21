@@ -41,7 +41,8 @@ type_elements_column_map = {COPY: [{'title': 'ID', 'data': 'id', 'className': 'e
                                      {'title': 'Status', 'data': 'status', 'width': '5%'},
                                      {'data': null, 'defaultContent':'<span class="oi oi-terminal text-primary"></span>', 'width': '1%', "orderable": false}]}
 
-function preprocess_subtabledata(data, job_id){
+function preprocess_subtabledata(data){
+    var job_id = this;  // this = job_id from the bind
     var processed_data = []  //cant just modify data inplace as need to filter (delete from) it.
     $.each(data, function(index, element){
         // skip listing job
@@ -202,6 +203,10 @@ $(document).ready(function(){
     /////////////////////////////////////////////////////
     setInterval(function(){
         jobs_table.DataTable().ajax.reload();
+//        var clicked_details = $("tbody tr td.details-control span.oi.text-danger", jobs_table);
+//        clicked_details.each(function(index, details_button){
+//            $(this).closest("tr").next("tr").find("table.compact").DataTable().ajax.reload();
+//        });
     }, 120000); // 2 mins in ms
 
     jobs_table.on('click', 'tbody tr td span.oi-terminal', function (){
@@ -230,28 +235,25 @@ $(document).ready(function(){
 
         var job_id = tr.children("td.job_id").text();
         var job_type = tr.children("td.job_type").text();
-        var loading_image = $("<img>", {src: "/static/images/pdm_animation.gif"})
-        row.child(loading_image).show();
+        var subtable = $("<table>", {class: "compact w-100"})
+        row.child(subtable).show();
+        subtable.DataTable({ajax: {url: `/web/js/jobs/${job_id}/elements`,
+                                   type: "GET",
+                                   cache: true,
+                                   dataType: "json",
+                                   dataSrc: preprocess_subtabledata.bind(job_id),
+                                   error: function(request, status, error){
+                                                console.warn(`Error getting elements for job ${job_id}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
+                                                bootstrap_alert("Attention!", `Error getting elements for job ${job_id}! status: ${status} error: ${error}`, "alert-danger");
+                                          }
+                                   },
+                            columns: type_elements_column_map[job_type],
+                            order: [[0, "asc"]],
+                            lengthMenu: [[-1], ["All"]],
+                            searching: false,
+                            paging: false,
+                            info: false});
         tr.addClass('shown');
-        $.ajax({
-            url: `/web/js/jobs/${job_id}/elements`,
-            type: "GET",
-            cache: true,
-            dataType: "json",
-            error: function(request, status, error){
-                console.warn(`Error getting elements for job ${job_id}!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
-                bootstrap_alert("Attention!", `Error getting elements for job ${job_id}! status: ${status} error: ${error}`, "alert-danger");
-            },
-            success: function(response, status, request){
-                console.log(`Successfully retrieved elements for job ${job_id}.`);
-                var subtable = $("<table>", {class: "compact w-100"});
-                subtable.DataTable({data: preprocess_subtabledata(response, job_id),
-                                    columns: type_elements_column_map[job_type],
-                                    order: [[0, "asc"]],
-                                    lengthMenu: [[-1], ["All"]]});
-                loading_image.replaceWith(subtable);
-            }
-        });
     });
 });
 </script>
