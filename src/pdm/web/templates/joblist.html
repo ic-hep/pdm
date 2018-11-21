@@ -68,7 +68,7 @@ function preprocess_subtabledata(data, job_id){
         if (element.status === "DONE"){
             text = variable_filesize(element.size);
             if (typeof element.monitoring_info !== "undefined" && element.monitoring_info !== null){
-                text += " (" + variable_filesize(element.monitoring_info.average, 1) +"/s)";
+                text += " (" + variable_filesize(element.monitoring_info.average) +"/s)";
             }
         }
         else if (element.status === "FAILED"){
@@ -84,8 +84,8 @@ function preprocess_subtabledata(data, job_id){
             colour = "bg-secondary";
         }
         else if(element.status === "RUNNING"){
-            width = 100 * element.monitoring_info.transferred / (element.size / 1048576.);
-            text = variable_filesize(element.monitoring_info.transferred, 2) + " (" + variable_filesize(element.monitoring_info.average, 1) + "/s)";
+            width = 100 * element.monitoring_info.transferred / element.size;
+            text = variable_filesize(element.monitoring_info.transferred) + " (" + variable_filesize(element.monitoring_info.average) + "/s)";
             colour = "bg-success progress-bar-striped progress-bar-animated text-dark";
         }
         else{

@@ -155,8 +155,8 @@ class WorkqueueService(object):
         element = JobElement.query.get_or_404((element_id, job_id))
         element.status = JobStatus.RUNNING
         if request.data['transferred'] == -1:
-            request.data['transferred'] = element.size / 1048576.  # MiB
-            request.data['average'] = element.size / request.data['elapsed'] / 1024.  # KiB/s
+            request.data['transferred'] = element.size
+            request.data['average'] = element.size / request.data['elapsed']
         element.monitoring_info = request.data
         element.update()
 
