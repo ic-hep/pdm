@@ -41,6 +41,16 @@ type_elements_column_map = {COPY: [{'title': 'ID', 'data': 'id', 'className': 'e
                                      {'title': 'Status', 'data': 'status', 'width': '5%'},
                                      {'data': null, 'defaultContent':'<span class="oi oi-terminal text-primary"></span>', 'width': '1%', "orderable": false}]}
 
+function variable_filesize(size, init_units=0){
+    var size_label = ["", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"]
+    var size_counter = init_units;
+    while(size >= 1024.){
+        size = size/1024.;
+        size_counter += 1;
+    }
+    return size = size.toPrecision(3) + " " + size_label[size_counter];
+}
+
 function preprocess_subtabledata(data){
     var job_id = this;  // this = job_id from the bind
     var processed_data = []  //cant just modify data inplace as need to filter (delete from) it.
@@ -57,9 +67,9 @@ function preprocess_subtabledata(data){
         var progress_wrapper = $("<div/>");
         var progressbar = $("<div>", {class: "progress"});
         if (element.status === "DONE"){
-            text = Math.floor(element.size/1e6) + " Mb";
+            text = variable_filesize(element.size);
             if (typeof element.monitoring_info !== "undefined" && element.monitoring_info !== null){
-                text += " (" + element.monitoring_info.average +"KiB/s)";
+                text += " (" + variable_filesize(element.monitoring_info.average) +"/s)";
             }
         }
         else if (element.status === "FAILED"){
@@ -75,8 +85,8 @@ function preprocess_subtabledata(data){
             colour = "bg-secondary";
         }
         else if(element.status === "RUNNING"){
-            width = 100 * element.monitoring_info.transferred / Math.floor(element.size/(1048576));
-            text = element.monitoring_info.transferred + " MiB (" + element.monitoring_info.average +"KiB/s)";
+            width = 100 * element.monitoring_info.transferred / element.size;
+            text = variable_filesize(element.monitoring_info.transferred) + " (" + variable_filesize(element.monitoring_info.average) + "/s)";
             colour = "bg-success progress-bar-striped progress-bar-animated text-dark";
         }
         else{
