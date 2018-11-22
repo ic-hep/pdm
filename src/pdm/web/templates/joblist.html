@@ -202,11 +202,20 @@ $(document).ready(function(){
     // Reload table ajax every 2 mins
     /////////////////////////////////////////////////////
     setInterval(function(){
-        jobs_table.DataTable().ajax.reload();
-//        var clicked_details = $("tbody tr td.details-control span.oi.text-danger", jobs_table);
-//        clicked_details.each(function(index, details_button){
-//            $(this).closest("tr").next("tr").find("table.compact").DataTable().ajax.reload();
-//        });
+        var opened_details = $("tbody tr td.details-control span.oi.text-danger", jobs_table);
+        var opened_ids = [];
+        opened_details.closest("td").siblings(".job_id").each(function(index, id_column){
+            opened_ids.push($(id_column).text());
+        });
+        jobs_table.DataTable().ajax.reload(function(data){
+            var all_details = $("tbody tr td.details-control span.oi", jobs_table);
+            all_details.each(function(index, details_span){
+                var id = $(details_span).closest("td").siblings(".job_id").text();
+                if ($.inArray(id, opened_ids) >=0 ){
+                    $(details_span).trigger("click");
+                }
+            });
+        });
     }, 120000); // 2 mins in ms
 
     jobs_table.on('click', 'tbody tr td span.oi-terminal', function (){
