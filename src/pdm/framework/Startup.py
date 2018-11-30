@@ -40,7 +40,10 @@ class ExecutableServer(object):
     def __fix_path(self, path):
         """ Convert a relative path to be rooted from the config directory
             of this server.
+            If path is None, return is None.
         """
+        if not path:
+          return None
         return os.path.join(self.__conf_base, path)
 
     @staticmethod
