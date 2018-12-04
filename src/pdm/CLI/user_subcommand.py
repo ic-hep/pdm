@@ -43,7 +43,7 @@ class UserCommand(object):
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.set_defaults(func=self.unregister)
-        #user_parser.set_defaults(func=self.not_implemented)
+        # user_parser.set_defaults(func=self.not_implemented)
         # login
         user_parser = subparsers.add_parser('login', help="User login procedure.")
         user_parser.add_argument('email', nargs='?', type=str)
@@ -72,12 +72,15 @@ class UserCommand(object):
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
                                  help='optional token file location (default=~/.pdm/token)')
         user_parser.add_argument('site', type=str)
-        user_parser.add_argument('-T', '--timeout', type=int, help='gfal2 ls timeout')
+        user_parser.add_argument('-T', '--timeout', type=int, help='gfal2 CORE (global) '
+                                                                   'timeout for listing')
         user_parser.add_argument('-m', '--max_tries', type=int, help='max tries')
         user_parser.add_argument('-p', '--priority', type=int, help='priority')
         user_parser.add_argument('-s', '--protocol', type=str, help='protocol')
         user_parser.add_argument('-d', '--depth', type=int, default=0,
                                  help='listing depths. Default: current level')
+        user_parser.add_argument('-w', '--wait', type=int, help='client-side timeout (in seconds)'
+                                 , default=10)
         user_parser.set_defaults(func=self.list)
         # remove
         user_parser = subparsers.add_parser('remove', help="remove files from remote site.")
@@ -381,9 +384,11 @@ class UserCommand(object):
         :param args: parser arguments.
         :return: None
         """
-        max_iter = 50
+
         nap = 0.2
         count = 1
+        max_iter = max(1, int(args.wait/nap))
+        print "maxi it %d " % (max_iter,)
         #
         token = UserCommand._get_token(args.token)
         if token and self._session_ok(args.site, token):
@@ -391,7 +396,7 @@ class UserCommand(object):
             # remove None values, position args, func and token from the kwargs:
             accepted_args = {key: value for (key, value) in vars(args).iteritems() if
                              value is not None and key not in ('func', 'site', 'token',
-                                                               'config', 'verbosity')}
+                                                               'config', 'verbosity', 'wait')}
             resp = client.list(args.site, **accepted_args)  # max_tries, priority, depth)
             # resp and status both carry job id:
             if resp:
@@ -483,27 +488,42 @@ class UserCommand(object):
         """
         token = UserCommand._get_token(args.token)
         block = args.block
-        job_id = int(args.job)
+        job_id = args.job
+        element_id = None
+
+        if '.' in job_id:
+            job_id, element_id = args.job.split('.')
+        job_id = int(job_id)
+
+        if element_id is not None:
+            element_id = int(element_id)
+
         if token:
             client = TransferClientFacade(token)
-            self._status(job_id, client, block=block)
+            self._status(job_id, client, element_id, block=block)
 
-    def _status(self, job_id, client, block=False):
+    def _status(self, job_id, client, element_id=None, block=False):
 
-        status = client.status(job_id)
+        status = client.status(job_id, element_id)
         sleep(self.__nap)  # seconds
 
         if block:
             while status['status'] not in ('DONE', 'FAILED'):
                 sleep(self.__nap)  # seconds
-                status = client.status(job_id)
+                status = client.status(job_id, element_id)
                 self.__count += 1
                 if self.__count >= self.__max_iter:
                     print "Timeout .."
                     break
                 print "(%2d) job id: %d status: %s " % (self.__count, job_id, status['status'])
 
-        print "Job id: %d status: %s " % (job_id, status['status'])
+        if element_id is None:
+            print "Job id: %d status: %s " % (job_id, status['status'])
+        else:
+            print "Job id: %d.%d status: %s " % (job_id, element_id, status['status'])
+            print "\tattempts: {attempts} transferred[MB]: {transferred}\n\t" \
+                  "instant[kB/s]: {instant} average[kB/s]:" \
+                  " {average} elapsed[s]: {elapsed}".format(**status)
         return status
 
     def remove(self, args):  # pylint: disable=no-self-use

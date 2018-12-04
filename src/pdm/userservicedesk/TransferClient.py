@@ -2,6 +2,7 @@
 Client API for the file transfer management
 """
 from copy import deepcopy
+from time import sleep
 from pdm.site.SiteClient import SiteClient
 from pdm.workqueue.WorkqueueClient import WorkqueueClient
 from pdm.userservicedesk.HRService import HRService
@@ -63,14 +64,31 @@ class TransferClient(object):
         response = self.__wq_client.output(job_id, element_id=element_id, attempt=attempt)
         return response
 
-    def status(self, job_id):
+    def status(self, job_id, element_id=None, block=False, interactive=False):
         """
         Return status of a job.
 
         :param job_id: job id to get the status of.
         :return: forward response from :func:`pdm.workqueue.WorkqueueClient.WorkqueueClient.status`.
         """
-        response = self.__wq_client.status(job_id)
+        response = self.__wq_client.status(job_id, element_id)
+        self.__max_iter = 50
+        self.__nap = 0.5
+        self.__count = 1
+
+        sleep(self.__nap)  # seconds
+
+        if block:
+            while response['status'] not in ('DONE', 'FAILED'):
+                sleep(self.__nap)  # seconds
+                response = self.__wq_client.status(job_id, element_id)
+                self.__count += 1
+                if self.__count >= self.__max_iter:
+                    if interactive:
+                        print "Timeout .."
+                    break
+                if interactive:
+                    print "(%2d) job id: %d status: %s " % (self.__count, job_id, response['status'])
         return response
 
     def list_sites(self):
