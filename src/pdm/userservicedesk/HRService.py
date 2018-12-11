@@ -77,6 +77,7 @@ class HRService(object):
         current_app.verification_url = config.pop("verification_url",
                                                   "https://pdm.grid.hep.ph.ic.ac.uk:5443/web/verify")
         current_app.mail_token_secret = config.pop("mail_token_secret")
+        current_app.mail_token_duration = config.pop("mail_token_validity", '24:00:00')
         #
         current_app.token_service = TokenService(current_app.mail_token_secret)
         # site client
@@ -464,7 +465,6 @@ class HRService(object):
 
     @staticmethod
     def email_user(to_address):
-        # TODO set email validity with a separate validity config field
         expiry = datetime.datetime.utcnow() + current_app.token_duration
         plain = {'expiry': expiry.isoformat(), 'email': to_address}
         HRService._logger.info("login request accepted for %s", to_address)
