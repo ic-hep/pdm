@@ -4,10 +4,16 @@ User Interface Service
 """
 
 import sys
+import os
 import logging
 import json
 import time
 import datetime
+import smtplib
+import socket
+from email.MIMEMultipart import MIMEMultipart
+from email.MIMEText import MIMEText
+
 from sqlalchemy import func
 from flask import request, abort, current_app
 from pdm.framework.FlaskWrapper import jsonify
@@ -15,8 +21,15 @@ from pdm.framework.Decorators import export, export_ext, db_model, startup
 from pdm.utils.hashing import hash_pass, check_hash
 from pdm.framework.Tokens import TokenService
 import pdm.userservicedesk.models
+from HRUtils import HRUtils
 from pdm.site.SiteClient import SiteClient
+from enum import IntEnum
 
+class HRServiceUserState(IntEnum):
+
+    REGISTERED = 0
+    VERIFIED = 1
+    DISABLED = -1
 
 @export_ext("/users/api/v1.0")
 @db_model(pdm.userservicedesk.models.UserModel)
@@ -45,6 +58,27 @@ class HRService(object):
                                     "file has wrong format %s. Aborting.", v_err)
             raise ValueError("Token lifetime incorrect format %s" % v_err)
 
+        # verification email:
+        current_app.token_url = config.pop("token_url","https://localhost:5443/web/verify")
+        current_app.smtp_server = config.pop("SMTP_server", None)
+        if current_app.smtp_server is None:
+            HRService._logger.error(" Mail server not provided in the config. Aborting")
+            raise ValueError(" Mail server not provided in the config. Aborting")
+
+        current_app.smtp_server_port = config.pop("SMTP_server_port", None)
+        current_app.smtp_server_login = config.pop("SMTP_server_login", None)
+        current_app.mail_display_from = config.pop("display_from_address", None)
+        current_app.smtp_server_pwd = config.pop("SMTP_server_pwd", None)
+        current_app.mail_subject = config.pop("mail_subject", None)
+        current_app.mail_expiry = config.pop("mail_expiry", "12:00:00")
+        current_app.smtp_server_startTLS = config.pop('SMTP_startTLS', 'REQUIRED')
+        current_app.smtp_server_login_req = config.pop('SMTP_login_req', 'REQUIRED')
+
+        current_app.verification_url = config.pop("verification_url",
+                                                  "https://pdm.grid.hep.ph.ic.ac.uk:5443/web/verify")
+        current_app.mail_token_secret = config.pop("mail_token_secret")
+        #
+        current_app.token_service = TokenService(current_app.mail_token_secret)
         # site client
         current_app.site_client = SiteClient()
 
@@ -122,9 +156,15 @@ class HRService(object):
             # user.save(db)
             db.session.add(user)
             user_id = db.session.query(User.id).filter_by(email=data['email']).scalar()
-            # add a user to the Credential Service:
+            # email the user
+            HRService.email_user(user.email)
+            HRService._logger.info("user: %s: verification email sent. ", user.email)
             db.session.commit()
-
+        except RuntimeError as r_error:
+            db.session.rollback()
+            HRService._logger.error("Runtime error when trying to send an email\n: %s", r_error)
+            HRService._logger.error("User %s not added.", user.email)
+            abort(500,'The server could not send the verification email.')
         except Exception:
             HRService._logger.error("Failed to add user: %s ", sys.exc_info())
             db.session.rollback()
@@ -134,6 +174,62 @@ class HRService(object):
         response = jsonify(user)
         response.status_code = 201
         return response
+
+    @staticmethod
+    @export_ext("verify", ["POST"])
+    def verify_user():
+        """
+        Verify users' email address. Data posted is a token which has to ve verified and unpacked.
+        The email address contained in the token is compared with the email stored in the DB.
+        User state is changed to 1 (verified) if successful.
+        :return:
+        """
+
+        data = json.loads(request.data)
+        HRService._logger.info("Data received for validation: %s", data)
+        try:
+            mtoken = data['mailtoken']
+            current_app.token_service.check(mtoken)
+            HRService._logger.info("Mailer token verified OK")
+            # token checked for integrity, check if not expired
+            if HRUtils.is_token_expired_insecure(mtoken):
+                HRService._logger.error("Email verification token expired.")
+                abort(400,"Bad token or already verified")
+            username = HRUtils.get_token_username_insecure(mtoken)
+            HRService.update_user_status(username, HRServiceUserState.VERIFIED)
+            response = jsonify([{'Verified' : 'OK'}])
+            response.status_code = 201
+            return response
+        except ValueError as ve:
+            HRService._logger.error("Mailer token integrity verification failed (%s)", ve)
+            abort(400,"Bad token or already verified")
+        return None
+
+    @staticmethod
+    def update_user_status(username, status, flag=False):
+        HRService._logger.info("Updating user %s status to %d", username, status)
+
+        User = request.db.tables.User
+        user = User.query.filter_by(email=username).first()
+        if not user:
+            # Raise an HTTPException with a 403 not found status code
+            HRService._logger.error("Updating user status: requested user for id %s doesn't exist ", username)
+            abort(400)
+        if user.state == status and not flag:
+            HRService._logger.error("User already verified.")
+            abort(400,' Invalid token or already verified')
+        user.state = status
+
+        try:
+            request.db.session.add(user)
+            request.db.session.commit()
+            HRService._logger.info("User status updated successfully for user %s ", username)
+        except:
+            HRService._logger.error("Failed to update user %s status %s ",
+                                    username, sys.exc_info())
+            request.db.session.rollback()
+            abort(500)
+
 
     @staticmethod
     @export_ext("passwd", ["PUT"])
@@ -183,7 +279,8 @@ class HRService(object):
         if check_hash(user.password, password):
 
             if check_hash(user.password, newpasswd):
-                HRService._logger.error("Password update FAILED for user %s (same password)", email)
+                HRService._logger.error("Password update FAILED for user %s (same password)",
+                                        email)
                 abort(400)
 
             user.password = hash_pass(newpasswd)
@@ -288,7 +385,12 @@ class HRService(object):
         if not check_hash(user.password, passwd):
             HRService._logger.info("login request for %s failed (wrong password) ", data['email'])
             abort(403)
-
+            # check if user account is verified
+        if user.state!=HRServiceUserState.VERIFIED:
+            HRService._logger.error("User login  FAILED for user %s "
+                                        "(unverified, password correct)", user.email)
+            abort(401,'USER_UNVERIFIED_LOGIN')
+        # issue a token and return it to the client
         expiry = datetime.datetime.utcnow() + current_app.token_duration
         plain = {'id': user_id, 'expiry': expiry.isoformat(), 'email': user.email}
         HRService._logger.info("login request accepted for %s", data['email'])
@@ -348,7 +450,7 @@ class HRService(object):
     def get_token_userid(token):
         """
         Get the value of the 'key' part of the token to be used to contact the CS
-        The token intenally holds:
+        The token holds internally:
         id: user id
         expiry: expiry info (to be decided)
         key: hashed key (from pdm.utils.hashing.hash_pass()).
@@ -359,6 +461,74 @@ class HRService(object):
         unpacked_user_token = TokenService.unpack(token)
         userid = unpacked_user_token.get('id', None)
         return userid
+
+    @staticmethod
+    def email_user(to_address):
+        # TODO set email validity with a separate validity config field
+        expiry = datetime.datetime.utcnow() + current_app.token_duration
+        plain = {'expiry': expiry.isoformat(), 'email': to_address}
+        HRService._logger.info("login request accepted for %s", to_address)
+        token = current_app.token_service.issue(plain)
+        HRService._logger.info("email verification token issued for %s, (expires on %s)",
+                               to_address, expiry.isoformat())
+        HRService._logger.info("Token:%s", token)
+
+        HRService.compose_and_send(to_address, token)
+
+    @staticmethod
+    def compose_and_send(to_address, mail_token):
+
+        fromaddr = current_app.smtp_server_login # this has to be a routable host
+        smtp_server = current_app.smtp_server
+        smtp_port = current_app.smtp_server_port
+        smtp_server_pwd = current_app.smtp_server_pwd
+        toaddr = to_address
+        msg = MIMEMultipart()
+        msg['From'] = current_app.mail_display_from
+        msg['To'] = to_address
+        msg['Subject'] = current_app.mail_subject
+
+        body = os.path.join(current_app.verification_url, mail_token)
+        msg.attach(MIMEText(body, 'plain'))
+
+        try:
+            server = smtplib.SMTP(smtp_server, smtp_port)
+        except smtplib.SMTPException as smtp_e:
+            HRService._logger.error("SMTP error %s", smtp_e)
+            raise RuntimeError(smtp_e)
+        except socket.error as se:
+            HRService._logger.error("smtplib socket error %s", se)
+            raise RuntimeError(se)
+
+        if current_app.smtp_server_startTLS != 'OFF':
+            try:
+                server.starttls()
+            except smtplib.SMTPException as smtp_e:
+                # will continue w/o TLS, if optional
+                HRService._check_server_requirements(current_app.smtp_server_startTLS, smtp_e)
+
+            try:
+                server.login(fromaddr, smtp_server_pwd)
+            except smtplib.SMTPException as smtp_e:
+                # will continue w/o login, if optional
+                HRService._check_server_requirements(current_app.smtp_server_login_req, smtp_e)
+
+        text = msg.as_string()
+        try:
+            server.sendmail(fromaddr, toaddr, text)
+        except smtplib.SMTPException as smtp_e:
+            HRService._logger.error("%s, SMTP sendmail error:", smtp_e)
+            raise RuntimeError(smtp_e)
+        server.quit()
+
+    @staticmethod
+    def _check_server_requirements(flag, smtp_e):
+        if flag == 'OPTIONAL':
+            HRService._logger.info("%s, SMTP %s OPTIONAL, continue...", smtp_e, flag)
+        else:
+            HRService._logger.error("%s, SMTP %s REQUIRED ", smtp_e, flag)
+            raise RuntimeError(smtp_e)
+
 
         ### Quarantine below this line.
         ### Code which might be cosidered in the future version of the service

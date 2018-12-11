@@ -49,6 +49,15 @@ class HRClient(RESTClient):
         """
         return self.post('users', userdict)
 
+    def verify_user(self, tokendict):
+        """
+        Verify user's email address.
+
+        :param tokendict: {'mailtoken' : token}. token is a base64 encoded string received by email.
+        :return:
+        """
+        return self.post('verify', tokendict)
+
     def login(self, username, password):
         """
         User login procedure. Gets a token issued by a service.
