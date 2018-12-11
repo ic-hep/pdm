@@ -13,6 +13,7 @@ import smtplib
 import socket
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
+from enum import IntEnum
 
 from sqlalchemy import func
 from flask import request, abort, current_app
@@ -23,13 +24,15 @@ from pdm.framework.Tokens import TokenService
 import pdm.userservicedesk.models
 from HRUtils import HRUtils
 from pdm.site.SiteClient import SiteClient
-from enum import IntEnum
 
 class HRServiceUserState(IntEnum):
-
+    """
+    User State enumeration.
+    """
     REGISTERED = 0
     VERIFIED = 1
     DISABLED = -1
+
 
 @export_ext("/users/api/v1.0")
 @db_model(pdm.userservicedesk.models.UserModel)
@@ -59,7 +62,7 @@ class HRService(object):
             raise ValueError("Token lifetime incorrect format %s" % v_err)
 
         # verification email:
-        current_app.token_url = config.pop("token_url","https://localhost:5443/web/verify")
+        current_app.token_url = config.pop("token_url", "https://localhost:5443/web/verify")
         current_app.smtp_server = config.pop("SMTP_server", None)
         if current_app.smtp_server is None:
             HRService._logger.error(" Mail server not provided in the config. Aborting")
@@ -74,8 +77,9 @@ class HRService(object):
         current_app.smtp_server_startTLS = config.pop('SMTP_startTLS', 'REQUIRED')
         current_app.smtp_server_login_req = config.pop('SMTP_login_req', 'REQUIRED')
 
-        current_app.verification_url = config.pop("verification_url",
-                                                  "https://pdm.grid.hep.ph.ic.ac.uk:5443/web/verify")
+        current_app.verification_url = \
+            config.pop("verification_url",
+                       "https://pdm.grid.hep.ph.ic.ac.uk:5443/web/verify")
         current_app.mail_token_secret = config.pop("mail_token_secret")
         current_app.mail_token_duration = config.pop("mail_token_validity", '24:00:00')
         #
@@ -165,7 +169,7 @@ class HRService(object):
             db.session.rollback()
             HRService._logger.error("Runtime error when trying to send an email\n: %s", r_error)
             HRService._logger.error("User %s not added.", user.email)
-            abort(500,'The server could not send the verification email.')
+            abort(500, 'The server could not send the verification email.')
         except Exception:
             HRService._logger.error("Failed to add user: %s ", sys.exc_info())
             db.session.rollback()
@@ -195,30 +199,38 @@ class HRService(object):
             # token checked for integrity, check if not expired
             if HRUtils.is_token_expired_insecure(mtoken):
                 HRService._logger.error("Email verification token expired.")
-                abort(400,"Bad token or already verified")
+                abort(400, "Bad token or already verified")
             username = HRUtils.get_token_username_insecure(mtoken)
             HRService.update_user_status(username, HRServiceUserState.VERIFIED)
-            response = jsonify([{'Verified' : 'OK'}])
+            response = jsonify([{'Verified': 'OK'}])
             response.status_code = 201
             return response
         except ValueError as ve:
             HRService._logger.error("Mailer token integrity verification failed (%s)", ve)
-            abort(400,"Bad token or already verified")
+            abort(400, "Bad token or already verified")
         return None
 
     @staticmethod
     def update_user_status(username, status, flag=False):
+        """
+        Update user status in the db.
+        :param username: user email address
+        :param status: new status
+        :param flag: if True update to the same status is allowed.
+        :return: None
+        """
         HRService._logger.info("Updating user %s status to %d", username, status)
 
         User = request.db.tables.User
         user = User.query.filter_by(email=username).first()
         if not user:
             # Raise an HTTPException with a 403 not found status code
-            HRService._logger.error("Updating user status: requested user for id %s doesn't exist ", username)
+            HRService._logger.error("Updating user status: requested user for id %s doesn't exist ",
+                                    username)
             abort(400)
         if user.state == status and not flag:
             HRService._logger.error("User already verified.")
-            abort(400,' Invalid token or already verified')
+            abort(400, ' Invalid token or already verified')
         user.state = status
 
         try:
@@ -230,7 +242,6 @@ class HRService(object):
                                     username, sys.exc_info())
             request.db.session.rollback()
             abort(500)
-
 
     @staticmethod
     @export_ext("passwd", ["PUT"])
@@ -387,10 +398,10 @@ class HRService(object):
             HRService._logger.info("login request for %s failed (wrong password) ", data['email'])
             abort(403)
             # check if user account is verified
-        if user.state!=HRServiceUserState.VERIFIED:
+        if user.state != HRServiceUserState.VERIFIED:
             HRService._logger.error("User login  FAILED for user %s "
-                                        "(unverified, password correct)", user.email)
-            abort(401,'USER_UNVERIFIED_LOGIN')
+                                    "(unverified, password correct)", user.email)
+            abort(401, 'USER_UNVERIFIED_LOGIN')
         # issue a token and return it to the client
         expiry = datetime.datetime.utcnow() + current_app.token_duration
         plain = {'id': user_id, 'expiry': expiry.isoformat(), 'email': user.email}
@@ -465,6 +476,13 @@ class HRService(object):
 
     @staticmethod
     def email_user(to_address):
+        """
+        Send an email to a user identified by to_address. Raises a RuntimeError if
+        unsuccessful.
+
+        :param to_address: user email
+        :return: None
+        """
         expiry = datetime.datetime.utcnow() + current_app.token_duration
         plain = {'expiry': expiry.isoformat(), 'email': to_address}
         HRService._logger.info("login request accepted for %s", to_address)
@@ -477,8 +495,16 @@ class HRService(object):
 
     @staticmethod
     def compose_and_send(to_address, mail_token):
+        """
+        Compose the email. Initialise the SMTP server, login and send the email.
+        Raises a RuntimeError if any of the email preparation and sending steps fail.
 
-        fromaddr = current_app.smtp_server_login # this has to be a routable host
+        :param to_address: mail recipient address
+        :param mail_token: a url with a token included in the email body.
+        :return: None
+        """
+
+        fromaddr = current_app.smtp_server_login  # this has to be a routable host
         smtp_server = current_app.smtp_server
         smtp_port = current_app.smtp_server_port
         smtp_server_pwd = current_app.smtp_server_pwd
@@ -530,70 +556,70 @@ class HRService(object):
             raise RuntimeError(smtp_e)
 
 
-        ### Quarantine below this line.
-        ### Code which might be cosidered in the future version of the service
+            ### Quarantine below this line.
+            ### Code which might be cosidered in the future version of the service
 
-        # @staticmethod
-        # @export_ext("users")
-        # def get_users():
-        #     """ Get all registered users (NOT for a regular user!)"""
-        #     # GET
-        #     User = request.db.tables.User
-        #     users = User.get_all()
-        #     results = []
-        #
-        #     for user in users:
-        #         obj = {
-        #             'id': user.id,
-        #             'username' : user.username,
-        #             'name': user.name,
-        #             'surname' : user.surname,
-        #             'state' : user.state,
-        #             #'dn' : user.dn,
-        #             'email' : user.email,
-        #             #'password' : user.password,
-        #             'date_created': str(user.date_created),
-        #             'date_modified': str(user.date_modified)
-        #         }
-        #         results.append(obj)
-        #     response = jsonify(results)
-        #     response.status_code = 200
-        #     return response
-        #
-        # @staticmethod
-        # @export_ext("users/<string:username>", ["PUT"])
-        # def update_user(username):
-        #     """
-        #     Update an existing user. NOT for a regular user !
-        #     :param username: username of the user to be updated
-        #     :return: json doc of the updated user or 404 if the user does not exist
-        #     """
-        #
-        #     User = request.db.tables.User
-        #     user = User.query.filter_by(username=username).first()
-        #     if not user:
-        #         # Raise an HTTPException with a 404 not found status code
-        #         abort(404)
-        #     print request.json
-        #
-        #     for key, value in request.json.iteritems():
-        #         if key not in ['id','userid','date_created','date_modified','email']:
-        #             setattr(user, key, value)
-        #
-        #     db = request.db
-        #     user.save(db)
-        #
-        #     response = jsonify([{
-        #         'id': user.id,
-        #         'name': user.name,
-        #         'username': user.username,
-        #         'surname': user.surname,
-        #         'state' : user.state,
-        #         #'dn' : user.dn,
-        #         'email' : user.email,
-        #         #'password' :user.password,
-        #         'date_created': str(user.date_created),
-        #         'date_modified': str(user.date_modified)
-        #     }])
-        #     response.status_code = 200
-        #     return response
+            # @staticmethod
+            # @export_ext("users")
+            # def get_users():
+            #     """ Get all registered users (NOT for a regular user!)"""
+            #     # GET
+            #     User = request.db.tables.User
+            #     users = User.get_all()
+            #     results = []
+            #
+            #     for user in users:
+            #         obj = {
+            #             'id': user.id,
+            #             'username' : user.username,
+            #             'name': user.name,
+            #             'surname' : user.surname,
+            #             'state' : user.state,
+            #             #'dn' : user.dn,
+            #             'email' : user.email,
+            #             #'password' : user.password,
+            #             'date_created': str(user.date_created),
+            #             'date_modified': str(user.date_modified)
+            #         }
+            #         results.append(obj)
+            #     response = jsonify(results)
+            #     response.status_code = 200
+            #     return response
+            #
+            # @staticmethod
+            # @export_ext("users/<string:username>", ["PUT"])
+            # def update_user(username):
+            #     """
+            #     Update an existing user. NOT for a regular user !
+            #     :param username: username of the user to be updated
+            #     :return: json doc of the updated user or 404 if the user does not exist
+            #     """
+            #
+            #     User = request.db.tables.User
+            #     user = User.query.filter_by(username=username).first()
+            #     if not user:
+            #         # Raise an HTTPException with a 404 not found status code
+            #         abort(404)
+            #     print request.json
+            #
+            #     for key, value in request.json.iteritems():
+            #         if key not in ['id','userid','date_created','date_modified','email']:
+            #             setattr(user, key, value)
+            #
+            #     db = request.db
+            #     user.save(db)
+            #
+            #     response = jsonify([{
+            #         'id': user.id,
+            #         'name': user.name,
+            #         'username': user.username,
+            #         'surname': user.surname,
+            #         'state' : user.state,
+            #         #'dn' : user.dn,
+            #         'email' : user.email,
+            #         #'password' :user.password,
+            #         'date_created': str(user.date_created),
+            #         'date_modified': str(user.date_modified)
+            #     }])
+            #     response.status_code = 200
+            #     return response
