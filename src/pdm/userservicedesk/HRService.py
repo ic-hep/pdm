@@ -62,7 +62,6 @@ class HRService(object):
             raise ValueError("Token lifetime incorrect format %s" % v_err)
 
         # verification email:
-        current_app.token_url = config.pop("token_url", "https://localhost:5443/web/verify")
         current_app.smtp_server = config.pop("SMTP_server", None)
         if current_app.smtp_server is None:
             HRService._logger.error(" Mail server not provided in the config. Aborting")
@@ -208,7 +207,6 @@ class HRService(object):
         except ValueError as ve:
             HRService._logger.error("Mailer token integrity verification failed (%s)", ve)
             abort(400, "Bad token or already verified")
-        return None
 
     @staticmethod
     def update_user_status(username, status, flag=False):
