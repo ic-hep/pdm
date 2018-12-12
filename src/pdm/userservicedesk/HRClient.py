@@ -58,6 +58,14 @@ class HRClient(RESTClient):
         """
         return self.post('verify', tokendict)
 
+    def resend_email(self, userdict):
+        """
+        (Re)send a verification  email containing the mail token.
+        :param userdict: a dict containg a email address to send an email to.
+        :return:
+        """
+        return self.post('resend', userdict)
+
     def login(self, username, password):
         """
         User login procedure. Gets a token issued by a service.

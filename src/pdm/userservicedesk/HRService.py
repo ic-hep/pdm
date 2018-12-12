@@ -25,6 +25,7 @@ import pdm.userservicedesk.models
 from HRUtils import HRUtils
 from pdm.site.SiteClient import SiteClient
 
+
 class HRServiceUserState(IntEnum):
     """
     User State enumeration.
@@ -56,6 +57,13 @@ class HRService(object):
             current_app.token_duration = datetime.timedelta(hours=time_struct.tm_hour,
                                                             minutes=time_struct.tm_min,
                                                             seconds=time_struct.tm_sec)
+            HRService._logger.info("User login token duration parsed successfully")
+            m_time_struct = time.strptime(config.pop("mail_token_validity", "23:59:00"),
+                                          "%H:%M:%S")
+            current_app.mail_token_duration = datetime.timedelta(hours=m_time_struct.tm_hour,
+                                                                 minutes=m_time_struct.tm_min,
+                                                                 seconds=m_time_struct.tm_sec)
+            HRService._logger.info("User mail token duration parsed successfully")
         except ValueError as v_err:
             HRService._logger.error(" Token lifetime provided in the config "
                                     "file has wrong format %s. Aborting.", v_err)
@@ -80,7 +88,7 @@ class HRService(object):
             config.pop("verification_url",
                        "https://pdm.grid.hep.ph.ic.ac.uk:5443/web/verify")
         current_app.mail_token_secret = config.pop("mail_token_secret")
-        current_app.mail_token_duration = config.pop("mail_token_validity", '24:00:00')
+
         #
         current_app.token_service = TokenService(current_app.mail_token_secret)
         # site client
@@ -179,6 +187,40 @@ class HRService(object):
         response.status_code = 201
         return response
 
+
+    @staticmethod
+    @export_ext("resend", ["POST"])
+    def resend_email():
+        """
+        Re-send a verification email for registered but not verified users.
+        :return:
+        """
+        data = json.loads(request.data)
+
+        if not 'email' in data:
+            HRService._logger.error("resend email request:no email supplied")
+            abort(400)
+
+        username = data['email']
+        HRService._logger.info("Re-sending verification email for user %s .", username)
+        User = request.db.tables.User
+        user = User.query.filter_by(email=data['email']).first()
+        if not user:
+            # Raise an HTTPException with a 400 not found status code
+            HRService._logger.error("resending email: requested user for id %s doesn't exist ",
+                                    username)
+            abort(400)
+        if user.state != 0:
+            HRService._logger.error("resending email: requested user for id %s is already verified ",
+                                    username)
+            abort(400,' Bad request or user already verified')
+
+        HRService.email_user(user.email)
+        HRService._logger.info("user: %s: verification email sent. ", user.email)
+        response = jsonify([{'MailSent': 'OK'}])
+        response.status_code = 200
+        return response
+
     @staticmethod
     @export_ext("verify", ["POST"])
     def verify_user():
@@ -222,7 +264,7 @@ class HRService(object):
         User = request.db.tables.User
         user = User.query.filter_by(email=username).first()
         if not user:
-            # Raise an HTTPException with a 403 not found status code
+            # Raise an HTTPException with a 400 not found status code
             HRService._logger.error("Updating user status: requested user for id %s doesn't exist ",
                                     username)
             abort(400)
@@ -481,7 +523,7 @@ class HRService(object):
         :param to_address: user email
         :return: None
         """
-        expiry = datetime.datetime.utcnow() + current_app.token_duration
+        expiry = datetime.datetime.utcnow() + current_app.mail_token_duration
         plain = {'expiry': expiry.isoformat(), 'email': to_address}
         HRService._logger.info("login request accepted for %s", to_address)
         token = current_app.token_service.issue(plain)
@@ -502,7 +544,15 @@ class HRService(object):
         :return: None
         """
 
-        fromaddr = current_app.smtp_server_login  # this has to be a routable host
+        email_greeting = \
+        """
+Email Address Verification.
+Please verify your email address.
+You are receiving this email because you registered with the PDM service.
+Please click the link below to verify that this email address belongs to you.
+If you haven't made this request you can safely ignore this email\n"""
+
+        fromaddr = current_app.smtp_server_login  # this has to be a routeable host
         smtp_server = current_app.smtp_server
         smtp_port = current_app.smtp_server_port
         smtp_server_pwd = current_app.smtp_server_pwd
@@ -512,7 +562,8 @@ class HRService(object):
         msg['To'] = to_address
         msg['Subject'] = current_app.mail_subject
 
-        body = os.path.join(current_app.verification_url, mail_token)
+        ref = os.path.join(current_app.verification_url, mail_token)
+        body = email_greeting + ref + "\n\nThank you for using the PDM service."
         msg.attach(MIMEText(body, 'plain'))
 
         try:
