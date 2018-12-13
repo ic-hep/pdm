@@ -235,13 +235,16 @@ class HRService(object):
         HRService._logger.info("Data received for validation: %s", data)
         try:
             mtoken = data['mailtoken']
-            current_app.token_service.check(mtoken)
-            HRService._logger.info("Mailer token verified OK")
+            plain = current_app.token_service.check(mtoken)
+            HRService._logger.info("Mailer token verified OK: %s", plain)
             # token checked for integrity, check if not expired
-            if HRUtils.is_token_expired_insecure(mtoken):
+            if HRUtils.is_date_passed(plain.get('expiry')):
                 HRService._logger.error("Email verification token expired.")
                 abort(400, "Bad token or already verified")
-            username = HRUtils.get_token_username_insecure(mtoken)
+            username = plain.get('email')
+            if not username:
+                HRService._logger.error("Email verification token does not contain user info.")
+                abort(400, "Bad token or already verified") # 500?
             HRService.update_user_status(username, HRServiceUserState.VERIFIED)
             response = jsonify([{'Verified': 'OK'}])
             response.status_code = 201
@@ -525,7 +528,7 @@ class HRService(object):
         """
         expiry = datetime.datetime.utcnow() + current_app.mail_token_duration
         plain = {'expiry': expiry.isoformat(), 'email': to_address}
-        HRService._logger.info("login request accepted for %s", to_address)
+        HRService._logger.info("email request accepted for %s", to_address)
         token = current_app.token_service.issue(plain)
         HRService._logger.info("email verification token issued for %s, (expires on %s)",
                                to_address, expiry.isoformat())

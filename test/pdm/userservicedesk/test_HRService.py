@@ -6,6 +6,7 @@ import mock
 import copy
 import datetime
 import smtplib
+import pdm
 
 from pdm.userservicedesk.HRService import HRService
 from pdm.userservicedesk.HRService import HRServiceUserState
@@ -301,8 +302,14 @@ class TestHRService(unittest.TestCase):
         res = self.__test.post('/users/api/v1.0/login', data=login_creds)
         assert (res.status_code == 401)
 
-    def test_email_user(self):
-        pass
+    @mock.patch('smtplib.SMTP')
+    @mock.patch.object(HRService,'compose_and_send')
+    def test_email_user(self,mcs, smtp_mock):
+        with self.__service.test_request_context(path="/test"):
+            with mock.patch.object(pdm.userservicedesk.HRService.current_app, 'token_service') as m_ts:
+                m_ts.issue = mock.MagicMock(return_value= 'agfgffsgdf')
+                HRService.email_user("user@example.com")
+                mcs.assert_called_with('user@example.com', 'agfgffsgdf')
 
     def test_verify_user(self):
         # isssue a valid mail token
@@ -346,6 +353,27 @@ class TestHRService(unittest.TestCase):
         plain = {'expiry': expiry.isoformat(), 'email': 'Fred@example.com'}
         token = self.token_service.issue(plain)
         res = self.__test.post('/users/api/v1.0/verify', data={'mailtoken': token})
+        assert res.status_code == 400
+
+    @mock.patch('smtplib.SMTP')
+    def test_resend_email(self, smtp_mock):
+        db = self.__service.test_db()
+        dbuser = db.tables.User.query.filter_by(email='Johnny@example.com').first()
+        dbuser.state = HRServiceUserState.REGISTERED # unverify !
+        db.session.add(dbuser)
+        db.session.commit()
+        email = 'Johnny@example.com'
+        data = {'email': email}
+        res = self.__test.post('/users/api/v1.0/resend', data=data)
+        assert res.status_code == 200
+        dbuser.state = HRServiceUserState.VERIFIED
+        db.session.add(dbuser)
+        db.session.commit()
+        res = self.__test.post('/users/api/v1.0/resend', data=data)
+        assert res.status_code == 400
+        res = self.__test.post('/users/api/v1.0/resend', data={'email': 'hula@gula'})
+        assert res.status_code == 400
+        res = self.__test.post('/users/api/v1.0/resend', data={'Email': 'hula@gula'})
         assert res.status_code == 400
 
 

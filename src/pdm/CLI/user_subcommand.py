@@ -287,6 +287,7 @@ class UserCommand(object):
         """
         print "Verifying email address.\nCut and paste the token received by email."
         token = raw_input("Token:")
+        token =  os.path.basename(token)
         client = HRClient()
         tokendict = {'mailtoken': token}
         try:
