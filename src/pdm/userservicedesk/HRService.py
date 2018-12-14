@@ -533,17 +533,18 @@ class HRService(object):
         HRService._logger.info("email verification token issued for %s, (expires on %s)",
                                to_address, expiry.isoformat())
         HRService._logger.info("Token:%s", token)
-
-        HRService.compose_and_send(to_address, token)
+        local_exp = HRUtils.utc_to_local(expiry)
+        HRService.compose_and_send(to_address, token, local_exp)
 
     @staticmethod
-    def compose_and_send(to_address, mail_token):
+    def compose_and_send(to_address, mail_token, local_exp):
         """
         Compose the email. Initialise the SMTP server, login and send the email.
         Raises a RuntimeError if any of the email preparation and sending steps fail.
 
         :param to_address: mail recipient address
         :param mail_token: a url with a token included in the email body.
+        :param local_exp: token expiry datetime in the server's local timezone
         :return: None
         """
 
@@ -553,7 +554,12 @@ Email Address Verification.
 Please verify your email address.
 You are receiving this email because you registered with the PDM service.
 Please click the link below to verify that this email address belongs to you.
-If you haven't made this request you can safely ignore this email\n"""
+If you haven't made this request you can safely ignore this email\n\n\n"""
+
+        closing= "\n\n\nYour token will expire on %s (server local time).\n\n" \
+                 "\n\nThank you for using the PDM service."\
+                 % local_exp.strftime('%c %Z')
+
 
         fromaddr = current_app.smtp_server_login  # this has to be a routeable host
         smtp_server = current_app.smtp_server
@@ -566,7 +572,7 @@ If you haven't made this request you can safely ignore this email\n"""
         msg['Subject'] = current_app.mail_subject
 
         ref = os.path.join(current_app.verification_url, mail_token)
-        body = email_greeting + ref + "\n\nThank you for using the PDM service."
+        body = email_greeting + ref + closing
         msg.attach(MIMEText(body, 'plain'))
 
         try:

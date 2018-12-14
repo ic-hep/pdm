@@ -5,6 +5,7 @@ User Interface Service Utilities
 
 import logging
 import datetime
+from dateutil import tz
 from pdm.framework.Tokens import TokenService
 
 
@@ -41,9 +42,9 @@ class HRUtils(object):
             if datetime.datetime.strptime(expiry_iso, _isoformat) < \
                     datetime.datetime.utcnow():
                 HRUtils._logger.error("Token expired on %s", expiry_iso)
-                return True  # expired
-            return False  # still valid
-        return True  # incomplete
+                return True  # past
+            return False  # future
+        return True  # None
 
     @staticmethod
     def get_token_expiry_insecure(token):
@@ -73,3 +74,11 @@ class HRUtils(object):
         if not username:
             HRUtils._logger.error("Token does not contain user information")
         return username
+
+    @staticmethod
+    def utc_to_local(dt_obj):
+        LOCAL = tz.tzlocal()
+        UTC = tz.gettz('UTC')
+        # convert:
+        gmt = dt_obj.replace(tzinfo=UTC)
+        return gmt.astimezone(LOCAL)
