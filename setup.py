@@ -15,7 +15,7 @@ setup(name='pdm',
                         'sqlalchemy==0.9.8',
                         'twisted==12.1.0',
                         'enum34==1.0.4',
-                        'dateutil==1.5.7'],
+                        'dateutil==1.5'],
       include_package_data=True,
       scripts=['src/pdm/bin/pdm'],
      )
