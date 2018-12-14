@@ -30,10 +30,10 @@ class TestHRService(unittest.TestCase):
     @mock.patch("pdm.userservicedesk.HRService.SiteClient")
     def setUp(self, site_mock):
         self.__site_mock = site_mock
-        conf = {'token_validity': '01:00:00', 'SMTP_server': 'localhost',
+        conf = {'token_validity': '01:00:00', 'smtp_server': 'localhost',
                 'verification_url': 'https://pdm.grid.hep.ph.ic.ac.uk:5443/web/verify',
-                'SMTP_server_login': 'centos@localhost', 'SMTP_startTLS': 'OPTIONAL',
-                'SMTP_login_req': 'OPTIONAL',
+                'smtp_server_login': 'centos@localhost', 'smtp_starttls': 'OPTIONAL',
+                'smtp_login_req': 'OPTIONAL',
                 'display_from_address': 'PDM mailer <centos@localhost>',
                 'mail_subject': 'PDM registration - please verify your email address.',
                 'mail_expiry': '12:00:00', 'mail_token_secret': 'somemailsecretstring'}
@@ -61,7 +61,7 @@ class TestHRService(unittest.TestCase):
         self.token_duration = datetime.timedelta(hours=time_struct.tm_hour,
                                             minutes=time_struct.tm_min,
                                             seconds=time_struct.tm_sec)
-        self.token_service = TokenService(self._conf['mail_token_secret'])
+        self.mail_token_service = TokenService(self._conf['mail_token_secret'])
 
     def test_getUserSelf(self):
         """
@@ -306,16 +306,18 @@ class TestHRService(unittest.TestCase):
     @mock.patch.object(HRService,'compose_and_send')
     def test_email_user(self,mcs, smtp_mock):
         with self.__service.test_request_context(path="/test"):
-            with mock.patch.object(pdm.userservicedesk.HRService.current_app, 'token_service') as m_ts:
+            with mock.patch.object(pdm.userservicedesk.HRService.current_app, 'mail_token_service') as m_ts:
                 m_ts.issue = mock.MagicMock(return_value= 'agfgffsgdf')
                 HRService.email_user("user@example.com")
-                mcs.assert_called_with('user@example.com', 'agfgffsgdf')
+                assert mcs.call_args[0][0] == 'user@example.com'
+                assert mcs.call_args[0][1] == 'agfgffsgdf'
+                #(ignore the timestamp passed in as the third arg.)
 
     def test_verify_user(self):
         # isssue a valid mail token
         expiry = datetime.datetime.utcnow() + self.token_duration
         plain = {'expiry': expiry.isoformat(), 'email': 'Johnny@example.com'}
-        token = self.token_service.issue(plain)
+        token = self.mail_token_service.issue(plain)
         #body = os.path.join(self._conf['verification_url'],token)
         # verify takes a token only, not the whole email body at the moment
         db = self.__service.test_db()
@@ -345,13 +347,13 @@ class TestHRService(unittest.TestCase):
         db.session.commit()
         expired = datetime.datetime.utcnow() - self.token_duration
         e_plain = {'expiry': expired.isoformat(), 'email': 'Johnny@example.com'}
-        e_token = self.token_service.issue(e_plain)
+        e_token = self.mail_token_service.issue(e_plain)
         res = self.__test.post('/users/api/v1.0/verify', data={'mailtoken': e_token})
         assert res.status_code == 400
 
         # non existent user:
         plain = {'expiry': expiry.isoformat(), 'email': 'Fred@example.com'}
-        token = self.token_service.issue(plain)
+        token = self.mail_token_service.issue(plain)
         res = self.__test.post('/users/api/v1.0/verify', data={'mailtoken': token})
         assert res.status_code == 400
 
@@ -386,14 +388,16 @@ class TestHRService(unittest.TestCase):
             # RuntimeError
             connect_mock.return_value = (400, 'cannot connect message')  # 220 is the success code
             with self.assertRaises(RuntimeError):
-                HRService.compose_and_send("centos@localhost", 'mytoken_abc')
+                HRService.compose_and_send("centos@localhost", 'mytoken_abc',
+                                           datetime.datetime.utcnow())  # timestamp does not matter here
             connect_mock.assert_called_with('localhost', None)  # from conf{}
 
             # now allow for connect() to raise a socket.error
             import socket
             connect_mock.side_effect = socket.error
             with self.assertRaises(RuntimeError):
-                HRService.compose_and_send("centos@localhost", 'mytoken_abc')
+                HRService.compose_and_send("centos@localhost", 'mytoken_abc',
+                                           datetime.datetime.utcnow())
 
     @mock.patch('email.MIMEMultipart.MIMEMultipart')
     @mock.patch('smtplib.SMTP')
@@ -405,9 +409,10 @@ class TestHRService(unittest.TestCase):
             body = os.path.join(self._conf['verification_url'], mytoken)
             smtp_mock.return_value.sendmail.side_effect = smtplib.SMTPException
             with self.assertRaises(RuntimeError):
-                HRService.compose_and_send(toaddr, mytoken)
+                HRService.compose_and_send(toaddr, mytoken,
+                                           datetime.datetime.utcnow())
             args = smtp_mock.return_value.sendmail.call_args
-            assert args[0][0] == self._conf['SMTP_server_login']
+            assert args[0][0] == self._conf['smtp_server_login']
             assert args[0][1] == toaddr
             assert body in args[0][2]  # check the important part of the email
 

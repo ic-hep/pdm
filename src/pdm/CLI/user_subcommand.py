@@ -39,7 +39,7 @@ class UserCommand(object):
         user_parser.add_argument('-s', '--surname', type=str)
         user_parser.set_defaults(func=self.register)
         # verify
-        user_parser = subparsers.add_parser('verify', help="Verify user's with the PDM.")
+        user_parser = subparsers.add_parser('verify', help="Confirm/Verify a user account.")
         user_parser.set_defaults(func=self.verify)
         # resend email
         user_parser = subparsers.add_parser('resend', help="Resend a verification email.")

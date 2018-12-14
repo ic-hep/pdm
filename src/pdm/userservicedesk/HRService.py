@@ -25,6 +25,26 @@ import pdm.userservicedesk.models
 from HRUtils import HRUtils
 from pdm.site.SiteClient import SiteClient
 
+verif_email_body = \
+    """
+    Email Address Verification.
+    ==========================
+
+    Please verify your email address.
+    You are receiving this email because you registered with the PDM service.
+    Please click the link below to verify that this email address belongs to you.
+    If you haven't made this request you can safely ignore this email.
+
+    {0:s}
+
+    Your token will expire on {1:s} (server local time).
+
+
+    Thank you for using the PDM service.
+
+        Your PDM team.
+    """
+
 
 class HRServiceUserState(IntEnum):
     """
@@ -70,27 +90,44 @@ class HRService(object):
             raise ValueError("Token lifetime incorrect format %s" % v_err)
 
         # verification email:
-        current_app.smtp_server = config.pop("SMTP_server", None)
+        current_app.smtp_server = config.pop("smtp_server", None)
         if current_app.smtp_server is None:
             HRService._logger.error(" Mail server not provided in the config. Aborting")
             raise ValueError(" Mail server not provided in the config. Aborting")
 
-        current_app.smtp_server_port = config.pop("SMTP_server_port", None)
-        current_app.smtp_server_login = config.pop("SMTP_server_login", None)
+        current_app.smtp_server_port = config.pop("smtp_server_port", None)
+        current_app.smtp_server_login = config.pop("smtp_server_login", None)
         current_app.mail_display_from = config.pop("display_from_address", None)
-        current_app.smtp_server_pwd = config.pop("SMTP_server_pwd", None)
+        current_app.smtp_server_pwd = config.pop("smtp_server_pwd", None)
         current_app.mail_subject = config.pop("mail_subject", None)
         current_app.mail_expiry = config.pop("mail_expiry", "12:00:00")
-        current_app.smtp_server_startTLS = config.pop('SMTP_startTLS', 'REQUIRED')
-        current_app.smtp_server_login_req = config.pop('SMTP_login_req', 'REQUIRED')
+        mail_server_req = ['REQUIRED', 'OPTIONAL', 'OFF']
+        allowed_opts = ', '.join(mail_server_req)
+        current_app.smtp_server_starttls = config.pop('smtp_starttls', 'UNDEFINED').upper()
+        if current_app.smtp_server_starttls not in mail_server_req:
+            HRService._logger.error(' Mail server starttls option invalid (%s). Aborting.',
+                                    current_app.smtp_server_starttls)
+            HRService._logger.error("Allowed option values are: %s.", allowed_opts)
+            raise ValueError('Mail server starttls option invalid (%s) . Aborting.'
+                             % current_app.smtp_server_starttls)
 
-        current_app.verification_url = \
-            config.pop("verification_url",
-                       "https://pdm.grid.hep.ph.ic.ac.uk:5443/web/verify")
+        current_app.smtp_server_login_req = config.pop('smtp_login_req', 'UNDEFINED').upper()
+        if current_app.smtp_server_login_req not in mail_server_req:
+            HRService._logger.error(' Mail server smtp_server_login_req option invalid (%s).'
+                                    ' Aborting', current_app.smtp_server_login_req)
+            HRService._logger.error("Allowed option values are: %s.", allowed_opts)
+            raise ValueError('Mail server smtp_server_login_req  option invalid (%s). Aborting.'
+                             % current_app.smtp_server_login_req)
+
+        current_app.verification_url = config.pop("verification_url")
+        if current_app.verification_url is None:
+            HRService._logger.error(" Mail verification URL not provided in the config. Aborting")
+            raise ValueError(" Mail verification URL not provided in the config. Aborting")
+
         current_app.mail_token_secret = config.pop("mail_token_secret")
 
         #
-        current_app.token_service = TokenService(current_app.mail_token_secret)
+        current_app.mail_token_service = TokenService(current_app.mail_token_secret)
         # site client
         current_app.site_client = SiteClient()
 
@@ -187,7 +224,6 @@ class HRService(object):
         response.status_code = 201
         return response
 
-
     @staticmethod
     @export_ext("resend", ["POST"])
     def resend_email():
@@ -206,14 +242,14 @@ class HRService(object):
         User = request.db.tables.User
         user = User.query.filter_by(email=data['email']).first()
         if not user:
-            # Raise an HTTPException with a 400 not found status code
+            # Raise an HTTPException with a 400 bad request status code
             HRService._logger.error("resending email: requested user for id %s doesn't exist ",
                                     username)
             abort(400)
         if user.state != 0:
             HRService._logger.error("resending email: requested user for id %s is already verified ",
                                     username)
-            abort(400,' Bad request or user already verified')
+            abort(400, ' Bad request or user already verified')
 
         HRService.email_user(user.email)
         HRService._logger.info("user: %s: verification email sent. ", user.email)
@@ -235,7 +271,7 @@ class HRService(object):
         HRService._logger.info("Data received for validation: %s", data)
         try:
             mtoken = data['mailtoken']
-            plain = current_app.token_service.check(mtoken)
+            plain = current_app.mail_token_service.check(mtoken)
             HRService._logger.info("Mailer token verified OK: %s", plain)
             # token checked for integrity, check if not expired
             if HRUtils.is_date_passed(plain.get('expiry')):
@@ -244,7 +280,7 @@ class HRService(object):
             username = plain.get('email')
             if not username:
                 HRService._logger.error("Email verification token does not contain user info.")
-                abort(400, "Bad token or already verified") # 500?
+                abort(400, "Bad token or already verified")  # 500?
             HRService.update_user_status(username, HRServiceUserState.VERIFIED)
             response = jsonify([{'Verified': 'OK'}])
             response.status_code = 201
@@ -529,7 +565,7 @@ class HRService(object):
         expiry = datetime.datetime.utcnow() + current_app.mail_token_duration
         plain = {'expiry': expiry.isoformat(), 'email': to_address}
         HRService._logger.info("email request accepted for %s", to_address)
-        token = current_app.token_service.issue(plain)
+        token = current_app.mail_token_service.issue(plain)
         HRService._logger.info("email verification token issued for %s, (expires on %s)",
                                to_address, expiry.isoformat())
         HRService._logger.info("Token:%s", token)
@@ -542,24 +578,11 @@ class HRService(object):
         Compose the email. Initialise the SMTP server, login and send the email.
         Raises a RuntimeError if any of the email preparation and sending steps fail.
 
-        :param to_address: mail recipient address
+        :param to_address: mail recipient address.
         :param mail_token: a url with a token included in the email body.
-        :param local_exp: token expiry datetime in the server's local timezone
+        :param local_exp: token expiry datetime in the server's local timezone.
         :return: None
         """
-
-        email_greeting = \
-        """
-Email Address Verification.
-Please verify your email address.
-You are receiving this email because you registered with the PDM service.
-Please click the link below to verify that this email address belongs to you.
-If you haven't made this request you can safely ignore this email\n\n\n"""
-
-        closing= "\n\n\nYour token will expire on %s (server local time).\n\n" \
-                 "\n\nThank you for using the PDM service."\
-                 % local_exp.strftime('%c %Z')
-
 
         fromaddr = current_app.smtp_server_login  # this has to be a routeable host
         smtp_server = current_app.smtp_server
@@ -572,7 +595,7 @@ If you haven't made this request you can safely ignore this email\n\n\n"""
         msg['Subject'] = current_app.mail_subject
 
         ref = os.path.join(current_app.verification_url, mail_token)
-        body = email_greeting + ref + closing
+        body = verif_email_body.format(ref, local_exp.strftime('%c %Z'))
         msg.attach(MIMEText(body, 'plain'))
 
         try:
@@ -584,12 +607,12 @@ If you haven't made this request you can safely ignore this email\n\n\n"""
             HRService._logger.error("smtplib socket error %s", se)
             raise RuntimeError(se)
 
-        if current_app.smtp_server_startTLS != 'OFF':
+        if current_app.smtp_server_starttls != 'OFF':
             try:
                 server.starttls()
             except smtplib.SMTPException as smtp_e:
                 # will continue w/o TLS, if optional
-                HRService._check_server_requirements(current_app.smtp_server_startTLS, smtp_e)
+                HRService._check_server_requirements(current_app.smtp_server_starttls, smtp_e)
 
             try:
                 server.login(fromaddr, smtp_server_pwd)
