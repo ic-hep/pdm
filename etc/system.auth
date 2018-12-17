@@ -33,6 +33,10 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 [auth/users]
 # Add user
 /users/api/v1.0/users%POST = "ALL"
+# Verify email address
+/users/api/v1.0/verify%POST = "ALL"
+# Resend an email if lost
+/users/api/v1.0/resend%POST = "ALL"
 # Get user info
 /users/api/v1.0/users/self%GET = "@user"
 # Delete user

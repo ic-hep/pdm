@@ -38,6 +38,13 @@ class UserCommand(object):
         user_parser.add_argument('-n', '--name', type=str)
         user_parser.add_argument('-s', '--surname', type=str)
         user_parser.set_defaults(func=self.register)
+        # verify
+        user_parser = subparsers.add_parser('verify', help="Confirm/Verify a user account.")
+        user_parser.set_defaults(func=self.verify)
+        # resend email
+        user_parser = subparsers.add_parser('resend', help="Resend a verification email.")
+        user_parser.add_argument('email', type=str)
+        user_parser.set_defaults(func=self.resend_email)
         # unregister
         user_parser = subparsers.add_parser('unregister', help="Delete a user from the PDM.")
         user_parser.add_argument('-t', '--token', type=str, default='~/.pdm/token',
@@ -269,6 +276,41 @@ class UserCommand(object):
                     'email': args.email, 'password': password}
         client.add_user(userdict)
         print "User registered %s %s %s " % (args.name, args.surname, args.email)
+        print "Verification email sent to %s. Please check your mailbox." % args.email
+
+    def verify(self, args):
+        """
+        Verify user's email address.
+
+        :param args: parser arguments
+        :return: None
+        """
+        print "Verifying email address.\nCut and paste the token received by email."
+        token = raw_input("Token:")
+        token =  os.path.basename(token)
+        client = HRClient()
+        tokendict = {'mailtoken': token}
+        try:
+            client.verify_user(tokendict)
+            print "User email %s verified" % HRUtils.get_token_username_insecure(token)
+        except RESTException as re:
+            if re.code == 400:
+                print "Token expired or already verified."
+            else:
+                print re
+
+    def resend_email(self, args):
+        """
+        Resend verification email.
+
+        :param args: parser arguments (email address)
+        :return: None
+        """
+        print "Sending a verification email to %s " % args.email
+        client = HRClient()
+        userdict = {'email': args.email}
+        client.resend_email(userdict)
+        print "Email sent. Please check your mailbox."
 
     def unregister(self, args):
         """
