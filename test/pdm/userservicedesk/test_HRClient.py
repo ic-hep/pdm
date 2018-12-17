@@ -15,11 +15,18 @@ from pdm.utils.hashing import hash_pass
 
 
 class TestHRClient(unittest.TestCase):
-
     @mock.patch("pdm.userservicedesk.HRService.SiteClient")
     def setUp(self, site_mock):
         # Get an instance of HRService to test against
-        conf = {}
+        conf = {'smtp_server': 'localhost',
+                'verification_url': 'https://pdm.grid.hep.ph.ic.ac.uk:5443/web/verify',
+                'smtp_server_login': 'centos@localhost',
+                'smtp_starttls': 'OPTIONAL',
+                'smtp_login_req': 'OPTIONAL',
+                'display_from_address': 'PDM mailer <centos@localhost>',
+                'mail_subject': 'PDM registration - please verify your email address.',
+                'mail_expiry': '12:00:00',
+                'mail_token_secret': 'somemailsecretstring'}
         self.__future_date = (datetime.timedelta(0, 600) + datetime.datetime.utcnow()).isoformat()
         self.__past_date = (-datetime.timedelta(0, 600) + datetime.datetime.utcnow()).isoformat()
         self.__service = FlaskServer("pdm.userservicedesk.HRService")
@@ -32,7 +39,7 @@ class TestHRClient(unittest.TestCase):
         # the user in the db with a hashed password.
         self.__userdict = {
             'name': 'John', 'surname': 'Smith',
-            'email': 'Johnny@example.com', 'state': 0,
+            'email': 'Johnny@example.com', 'state': 1,
             'password': hash_pass('very_secret')}
         self.__userjson = json.dumps(self.__userdict)
 
@@ -66,7 +73,8 @@ class TestHRClient(unittest.TestCase):
         the_exception = login_ex.exception
         assert (the_exception.code == 403)
 
-    def test_add_user(self):
+    @mock.patch("pdm.userservicedesk.HRService.HRService.email_user")
+    def test_add_user(self, email_mock):
         userdict = {
             'name': 'Fred', 'surname': 'Smith',
             'email': 'fred@example.com', 'state': 0,
@@ -82,7 +90,7 @@ class TestHRClient(unittest.TestCase):
         assert (the_exception.code == 403)
 
     def test_change_password(self):
-        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__future_date})
+        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__future_date})
         # client takes plain passwords
         res = self.__client.change_password('very_secret', 'newpassword')
         print res
@@ -94,7 +102,7 @@ class TestHRClient(unittest.TestCase):
         the_exception = pwd_ex.exception
         assert (the_exception.code == 400)
 
-        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__past_date})
+        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__past_date})
         with self.assertRaises(Exception) as pwd_ex:
             res = self.__client.change_password('newpassword', 'evennewerpasword')
 
@@ -102,24 +110,24 @@ class TestHRClient(unittest.TestCase):
         assert (the_exception.code == 403)
 
     def test_get_user(self):
-        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__future_date})
+        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__future_date})
         res = self.__client.get_user()
         assert (res['email'] == self.__userdict['email'])
 
-        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__past_date})
+        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__past_date})
         with self.assertRaises(Exception) as pwd_ex:
             res = self.__client.get_user()
         the_exception = pwd_ex.exception
         assert (the_exception.code == 403)
 
-    #@mock.patch('pdm.cred.CredClient.MockCredClient.del_user')
+    # @mock.patch('pdm.cred.CredClient.MockCredClient.del_user')
 
     def test_del_user(self):
-        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__future_date})
+        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__future_date})
         res = self.__client.del_user()
         assert ('message' in res[0])
 
-        self.__service.fake_auth("TOKEN", {'id':1, 'expiry':self.__past_date})
+        self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__past_date})
         with self.assertRaises(Exception) as pwd_ex:
             res = self.__client.del_user()
         the_exception = pwd_ex.exception
