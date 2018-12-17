@@ -19,19 +19,27 @@ class TestTransferClient(unittest.TestCase):
     @mock.patch("pdm.userservicedesk.TransferClient.SiteClient")
     @mock.patch("pdm.workqueue.WorkqueueClient.WorkqueueClient.__new__")
     def setUp(self, wq_mock, site_mock, mocked_unpack, hr_site_client_mock):
-
         self.__future_date = (datetime.timedelta(0, 600) + datetime.datetime.utcnow()).isoformat()
 
         site_mock().get_sites.return_value = \
-            [{'site_id':1, 'site_name':'localhost', 'site_desc':'test localhost site'},
-            {'site_id':2, 'site_name':'remotehost', 'site_desc':'test remotehost site'}]
+            [{'site_id': 1, 'site_name': 'localhost', 'site_desc': 'test localhost site'},
+             {'site_id': 2, 'site_name': 'remotehost', 'site_desc': 'test remotehost site'}]
 
         site_mock.return_value.set_token = mock.MagicMock()
 
         self.site_id = site_mock().get_sites()[0]['site_id']
         self.site2_id = site_mock().get_sites()[1]['site_id']
 
-        conf = {'CS_secret': 'HJGnbfdsV'}
+        conf = {'CS_secret': 'HJGnbfdsV',
+                'smtp_server': 'localhost',
+                'verification_url': 'https://pdm.grid.hep.ph.ic.ac.uk:5443/web/verify',
+                'smtp_server_login': 'centos@localhost',
+                'smtp_starttls': 'OPTIONAL',
+                'smtp_login_req': 'OPTIONAL',
+                'display_from_address': 'PDM mailer <centos@localhost>',
+                'mail_subject': 'PDM registration - please verify your email address.',
+                'mail_expiry': '12:00:00',
+                'mail_token_secret': 'somemailsecretstring'}
         # HR
         self.__service = FlaskServer("pdm.userservicedesk.HRService")
         self.__service.test_mode(HRService, None)  # to skip DB auto build
@@ -115,18 +123,18 @@ class TestTransferClient(unittest.TestCase):
 
     def test_split_site_path(self):
         site = "localhost:/root/file.txt"
-        malformed_site = "localhost/root/file.txt" # mind a missing colon
+        malformed_site = "localhost/root/file.txt"  # mind a missing colon
         multicolon_site = "localhost:/root/file.txt:1"
 
         a, b = TransferClientFacade.split_site_path(site)
         assert a == 'localhost'
         assert b == '/root/file.txt'
 
-        c, d  = TransferClientFacade.split_site_path(malformed_site)
+        c, d = TransferClientFacade.split_site_path(malformed_site)
         assert d is None
         assert c is None
 
-        e, f  = TransferClientFacade.split_site_path(multicolon_site)
+        e, f = TransferClientFacade.split_site_path(multicolon_site)
         assert e == 'localhost'
         assert f == '/root/file.txt:1'
 
@@ -137,7 +145,7 @@ class TestTransferClient(unittest.TestCase):
             assert self.__client.mkdir(site, **{'priority': 2}) == 'root/subdir created'
         assert mock_mkdir.called
         mock_mkdir.assert_called_with(self.site_id, '/root/subdir',
-                                       priority=2)
+                                      priority=2)
         # now unknown site:
         wrongurl = "localhost2:/root/file.txt"  # no such site,
         with mock.patch.object(self.__client._TransferClient__wq_client, 'mkdir') as mock_mkdir:
@@ -152,17 +160,18 @@ class TestTransferClient(unittest.TestCase):
         with mock.patch.object(self.__client._TransferClient__wq_client, 'rename') as mock_rename:
             mock_rename.return_value = 'root/file.txt renamed'
             assert self.__client.rename(s_site, t_site,
-                                      **{'priority': 2}) == 'root/file.txt renamed'
+                                        **{'priority': 2}) == 'root/file.txt renamed'
         assert mock_rename.called
         mock_rename.assert_called_with(self.site_id, '/root/file.txt',
-                                     '/root/file2.txt',
-                                     priority=2)
+                                       '/root/file2.txt',
+                                       priority=2)
 
         wrongurl = "localhost2:/root/file.txt"  # no such site,
         with mock.patch.object(self.__client._TransferClient__wq_client, 'rename') as mock_rename:
             mock_rename.return_value = 'whatever..'  # even if ...
             assert self.__client.rename(wrongurl, t_site,
-                                      **{'priority': 2}) == None  # we return None
+                                        **{'priority': 2}) == None  # we return None
         assert not mock_rename.called
+
     def tearDown(self):
         pass
