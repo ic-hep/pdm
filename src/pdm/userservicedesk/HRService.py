@@ -126,7 +126,7 @@ class HRService(object):
 
         current_app.mail_token_secret = config.pop("mail_token_secret")
 
-        #
+        # TokenService used to generate a verification email token.
         current_app.mail_token_service = TokenService(current_app.mail_token_secret)
         # site client
         current_app.site_client = SiteClient()
@@ -584,7 +584,7 @@ class HRService(object):
         :return: None
         """
 
-        fromaddr = current_app.smtp_server_login  # this has to be a routeable host
+        fromaddr = current_app.smtp_server_login
         smtp_server = current_app.smtp_server
         smtp_port = current_app.smtp_server_port
         smtp_server_pwd = current_app.smtp_server_pwd
