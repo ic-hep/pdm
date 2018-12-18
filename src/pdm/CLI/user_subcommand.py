@@ -337,7 +337,7 @@ class UserCommand(object):
         token = UserCommand._get_token(args.token, check_validity=False)  # expired or not
 
         password = None
-        if token:
+        if token and not args.email:
             # username from token
             try:
                 username = HRUtils.get_token_username_insecure(token)
