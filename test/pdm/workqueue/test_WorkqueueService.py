@@ -7,7 +7,79 @@ import mock
 
 from pdm.framework.FlaskWrapper import FlaskServer
 from pdm.workqueue.WorkqueueDB import JobType, JobStatus, JobProtocol
-from pdm.workqueue.WorkqueueService import WorkqueueService
+from pdm.workqueue.WorkqueueService import WorkqueueService, Algorithm
+
+
+class TestAlgorithms(unittest.TestCase):
+    def setUp(self):
+        conf = {'workerlogs': '/tmp/workers'}
+        self.__service = FlaskServer("pdm.workqueue.WorkqueueService")
+        self.__service.test_mode(WorkqueueService, None)  # to skip DB auto build
+        self.__service.fake_auth("ALL")
+        self.__service.build_db()  # build manually
+
+        db = self.__service.test_db()
+        Job = db.tables.Job
+        JobElement = db.tables.JobElement
+        db.session.add(Job(user_id=1, src_siteid=13,
+                           src_filepath='/data/somefile1', type=JobType.LIST))
+        job = Job(user_id=2, src_siteid=14,
+                  src_filepath='/data/somefile2', type=JobType.REMOVE)
+        for i in xrange(1, 6):
+            job.elements.append(JobElement(id=i, job_id=2, src_siteid=12,
+                                           src_filepath='/data/somefile2.%d' % i,
+                                           type=JobType.REMOVE, size=10**i))
+        db.session.add(job)
+        j = Job(user_id=3, type=JobType.COPY,
+                src_siteid=15, src_filepath='/data/somefile3',
+                dst_siteid=16, dst_filepath='/data/newfile')
+
+        for i in xrange(1, 6):
+            j.elements.append(JobElement(id=i, job_id=3, src_siteid=12,
+                                         src_filepath='/data/somefile3.%d' % i,
+                                         dst_filepath='/data/newfile.%d' % i,
+                                         type=JobType.COPY, size=10**i))
+        db.session.add(j)
+        db.session.commit()
+        with mock.patch('pdm.workqueue.WorkqueueService.SiteClient'):
+            self.__service.before_startup(conf)  # to continue startup
+        self.__test = self.__service.test_client()
+
+    @mock.patch('pdm.workqueue.WorkqueueService.request')
+    def test_by_number(self, mock_request):
+        mock_request.db.tables.Job = self.__service.test_db().tables.Job
+        mock_request.db.tables.JobElement = self.__service.test_db().tables.JobElement
+        mock_request.data = {"types": (JobType.RENAME, JobType.MKDIR)}
+        self.assertEqual(len(Algorithm["BY_NUMBER"]()), 0)
+
+        mock_request.data["types"] = (JobType.LIST,)
+        self.assertEqual(len(Algorithm["BY_NUMBER"]()), 1)
+
+        mock_request.data["types"] = (JobType.LIST, JobType.COPY)
+        self.assertEqual(len(Algorithm["BY_NUMBER"]()), 7)
+
+        mock_request.data["types"] = (JobType.LIST, JobType.COPY, JobType.REMOVE)
+        self.assertEqual(len(Algorithm["BY_NUMBER"]()), 13)
+        self.assertEqual(len(Algorithm["BY_NUMBER"](5)), 5)
+        self.assertEqual(len(Algorithm["BY_NUMBER"](8)), 8)
+
+    @mock.patch('pdm.workqueue.WorkqueueService.request')
+    def test_by_size(self, mock_request):
+        mock_request.db.tables.Job = self.__service.test_db().tables.Job
+        mock_request.db.tables.JobElement = self.__service.test_db().tables.JobElement
+        mock_request.data = {"types": (JobType.RENAME, JobType.MKDIR)}
+        self.assertEqual(len(Algorithm["BY_SIZE"]()), 0)
+
+        mock_request.data["types"] = (JobType.LIST,)
+        self.assertEqual(len(Algorithm["BY_SIZE"]()), 1)
+
+        mock_request.data["types"] = (JobType.LIST, JobType.COPY)
+        self.assertEqual(len(Algorithm["BY_SIZE"]()), 7)
+
+        mock_request.data["types"] = (JobType.LIST, JobType.COPY, JobType.REMOVE)
+        self.assertEqual(len(Algorithm["BY_SIZE"]()), 13)
+        self.assertEqual(len(Algorithm["BY_SIZE"](100)), 3)
+        self.assertEqual(len(Algorithm["BY_SIZE"](111)), 4)
 
 
 class TestWorkqueueService(unittest.TestCase):
@@ -30,8 +102,9 @@ class TestWorkqueueService(unittest.TestCase):
                                            src_filepath='/data/somefile2.%d' % i,
                                            type=JobType.REMOVE, size=10**i))
         db.session.add(job)
-        j = Job(user_id=3, src_siteid=15, src_filepath='/data/somefile3',
-                           dst_siteid=16, dst_filepath='/data/newfile', type=JobType.COPY)
+        j = Job(user_id=3, type=JobType.COPY,
+                src_siteid=15, src_filepath='/data/somefile3',
+                dst_siteid=16, dst_filepath='/data/newfile')
 
         for i in xrange(1, 6):
             j.elements.append(JobElement(id=i, job_id=3, src_siteid=12,

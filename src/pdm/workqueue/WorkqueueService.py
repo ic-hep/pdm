@@ -9,6 +9,8 @@ from pprint import pformat
 
 from enum import Enum
 from flask import request, abort, current_app
+from sqlalchemy import and_, or_, func
+from sqlalchemy.orm import aliased
 # from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from pdm.framework.FlaskWrapper import jsonify
@@ -42,35 +44,57 @@ def by_number(limit=20):
                            .all()
 
 
-def by_size(size=150000000, limit=20):
+def by_size(size=150000000):
     """Extract job elements up to size."""
     Job = request.db.tables.Job  # pylint: disable=invalid-name
     JobElement = request.db.tables.JobElement  # pylint: disable=invalid-name
-    elements = JobElement.query.filter(JobElement.status.in_((JobStatus.NEW, JobStatus.FAILED)),
-                                       JobElement.attempts < JobElement.max_tries)\
-                               .join(JobElement.job)\
-                               .filter(Job.type.in_(request.data['types']))\
-                               .order_by(Job.priority)\
-                               .order_by(Job.id)\
-                               .order_by(Job.status)\
-                               .order_by(JobElement.size.desc())\
-                               .with_for_update()
-#                               .limit(limit)
-#                               .all()  # without this line we have a generator.
-    zero_size_count = 0
-    total_size = 0
-    ret = []
-    for element in elements:
-        if total_size + element.size > size:
-            continue
-        if element.type in (JobType.LIST, JobType.RENAME, JobType.MKDIR):
-            zero_size_count += 1
-            if zero_size_count > limit:
-                continue
-        total_size += element.size
-        ret.append(element)
+    # Can use windowed CTE approach below if we have updated version of SQLite.
+    # Follows the example of accumulation from:
+    # http://www.sqlfiddle.com/#!15/1953ec/2
+    # namely:
+    # -- simple CTE
+    # WITH cte AS (
+    # SELECT *, sum(verbosity) OVER (ORDER BY id) AS total
+    # FROM  messages
+    # )
+    # SELECT *
+    # FROM   cte
+    # WHERE  total <= 70
+    # ORDER  BY id;
 
-    return ret
+    # cte = JobElement.query.with_entities(JobElement,
+    #                                      func.sum(JobElement.size)
+    #                                          # .over(order_by=(JobElement.job_id, JobElement.id))
+    #                                          .over(order_by=(Job.priority, JobElement.job_id,
+    #                                                          JobElement.id, Job.status))
+    #                                          .label("total")) \
+    #                       .filter(JobElement.status.in_((JobStatus.NEW, JobStatus.FAILED)),
+    #                               JobElement.attempts < JobElement.max_tries) \
+    #                       .join(JobElement.job) \
+    #                       .filter(Job.type.in_(request.data['types'])) \
+    #                       .order_by(Job.priority) \
+    #                       .order_by(JobElement.job_id, JobElement.id) \
+    #                       .order_by(Job.status) \
+    #                       .with_for_update() \
+    #                       .cte(name="cte")
+    # return JobElement.query.with_entities(cte).filter(cte.c.total < size).all()
+
+    JobElementAlias = aliased(JobElement)  # pylint: disable=invalid-name
+    return JobElement.query.join(JobElementAlias,
+                                 or_(JobElementAlias.job_id < JobElement.job_id,
+                                     and_(JobElementAlias.job_id == JobElement.job_id,
+                                          JobElementAlias.id <= JobElement.id)))\
+                           .group_by(JobElement.job_id, JobElement.id)\
+                           .having(func.sum(JobElementAlias.size) <= size)\
+                           .filter(JobElement.status.in_((JobStatus.NEW, JobStatus.FAILED)),
+                                   JobElement.attempts < JobElement.max_tries)\
+                           .join(JobElement.job)\
+                           .filter(Job.type.in_(request.data['types']))\
+                           .order_by(Job.priority)\
+                           .order_by(JobElement.job_id, JobElement.id)\
+                           .order_by(Job.status)\
+                           .with_for_update()\
+                           .all()
 
 
 class Algorithm(Enum):  # pylint: disable=too-few-public-methods
