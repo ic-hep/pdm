@@ -57,7 +57,7 @@ def write_def_config():
     with open(CONF_FILE, "w") as conf_fd:
         conf_fd.write(INSTALLER_CONF % OPTS)
     print "Default config written to '%s'." % CONF_FILE
-    sys.exit(1)
+    sys.exit(0)
 
 def read_config(fname):
     """ Read the config file 'fname' and update the OPTS dictionary with the
