@@ -8,7 +8,7 @@ setup(name='pdm',
       package_dir={'': 'src'},
       packages=find_packages('src'),
       install_requires=['m2crypto',
-                        'flask==0.10.1',
+                        'flask==1.0',
                         'flask-sqlalchemy==2.0',
                         'pyOpenSSL', # ==0.13.1 on RHEL7
                         'requests==2.6.0',
