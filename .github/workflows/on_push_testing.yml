@@ -1,0 +1,56 @@
+name: Push Testing
+
+on: [push]
+
+jobs:
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install dependencies
+        run: sudo apt-get install python python-pip python-virtualenv python-m2crypto
+      - name: Setup virtualenv
+        run: |
+          virtualenv --system-site-packages venv
+          (. venv/bin/activate && pip install --upgrade pip wheel setuptools)
+      - name: Install pdm from push
+        run: (. venv/bin/activate && pip install --user -e .)
+      - name: Install Tox and dependencies (for testing)
+        run: (. venv/bin/activate && pip install tox)
+      - name: Run tox testing
+        run: (. venv/bin/activate && tox -e lint test)    
+
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install dependencies
+        run: sudo apt-get install python python-pip python-virtualenv python-m2crypto
+      - name: Setup virtualenv
+        run: |
+          virtualenv --system-site-packages venv
+          (. venv/bin/activate && pip install --upgrade pip wheel setuptools)
+      - name: Install pdm from push
+        run: (. venv/bin/activate && pip install --user -e .)
+      - name: Install Tox and dependencies (for testing)
+        run: (. venv/bin/activate && pip install tox)
+      - name: Run tox testing
+        run: (. venv/bin/activate && tox -e unit test)
+
+  full:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install dependencies
+        run: sudo apt-get install python python-pip python-virtualenv python-m2crypto
+      - name: Setup virtualenv
+        run: |
+          virtualenv --system-site-packages venv
+          (. venv/bin/activate && pip install --upgrade pip wheel setuptools)
+      - name: Install pdm from push
+        run: (. venv/bin/activate && pip install --user -e .)
+      - name: Install Tox and dependencies (for testing)
+        run: (. venv/bin/activate && pip install tox)
+      - name: Run tox testing
+        run: (. venv/bin/activate && tox -e full test)
