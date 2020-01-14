@@ -18,22 +18,25 @@ from pdm.userservicedesk.HRClient import HRClient
 from pdm.userservicedesk.HRUtils import HRUtils
 from pdm.site.SiteClient import SiteClient
 from pdm.userservicedesk.TransferClient import TransferClient
+from pdm.utils.config import getConfig
 
 
-def gravitar_hash(email_add):
+def gravatar_hash(email_add):
     """
     Hash an email address.
 
-    Generate a gravitar compatible hash from an email address.
+    Generate a gravatar compatible hash from an email address.
     Args:
         email_add (str): The target email address
     Returns:
         str: The hash string
     """
+    if getConfig('webapp').get("disable_gravatar", False):
+        return ''
     return hashlib.md5(email_add.strip().lower()).hexdigest()
 
 
-jinja2.filters.FILTERS['gravitar_hash'] = gravitar_hash
+jinja2.filters.FILTERS['gravitar_hash'] = gravatar_hash
 
 
 @export_ext("/web", redir="/web/datamover?return_to=%(return_to)s")
