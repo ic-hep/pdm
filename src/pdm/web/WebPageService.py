@@ -36,7 +36,7 @@ def gravatar_hash(email_add):
     return hashlib.md5(email_add.strip().lower()).hexdigest()
 
 
-jinja2.filters.FILTERS['gravitar_hash'] = gravatar_hash
+jinja2.filters.FILTERS['gravatar_hash'] = gravatar_hash
 
 
 @export_ext("/web", redir="/web/datamover?return_to=%(return_to)s")
