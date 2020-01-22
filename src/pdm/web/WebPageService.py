@@ -64,10 +64,10 @@ class WebPageService(object):
     @export_ext("datamover", methods=["GET"])
     def front_portal():
         """Render the Datamover's front portal."""
-        username = ''
         user_token = flask.session.get('token', None)
         if user_token is not None:
-            username = current_app.hrutils.get_token_username_insecure(user_token)
+            return redirect(url_for("WebPageService.dashboard"))
+        username = request.args.get("username", '')
         return render_template("datamover.html", status="In development", username=username,
                                accept_cookies=flask.session.get("accept_cookies", False))
 
@@ -83,10 +83,13 @@ class WebPageService(object):
         try:
             token = current_app.hrclient.login(username, password)
             flask.session["token"] = token
-        except Exception as err:
-            log.warning("Failed login: %s", err.message)
-            flash('Could not login user (%s)' % err)
-            return WebPageService.front_portal()
+        except RESTException as err:
+            if err.code == 401 and "USER_UNVERIFIED_LOGIN" in err.message:
+                log.debug("User %r is unverified", username)
+                return render_template("verification.html", username=username)
+            log.exception("Failed login from user: %r", username)
+            flash('Could not login user (%s)' % username, "danger")
+            return redirect(url_for("WebPageService.front_portal", username=username))
         return redirect(url_for("WebPageService.dashboard"))
 
     @staticmethod
@@ -125,11 +128,12 @@ class WebPageService(object):
         try:
             current_app.hrclient.add_user(hrdict)
         except RESTException:
-            current_app.log.exception("Error registering user")
+            current_app.log.exception("Error registering user %r", username)
+            flash("Error registering user '%s'" % username, "danger")
             return render_template("registration.html", username=username, forename=forename,
                                    surname=surname, password=password,
                                    password_repeat=password_repeat, accept_cookies=True)
-        return redirect(url_for("WebPageService.front_portal"))
+        return render_template("verification.html", username=username)
 
     @staticmethod
     @export_ext("dashboard/joblist")
@@ -146,17 +150,79 @@ class WebPageService(object):
         return render_template("joblist.html", user=user)
 
     @staticmethod
+    @export_ext("verify/resend", methods=["POST"])
+    def resend_verify_email():
+        try:
+            username = request.json['username']
+        except KeyError:
+            flash("Invalid data received by server, expected username", "danger")
+            abort(400, "Expected username key in json data.")
+        try:
+            current_app.hrclient.resend_email({'email': username})
+        except RESTException:
+            current_app.log.exception("Error sending verification email for user: %r", username)
+            flash("Error requesting new verification email from HRClient.", "danger")
+            abort(500, "Error requesting new verification email from HRClient")
+        return '', 200
+
+    @staticmethod
+    @export_ext("verify/<token>")
+    def auto_verify_user(token):
+        """Automatically verify user from emailed URL."""
+        try:
+            response = current_app.hrclient.verify_user({'mailtoken': token})
+        except RESTException:
+            flash("Error verifying user from token", "danger")
+            current_app.log.exception("Error verifying user")
+            return redirect(url_for('WebPageService.front_portal'))
+        if not response.get("Verified", False):
+            flash("Error verifying user from token", "danger")
+            return redirect(url_for('WebPageService.front_portal'))
+        username = response.get('username', '')
+        flash('Successfully verified user %s' % username, 'success')
+        return redirect(url_for("WebPageService.front_portal", username=username))
+
+    @staticmethod
+    @export_ext("verify", methods=["POST"])
+    def verify_user():
+        """Verify the user."""
+        username = request.form.get("username", '')
+        try:
+            token = request.form['token']
+        except KeyError:
+            flash("No token", "warning")
+            return render_template("verification.html", username=username)
+        try:
+            response = current_app.hrclient.verify_user({'mailtoken': token})
+        except RESTException:
+            current_app.log.exception("Exception verifying user token")
+            flash("Exception raised when verifying token", "danger")
+            return render_template("verification.html", username=username, token=token)
+        if not response.get("Verified", False):
+            current_app.log.error("Token failed verification.")
+            flash("Failed to verify token", "danger")
+            return render_template("verification.html", username=username, token=token)
+        username = response.get('username', '')
+        flash("Successfully verified user %s" % username, "success")
+        return redirect(url_for("WebPageService.front_portal", username=username))
+
+    @staticmethod
     @export_ext("dashboard")
     def dashboard():
         """Render the Datamover's main dashboard page."""
-        # will abort of user is not logged in (if getting token raises keyerror)
-        user_token = flask.session['token']
+        # will abort if user is not logged in (if getting token raises keyerror)
+        try:
+            user_token = flask.session['token']
+        except KeyError:
+            current_app.log.debug("User not logged in, redirecting...")
+            return redirect(url_for("WebPageService.front_portal"))
         current_app.hrclient.set_token(user_token)
         try:
             user = current_app.hrclient.get_user()
         except RESTException:
-            current_app.log.exception("Error getting dashboard")
-            return redirect(url_for('WebPageService.front_portal'))
+            current_app.log.exception("Error getting current user from HRService")
+            flash("Error finding user", "danger")
+            return WebPageService.pdm_logout()
         return render_template("newjob.html", user=user)
 
     @staticmethod
