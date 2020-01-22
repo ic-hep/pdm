@@ -282,7 +282,7 @@ class HRService(object):
                 HRService._logger.error("Email verification token does not contain user info.")
                 abort(400, "Bad token or already verified")  # 500?
             HRService.update_user_status(username, HRServiceUserState.VERIFIED)
-            response = jsonify([{'Verified': 'OK'}])
+            response = jsonify([{'Verified': True, 'username': username}])
             response.status_code = 201
             return response
         except ValueError as ve:
