@@ -215,7 +215,7 @@ class HRService(object):
             HRService._logger.error("User %s not added.", user.email)
             abort(500, 'The server could not send the verification email.')
         except Exception:
-            HRService._logger.error("Failed to add user: %s ", sys.exc_info())
+            HRService._logger.exception("Failed to add user: %s", user.name)
             db.session.rollback()
             abort(403)  # 500 ?
 
