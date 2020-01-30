@@ -61,7 +61,7 @@ class HRClient(RESTClient):
     def resend_email(self, userdict):
         """
         (Re)send a verification  email containing the mail token.
-        :param userdict: a dict containg a email address to send an email to.
+        :param userdict: a dict containg a email address to send an email to as {'email': <address>}
         :return:
         """
         return self.post('resend', userdict)

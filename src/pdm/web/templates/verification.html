@@ -1,0 +1,70 @@
+{% extends "datamover.html" %}
+{% block footer %}{% endblock footer %}
+{% block content%}
+<form method="POST" action="/web/verify">
+
+    <div class="form-group">
+        <label for="username">Username:</label>
+        <div class="input-group">
+            <div class="input-group-prepend">
+                <span class="input-group-text">
+                    <span id="username_icon" class="oi oi-person text-primary" aria-hidden="true"></span>
+                </span>
+            </div>
+            <input id=username name="username" type="text" class="form-control" value="{{username}}" placeholder="email address" aria-label="Username" aria-describedby="basic-addon1" data-container="body" data-toggle="popover" data-placement="right" data-content="Invalid email: regex match '^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$' only">
+            <div class="input-group-append">
+                    <button id="resend_button" type="button" class="btn btn-outline-primary resend_email" data-toggle="tooltip" data-placement="right" title="Resend verification email.">
+                        <span id="resend_icon" class="oi oi-share text-primary" aria-hidden="true"></span>
+                    </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="token">Verification Token:</label>
+        <div class="input-group">
+            <div class="input-group-prepend">
+                <span class="input-group-text">
+                    <span id="password_icon" class="oi oi-key text-primary" aria-hidden="true"></span>
+                </span>
+            </div>
+            <input id="token" name="token" type="text" class="form-control pwd" value="{{token}}" placeholder="Token" required>
+        </div>
+    </div>
+    <button type="button" class="btn btn-link resend_email">Resend email</button>
+    <div class="d-flex justify-content-end">
+        <button id="validate_button" type="submit" class="btn btn-primary">Validate</button>
+    </div>
+</form>
+{% endblock content %}
+{% block script %}
+<script>
+$(document).ready(function(){
+    $("#resend_button").hover(
+        function(event){
+            $("#resend_icon").toggleClass("text-primary text-light")
+        },
+        function(event){
+            $("#resend_icon").toggleClass("text-primary text-light")
+        }
+    );
+
+    $(".resend_email").click(function(event){
+        $.ajax({url: `/web/verify/resend`,
+                type: "POST",
+                data: JSON.stringify({username: $("#username").val()}),
+                contentType: "application/json; charset=utf-8",
+                error: function(request, status, error){
+                    console.error(`Error requesting verification email!\nstatus: ${status}\nerror: ${error}\nrequest: ` + JSON.stringify(request));
+                    bootstrap_alert("danger", "Failed!", "Failed to request new verification email.");
+                },
+                success: function(response, status, request){
+                    console.log("Successfully requested verification email");
+                    bootstrap_alert("success", "Success:", "Verification email request sent.");
+                }
+               });
+    });
+});
+</script>
+
+{% endblock script %}

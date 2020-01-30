@@ -11,6 +11,10 @@ worker = ["CERT:C=XX, L=Default City, O=Default Company Ltd, OU=Test CA, CN=work
 # Registration
 /web/registration = "ALL"
 /web/registration%POST = "ALL"
+# Verification
+/web/verify%POST = "ALL"
+/web/verify/?%GET = "ALL"
+/web/verify/resend%POST = "ALL"
 # Login
 /web/datamover = "ALL"
 /web/datamover%POST = "ALL"

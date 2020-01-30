@@ -215,7 +215,7 @@ class HRService(object):
             HRService._logger.error("User %s not added.", user.email)
             abort(500, 'The server could not send the verification email.')
         except Exception:
-            HRService._logger.error("Failed to add user: %s ", sys.exc_info())
+            HRService._logger.exception("Failed to add user: %s", user.name)
             db.session.rollback()
             abort(403)  # 500 ?
 
@@ -282,7 +282,7 @@ class HRService(object):
                 HRService._logger.error("Email verification token does not contain user info.")
                 abort(400, "Bad token or already verified")  # 500?
             HRService.update_user_status(username, HRServiceUserState.VERIFIED)
-            response = jsonify([{'Verified': 'OK'}])
+            response = jsonify({'Verified': True, 'username': username})
             response.status_code = 201
             return response
         except ValueError as ve:
