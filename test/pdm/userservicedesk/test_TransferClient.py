@@ -4,7 +4,6 @@ import datetime
 from pdm.userservicedesk.TransferClientFacade import TransferClientFacade
 from pdm.framework.FlaskWrapper import FlaskServer
 from pdm.userservicedesk.HRService import HRService
-from urlparse import urlparse
 
 import pdm.framework.Tokens as Tokens
 
@@ -69,7 +68,7 @@ class TestTransferClient(unittest.TestCase):
         assert mock_list.called
         mock_list.assert_called_with(self.site_id, '/root/file.txt',
                                      priority=2)
-        print mock_list.call_args_list
+        print(mock_list.call_args_list)
 
         wrongurl = "localhost2:/root/file.txt"  # no such site,
         with mock.patch.object(self.__client._TransferClient__wq_client, 'list') as mock_list:
@@ -79,10 +78,10 @@ class TestTransferClient(unittest.TestCase):
 
     def test_sitelist(self):
         sites = self.__client.list_sites()
-        print sites
+        print(sites)
         assert sites[0]['site_name'] == 'localhost'
         assert sites[1]['site_name'] == 'remotehost'
-        assert 'site_id' not in [dd.keys() for dd in sites]
+        assert 'site_id' not in [list(dd.keys()) for dd in sites]
 
     def test_remove(self):
         site = "localhost:/root/file.txt"
@@ -93,7 +92,7 @@ class TestTransferClient(unittest.TestCase):
         assert mock_remove.called
         mock_remove.assert_called_with(self.site_id, '/root/file.txt',
                                        priority=2)
-        print mock_remove.call_args_remove
+        print(mock_remove.call_args_remove)
 
         wrongurl = "localhost2:/root/file.txt"  # no such site,
         with mock.patch.object(self.__client._TransferClient__wq_client, 'remove') as mock_remove:

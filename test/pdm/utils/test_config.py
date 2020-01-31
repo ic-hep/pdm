@@ -30,7 +30,7 @@ class TestConfigSystem(unittest.TestCase):
     def test_get_section_list(self):
         """Test get section list."""
         self.cfg._config = self.test_ref
-        self.assertEqual(self.cfg.sections, self.test_ref.keys())
+        self.assertEqual(self.cfg.sections, list(self.test_ref.keys()))
 
     def test_get_section(self):
         """Test getting a section."""

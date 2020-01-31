@@ -76,7 +76,7 @@ class ExecutableServer(object):
         except pydoc.ErrorDuringImport as err:
             # We failed to import the client app, we need to raise the inner
             # exception to make debugging easier
-            raise err.exc, err.value, err.tb
+            raise err.exc(err.value).with_traceback(err.tb)
         app_server.build_db()
         app_server.before_startup(config, with_test=self.__test)
         # Test if there are any unused keys in the dictionary

@@ -243,7 +243,7 @@ class WorkqueueService(object):
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
             element_counter = 0
-            element_listing = sorted(element.listing.iteritems(), key=lambda item: len(item[0]))
+            element_listing = sorted(iter(element.listing.items()), key=lambda item: len(item[0]))
             dir_copy = False
             if element_listing and \
                     element_listing[0][0].rstrip('/') == job.src_filepath.rstrip('/'):
@@ -270,7 +270,7 @@ class WorkqueueService(object):
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
             element_counter = 0
-            for root, listing in sorted(element.listing.iteritems(),
+            for root, listing in sorted(iter(element.listing.items()),
                                         key=lambda item: len(item[0]), reverse=True):
                 for entry in sorted(listing, key=lambda x: stat.S_ISDIR(int(x['st_mode']))):
                     element_counter += 1
@@ -448,7 +448,7 @@ class WorkqueueService(object):
             attempt_list = []
             attempts = element.attempts
             element_log_filebase = os.path.join(log_filebase, str(element.id))
-            for attempt in xrange(1, attempts):  # previous attempts, presumably failed ones
+            for attempt in range(1, attempts):  # previous attempts, presumably failed ones
                 failed_output = dict(attempt_output, attempt=attempt, status=JobStatus.FAILED.name)
                 log_filename = os.path.join(element_log_filebase, "attempt%i.log" % attempt)
                 log = "log directory/file %s not found for job.element %s.%s."\
@@ -510,7 +510,7 @@ class WorkqueueService(object):
                 abort(400, description="bad attempt, expected an integer.")
             if attempt < 0:
                 attempt = element.attempts + attempt + 1
-            if attempt not in xrange(1, element.attempts + 1):
+            if attempt not in range(1, element.attempts + 1):
                 abort(404, description="Invalid attempt '%s', job.element %s.%s has been tried %s "
                                        "time(s)" % (attempt, job_id, element_id, element.attempts))
 
@@ -530,7 +530,7 @@ class WorkqueueService(object):
 
         attempt_list = []
         attempts = element.attempts
-        for attempt_ in xrange(1, attempts):  # previous attempts, presumably failed ones
+        for attempt_ in range(1, attempts):  # previous attempts, presumably failed ones
             failed_output = dict(attempt_output, attempt=attempt_, status=JobStatus.FAILED.name)
             log_filename = os.path.join(log_filebase, "attempt%i.log" % attempt_)
             log = "log directory/file %s not found for job.element %s.%s."\

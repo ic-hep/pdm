@@ -38,7 +38,7 @@ class EnumBase(IntEnum):
         """Convert arg to enum."""
         if isinstance(obj, int):
             return cls(obj)
-        if isinstance(obj, basestring):
+        if isinstance(obj, str):
             if obj.isdigit():
                 return cls(int(obj))
             return cls[obj.upper()]
@@ -167,16 +167,16 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
             timestamp = Column(TIMESTAMP, nullable=False,
                                default=datetime.utcnow, onupdate=datetime.utcnow)
             priority = SmartColumn(SmallInteger,
-                                   CheckConstraint('priority in {0}'.format(tuple(xrange(10)))),
+                                   CheckConstraint('priority in {0}'.format(tuple(range(10)))),
                                    nullable=False, allowed=True, default=5)
             type = SmartColumn(SmallInteger,  # pylint: disable=invalid-name
-                               CheckConstraint('type in {0}'.format(JobType.values())),
+                               CheckConstraint('type in {0}'.format(list(JobType.values()))),
                                nullable=False, allowed=True, required=True)
             protocol = SmartColumn(SmallInteger,
-                                   CheckConstraint('protocol in {0}'.format(JobProtocol.values())),
+                                   CheckConstraint('protocol in {0}'.format(list(JobProtocol.values()))),
                                    nullable=False, allowed=True, default=JobProtocol.GRIDFTP)
             status = Column(SmallInteger,
-                            CheckConstraint('status in {0}'.format(JobStatus.values())),
+                            CheckConstraint('status in {0}'.format(list(JobStatus.values()))),
                             nullable=False, default=JobStatus.NEW)
             elements = relationship("JobElement", back_populates="job",
                                     cascade="all, delete-orphan")
@@ -300,10 +300,10 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
             timestamp = Column(TIMESTAMP, nullable=False,
                                default=datetime.utcnow, onupdate=datetime.utcnow)
             type = SmartColumn(SmallInteger,  # pylint: disable=invalid-name
-                               CheckConstraint('type in {0}'.format(JobType.values())),
+                               CheckConstraint('type in {0}'.format(list(JobType.values()))),
                                nullable=False, allowed=True, required=True)
             status = Column(SmallInteger,
-                            CheckConstraint('status in {0}'.format(JobStatus.values())),
+                            CheckConstraint('status in {0}'.format(list(JobStatus.values()))),
                             nullable=False, default=JobStatus.NEW)
 
             def asdict(self):

@@ -129,7 +129,7 @@ class X509Utils(object):
 
             Returns None.
         """
-        if isinstance(ca_pem, unicode):
+        if isinstance(ca_pem, str):
             ca_pem = ca_pem.encode('ascii','ignore')
         cert = X509.load_cert_string(ca_pem, X509.FORMAT_PEM)
         ca_raw_dn = X509Utils.x509name_to_str(cert.get_subject())

@@ -153,7 +153,7 @@ class Daemon(object):
                         maxfd = 1024
 
                     # Close all open file descriptors.
-                    for filed in xrange(maxfd):
+                    for filed in range(maxfd):
                         if filed not in self._extra_fds | {pidfile.fileno}:
                             try:
                                 os.close(filed)

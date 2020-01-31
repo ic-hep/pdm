@@ -97,7 +97,7 @@ class TestWorkqueueService(unittest.TestCase):
                            src_filepath='/data/somefile1', type=JobType.LIST))
         job = Job(user_id=2, src_siteid=14,
                   src_filepath='/data/somefile2', type=JobType.REMOVE)
-        for i in xrange(1, 6):
+        for i in range(1, 6):
             job.elements.append(JobElement(id=i, job_id=2, src_siteid=12,
                                            src_filepath='/data/somefile2.%d' % i,
                                            type=JobType.REMOVE, size=10**i))
@@ -106,7 +106,7 @@ class TestWorkqueueService(unittest.TestCase):
                 src_siteid=15, src_filepath='/data/somefile3',
                 dst_siteid=16, dst_filepath='/data/newfile')
 
-        for i in xrange(1, 6):
+        for i in range(1, 6):
             j.elements.append(JobElement(id=i, job_id=3, src_siteid=12,
                                          src_filepath='/data/somefile3.%d' % i,
                                          dst_filepath='/data/newfile.%d' % i,
@@ -142,7 +142,7 @@ class TestWorkqueueService(unittest.TestCase):
                                        'dst_filepath': None}, job)#,  "Job not returned correctly.")
 
         element = job['elements'][0]
-        self.assertIsInstance(element['token'], basestring)
+        self.assertIsInstance(element['token'], str)
         self.assertDictContainsSubset({'status': JobStatus.SUBMITTED,
                                        'job_id': 1,
                                        'attempts': 0,
@@ -169,7 +169,7 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(work[0]['type'], JobType.REMOVE)
         self.assertEqual(len(work[0]['elements']), 6)
         self.assertEqual(work[0]['elements'][0]['type'], JobType.LIST)
-        for i in xrange(1, 6):
+        for i in range(1, 6):
             self.assertEqual(work[0]['elements'][i]['type'], JobType.REMOVE)
         self.assertEqual(work[1]['type'], JobType.COPY)
         self.assertEqual(len(work[1]['elements']), 6)
@@ -461,7 +461,7 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(job.src_credentials, 'somesecret')
         self.assertEqual(job.protocol, JobProtocol.GRIDFTP)
         self.assertEqual(returned_job['protocol'], 'GRIDFTP')
-        self.assertIsInstance(job.log_uid, basestring)
+        self.assertIsInstance(job.log_uid, str)
         self.assertEqual(len(job.elements), 1)
         element = job.elements[0]
         self.assertEqual(element.type, JobType.LIST)
@@ -508,7 +508,7 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(job.dst_credentials, "someothersecret")
         self.assertEqual(job.protocol, JobProtocol.SSH)
         self.assertEqual(returned_job['protocol'], 'SSH')
-        self.assertIsInstance(job.log_uid, basestring)
+        self.assertIsInstance(job.log_uid, str)
         self.assertNotEqual(job.log_uid, 'my_log_uid')
         self.assertEqual(len(job.elements), 1)
         element = job.elements[0]

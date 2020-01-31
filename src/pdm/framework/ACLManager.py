@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """ Access Control for Flask Wrapper. """
 
-import urllib
+import urllib.parse
 from copy import deepcopy
 from datetime import datetime
 import flask
@@ -205,7 +205,7 @@ class ACLManager(object):
             return False
         # Now check each segment of the path to match either
         # directly or by wildcard
-        for part_num in xrange(0, len(rule_parts)):
+        for part_num in range(0, len(rule_parts)):
             req_part = req_parts[part_num]
             rule_part = rule_parts[part_num]
             if rule_part == '?':
@@ -229,7 +229,7 @@ class ACLManager(object):
                 if ep_func:
                     redir_url = getattr(ep_func, 'export_redir', None)
                     if redir_url:
-                        orig_path = urllib.quote(request.path, safe='')
+                        orig_path = urllib.parse.quote(request.path, safe='')
                         real_redir = redir_url % {'return_to': orig_path}
                         abort(flask.redirect(real_redir))
         abort(403)
@@ -255,7 +255,7 @@ class ACLManager(object):
             self.__do_abort()
         # No specific rule for this path, try generic rules
         did_match = False
-        for rule_path in self.__rules.iterkeys():
+        for rule_path in self.__rules.keys():
             if self.__match_path(real_path, rule_path):
                 did_match = True
                 if self.__matches_rules(self.__rules[rule_path]):

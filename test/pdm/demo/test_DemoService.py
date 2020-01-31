@@ -68,7 +68,7 @@ class TestDemoService(unittest.TestCase):
         res = self.__test.post('/demo/api/v1.0/turtles', data=new_turtle)
         assert(res.status_code == 200)
         turtle_id = json.loads(res.data)['id']
-        print "Turtle ID: %s" % turtle_id
+        print("Turtle ID: %s" % turtle_id)
         # Get info
         res = self.__test.get('/demo/api/v1.0/turtles/%u' % turtle_id)
         assert(res.status_code == 200)
@@ -97,11 +97,11 @@ class TestDemoService(unittest.TestCase):
         assert(res.status_code == 200)
         turtles = json.loads(res.data)
         timmy_id = None
-        for turtle_id, turtle_name in turtles.iteritems():
+        for turtle_id, turtle_name in turtles.items():
           if turtle_name == 'Timmy':
             timmy_id = int(turtle_id)
             break
-        print "Timmy ID: %s" % timmy_id
+        print("Timmy ID: %s" % timmy_id)
         assert(timmy_id is not None)
         # Found Timmy, now try delete
         res = self.__test.delete('/demo/api/v1.0/turtles/%u' % timmy_id)

@@ -22,7 +22,7 @@ from pdm.framework.Decorators import export, export_ext, db_model, startup
 from pdm.utils.hashing import hash_pass, check_hash
 from pdm.framework.Tokens import TokenService
 import pdm.userservicedesk.models
-from HRUtils import HRUtils
+from .HRUtils import HRUtils
 from pdm.site.SiteClient import SiteClient
 
 verif_email_body = \

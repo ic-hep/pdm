@@ -12,12 +12,12 @@ import shutil
 import asyncore
 import logging
 import threading
-from cStringIO import StringIO
+from io import StringIO
 from collections import defaultdict
 from pprint import pformat
 from datetime import datetime
 from contextlib import contextmanager
-from urlparse import urlsplit, urlunsplit
+from urllib.parse import urlsplit, urlunsplit
 from tempfile import NamedTemporaryFile
 
 from requests.exceptions import Timeout
@@ -148,7 +148,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
                 'timestamp': datetime.utcnow().isoformat(),
                 'host': socket.gethostbyaddr(socket.getfqdn())}
         stderr = self._stderr_dispatcher.buffer
-        for element_id, token in self._tokens.iteritems():
+        for element_id, token in self._tokens.items():
             log = self._log_dict.pop(element_id, StringIO())
             log.write(stderr)
             log.write('\n')
@@ -216,7 +216,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
 
                 if 'Listing' in done_element:
                     data['listing'] = {}
-                    for root, listing in done_element['Listing'].iteritems():
+                    for root, listing in done_element['Listing'].items():
                         root = urlsplit(root).path
                         if root.startswith('/~'):
                             root = root.lstrip('/')
@@ -395,7 +395,7 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                     script_env = dict(os.environ, X509_CERT_DIR=ca_dir, **proxy_env_vars)
                     if self._logger.isEnabledFor(logging.DEBUG):
                         extra_env = {key: script_env[key] for key in
-                                     set(script_env.iterkeys()).difference(os.environ.iterkeys())}
+                                     set(script_env.keys()).difference(iter(os.environ.keys()))}
                         self._logger.debug("Extra environment variables: %s", pformat(extra_env))
                     self._logger.debug("Sending subprocess the following data: %s", pformat(data))
                     self._current_process = subprocess.Popen(command,

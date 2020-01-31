@@ -140,7 +140,7 @@ class TestACLManager(unittest.TestCase):
            (False, False, False, False, False, True, False, )),
         ]
         for auth_mode, auth_data, auth_res in AUTH_TESTS:
-            for i in xrange(0, len(TEST_EP)):
+            for i in range(0, len(TEST_EP)):
                 res = self.__gen_req(TEST_EP[i], "GET", auth_mode, auth_data)
                 self.assertEqual(res, auth_res[i],
                     "Path %s failed, auth_data=%s, Expected: %s, Actual: %s" % \
