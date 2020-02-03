@@ -11,8 +11,7 @@ import time
 import datetime
 import smtplib
 import socket
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEText import MIMEText
+from email.message import EmailMessage
 from enum import IntEnum
 
 from sqlalchemy import func
@@ -589,14 +588,14 @@ class HRService(object):
         smtp_port = current_app.smtp_server_port
         smtp_server_pwd = current_app.smtp_server_pwd
         toaddr = to_address
-        msg = MIMEMultipart()
+        msg = EmailMessage()
         msg['From'] = current_app.mail_display_from
         msg['To'] = to_address
         msg['Subject'] = current_app.mail_subject
 
         ref = os.path.join(current_app.verification_url, mail_token)
         body = verif_email_body.format(ref, local_exp.strftime('%c %Z'))
-        msg.attach(MIMEText(body, 'plain'))
+        msg.set_content(body)
 
         try:
             server = smtplib.SMTP(smtp_server, smtp_port)
@@ -620,9 +619,8 @@ class HRService(object):
                 # will continue w/o login, if optional
                 HRService._check_server_requirements(current_app.smtp_server_login_req, smtp_e)
 
-        text = msg.as_string()
         try:
-            server.sendmail(fromaddr, toaddr, text)
+            server.send_message(msg)
         except smtplib.SMTPException as smtp_e:
             HRService._logger.error("%s, SMTP sendmail error:", smtp_e)
             raise RuntimeError(smtp_e)
