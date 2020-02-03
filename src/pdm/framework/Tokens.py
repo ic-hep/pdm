@@ -25,7 +25,7 @@ class TokenService(object):
             Returns None.
         """
         if not key:
-            self.__key = os.urandom(32)
+            self.__key = os.urandom(32).decode('latin1')
         else:
             self.__key = key
         self.__signer = URLSafeSerializer(self.__key, salt=self.__salt)
