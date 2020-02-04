@@ -14,7 +14,7 @@ class TestPIDLockFile(unittest.TestCase):
     @mock.patch("logging.getLogger")
     @mock.patch("os.fsync")
     @mock.patch("fcntl.flock")
-    @mock.patch("__builtin__.open")
+    @mock.patch("builtins.open")
     def test_locking(self, open_fcn, flock_fcn,
                      fsync_fcn, logging_fcn):
         """ Check that the locking works as expected. """
@@ -30,7 +30,7 @@ class TestPIDLockFile(unittest.TestCase):
         with pid_lock:
             # The file should now be "locked"
             self.assertEqual(pid_lock.fileno, 123)
-            open_fcn.assert_called_with(TEST_FILENAME, "a+b")
+            open_fcn.assert_called_with(TEST_FILENAME, "a+")
             flock_fcn.assert_called_with(123, fcntl.LOCK_EX | fcntl.LOCK_NB)
             self.assertFalse(file_handle.close.called)
         self.assertTrue(file_handle.close.called)
