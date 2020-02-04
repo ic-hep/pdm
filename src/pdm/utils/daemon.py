@@ -182,5 +182,5 @@ class Daemon(object):
                     sys.exit(0)
 
         except AlreadyLockedError as err:
-            sys.stderr.write(err.message)
+            sys.stderr.write(str(err))
             sys.stderr.write('\n')

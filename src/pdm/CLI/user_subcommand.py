@@ -346,7 +346,7 @@ class UserCommand(object):
                     password = getpass(prompt=str(username) + "'s password: ")
             except ValueError as ve:
                 # corrupted or empty token
-                print(ve.message)
+                print(ve)
 
         if not password:
             # username from the command line
@@ -389,7 +389,7 @@ class UserCommand(object):
             try:
                 username = HRUtils.get_token_username_insecure(token)
             except ValueError as ve:
-                print(ve.message)
+                print(ve)
             finally:
                 os.remove(os.path.expanduser(args.token))
                 print("Token deleted, user {} is now logged off".format(str(username)))
