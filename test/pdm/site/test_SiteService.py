@@ -267,7 +267,7 @@ class test_SiteService(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         service_info = json.loads(res.data)
         self.assertIn('vos', service_info)
-        self.assertItemsEqual(TEST_VOS, service_info['vos'])
+        self.assertCountEqual(TEST_VOS, service_info['vos'])
 
     def test_session_basics(self):
         """ Manually add a credential to the DB and check that all of the 
@@ -422,7 +422,7 @@ class test_SiteService(unittest.TestCase):
         mp_mock.logon.side_effect = Exception(MSG)
         res = self.__client.post('/site/api/v1.0/session/2', data=AUTH_DATA)
         self.assertEqual(res.status_code, 400)
-        self.assertIn(MSG, res.data)
+        self.assertIn(MSG, res.get_data(as_text=True))
 
     @mock.patch("pdm.site.SiteService.managed_session")
     @mock.patch("pdm.site.SiteService.X509Utils")
