@@ -47,7 +47,7 @@ class TestDemoService(unittest.TestCase):
         self.__service.testing = True
         res = self.__test.get('/web/turtles')
         assert(res.status_code == 200)
-        assert("<html>" in res.data)
+        assert("<html>" in res.get_data(as_text=True))
 
     def test_hello(self):
         res = self.__test.get('/demo/api/v1.0/hello')
@@ -111,7 +111,7 @@ class TestDemoService(unittest.TestCase):
         res = self.__test.get('/demo/api/v1.0/get_token')
         assert(res.status_code == 200)
         assert(len(res.data) > 10)
-        assert("." in res.data)
+        assert("." in res.get_data(as_text=True))
         # Actually check token content
         token_data = self.__service.token_svc.check(json.loads(res.data))
         assert(token_data == "Hello")
