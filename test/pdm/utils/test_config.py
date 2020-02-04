@@ -44,7 +44,7 @@ class TestConfigSystem(unittest.TestCase):
 
     def test_setup(self):
         """Test the setup method."""
-        with NamedTemporaryFile() as tmpfile:
+        with NamedTemporaryFile(mode='w') as tmpfile:
             tmpfile.write(dedent("""
             [my_section]
             my_var_str = 'hello world'
@@ -61,7 +61,7 @@ class TestConfigSystem(unittest.TestCase):
             self.cfg.setup('blah')
 
         # Test corrupted config.
-        with NamedTemporaryFile() as tmpfile:
+        with NamedTemporaryFile(mode='w') as tmpfile:
             tmpfile.write("blah ][")
             tmpfile.flush()
             with self.assertRaises(Exception):
@@ -72,8 +72,8 @@ class TestConfigSystem(unittest.TestCase):
 
     def test_multi_configs(self):
         """Test reading in multiple configs."""
-        with NamedTemporaryFile() as file1,\
-             NamedTemporaryFile() as file2:
+        with NamedTemporaryFile(mode='w') as file1,\
+             NamedTemporaryFile(mode='w') as file2:
             file1.write(dedent("""
             [section_one]
             var_one = 12
