@@ -44,7 +44,7 @@ class ConfigSystem(object):
 
         for filename in filenames:
             try:
-                with open(filename, 'rb') as config_file:
+                with open(filename, 'r') as config_file:
                     config_parser.read_file(config_file)
                 self._logger.debug("Read config file: %s", filename)
             except Exception:

@@ -61,7 +61,7 @@ class PIDLockFile(object):
     def __enter__(self):
         """Enter context."""
         try:
-            self._pidfile = open(self._filename, 'a+b')
+            self._pidfile = open(self._filename, 'a+')
         except IOError:
             self._logger.exception("Error opening pidfile %s", self._filename)
             raise

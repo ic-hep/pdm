@@ -231,7 +231,7 @@ class WorkqueueService(object):
                             str(element_id))
         if not os.path.exists(dir_):
             os.makedirs(dir_)
-        with open(os.path.join(dir_, 'attempt%i.log' % element.attempts), 'wb') as logfile:
+        with open(os.path.join(dir_, 'attempt%i.log' % element.attempts), 'w') as logfile:
             logfile.write("Job run on host: %s, returncode: %s, timestamp: %s\n"
                           % (request.data['host'],
                              request.data['returncode'],
@@ -454,7 +454,7 @@ class WorkqueueService(object):
                 log = "log directory/file %s not found for job.element %s.%s."\
                       % (log_filename, job_id, element.id)
                 if os.path.exists(log_filename):
-                    with open(log_filename, 'rb') as logfile:
+                    with open(log_filename, 'r') as logfile:
                         log = logfile.read()
                 failed_output.update(log=log)
                 attempt_list.append(failed_output)
@@ -468,7 +468,7 @@ class WorkqueueService(object):
                 log = "log directory/file %s not found for job.element %s.%s."\
                       % (log_filename, job_id, element.id)
                 if os.path.exists(log_filename):
-                    with open(log_filename, 'rb') as logfile:
+                    with open(log_filename, 'r') as logfile:
                         log = logfile.read()
                 last_output.update(log=log)
                 if status == JobStatus.DONE and element.type == JobType.LIST:
@@ -522,7 +522,7 @@ class WorkqueueService(object):
             if attempt == element.attempts and element.status == JobStatus.DONE:
                 status = JobStatus.DONE
             attempt_output.update(attempt=attempt, status=status.name)
-            with open(log_filename, 'rb') as logfile:
+            with open(log_filename, 'r') as logfile:
                 attempt_output.update(log=logfile.read())
             if status == JobStatus.DONE and element.type == JobType.LIST:
                 attempt_output.update(listing=element.listing)
@@ -536,7 +536,7 @@ class WorkqueueService(object):
             log = "log directory/file %s not found for job.element %s.%s."\
                   % (log_filename, job_id, element.id)
             if os.path.exists(log_filename):
-                with open(log_filename, 'rb') as logfile:
+                with open(log_filename, 'r') as logfile:
                     log = logfile.read()
             failed_output.update(log=log)
             attempt_list.append(failed_output)
@@ -550,7 +550,7 @@ class WorkqueueService(object):
             log = "log directory/file %s not found for job.element %s.%s."\
                   % (log_filename, job_id, element.id)
             if os.path.exists(log_filename):
-                with open(log_filename, 'rb') as logfile:
+                with open(log_filename, 'r') as logfile:
                     log = logfile.read()
             last_output.update(log=log)
             if status == JobStatus.DONE and element.type == JobType.LIST:

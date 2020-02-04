@@ -88,7 +88,7 @@ class Daemon(object):
     @property
     def pid(self):
         """Get the pid of the running daemon."""
-        with open(self._pidfilename, 'rb') as pidfile:
+        with open(self._pidfilename, 'r') as pidfile:
             return pidfile.read()
 
     def exit(self):
