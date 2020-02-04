@@ -328,13 +328,13 @@ class WorkqueueService(object):
         try:
             job = Job(**request.data)
         except ValueError as err:
-            abort(400, description=err.message)
+            abort(400, description=str(err))
         except Exception as err:  # pylint: disable=broad-except
-            abort(500, description=err.message)
+            abort(500, description=str(err))
         try:
             job.add()
         except Exception as err:  # pylint: disable=broad-except
-            abort(500, description=err.message)
+            abort(500, description=str(err))
         return jsonify(job)
 
     @staticmethod

@@ -235,7 +235,7 @@ class TestWorkqueueService(unittest.TestCase):
         Job run on host: somehost.domain, returncode: 1, timestamp: timestamp
         blah blah
         """).strip()
-        with open(logfile, 'rb') as log:
+        with open(logfile, 'r') as log:
             self.assertEqual(log.read(), expected_log)
 
         request = self.__test.put('/workqueue/api/v1.0/worker/jobs/1/elements/0',
@@ -258,7 +258,7 @@ class TestWorkqueueService(unittest.TestCase):
         Job run on host: somehost.domain, returncode: 0, timestamp: timestamp
         blah blah
         """).strip()
-        with open(logfile, 'rb') as log:
+        with open(logfile, 'r') as log:
             self.assertEqual(log.read(), expected_log)
         self.assertEqual(je.listing, {'root': []})
 
@@ -777,9 +777,9 @@ class TestWorkqueueService(unittest.TestCase):
             os.makedirs(remove_job0_dir)
         if not os.path.exists(remove_job1_dir):
             os.makedirs(remove_job1_dir)
-        with open(list_job_filename, 'wb') as listlog,\
-                open(remove_job0_filename, 'wb') as removelog0,\
-                open(remove_job1_filename, 'wb') as removelog1:
+        with open(list_job_filename, 'w') as listlog,\
+                open(remove_job0_filename, 'w') as removelog0,\
+                open(remove_job1_filename, 'w') as removelog1:
             listlog.write('la la la\n')
             removelog0.write('blah blah\n')
             removelog1.write('tralala\n')
