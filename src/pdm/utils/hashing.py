@@ -23,8 +23,10 @@ def hash_pass(password, salt=None):
               every time. Use check_hash to check an existing hash
               against a password.
     """
-    if not salt:
+    if salt is None:
         salt = get_salt()
+    elif isinstance(salt, str):
+        salt = salt.encode()
     hashed_pass = hashlib.pbkdf2_hmac(HASH_ALGO, password.encode(),
                                       salt, HASH_ITER)
     hash_str = "$5$%s$%s" % (binascii.hexlify(salt).decode(),
@@ -44,7 +46,6 @@ def check_hash(hash_in, password):
     if hash_parts[1] != "5":
         raise ValueError("Unreconised hash type")
     try:
-        print(hash_in)
         salt = binascii.unhexlify(hash_parts[2])
         stored_hash = binascii.unhexlify(hash_parts[3])
     except TypeError:
