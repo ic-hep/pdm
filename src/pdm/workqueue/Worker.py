@@ -113,7 +113,7 @@ class BufferingDispatcher(asyncore.file_dispatcher):
 
     def handle_read(self):
         """Handle read events."""
-        self._buffer += self.recv(8192)
+        self._buffer += self.recv(8192).decode()
 
 
 class StdOutDispatcher(asyncore.file_dispatcher):
@@ -169,7 +169,7 @@ class StdOutDispatcher(asyncore.file_dispatcher):
 
     def handle_read(self):
         """Handle read events."""
-        self._buffer += self.recv(8192)
+        self._buffer += self.recv(8192).decode()
         buffered_elements = self._buffer.split('\n')
         self._buffer = buffered_elements.pop()
 
