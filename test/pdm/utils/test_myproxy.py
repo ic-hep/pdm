@@ -121,5 +121,5 @@ class TestMyProxyUtils(unittest.TestCase):
         open_mock.side_effect = self.voms_open_fcn
         res = MyProxyUtils.load_voms_list("/mydir")
         self.assertIsInstance(res, list)
-        self.assertItemsEqual(res, ["vo1", "vo2.test.vo"])
+        self.assertCountEqual(res, ["vo1", "vo2.test.vo"])
         self.assertTrue(sorted(res))
