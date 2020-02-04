@@ -403,7 +403,8 @@ class Worker(RESTClient, Daemon):  # pylint: disable=too-many-instance-attribute
                                                              stdin=subprocess.PIPE,
                                                              stdout=subprocess.PIPE,
                                                              stderr=subprocess.PIPE,
-                                                             env=script_env)
+                                                             env=script_env,
+                                                             encoding="utf-8")
                     json.dump(data, self._current_process.stdin)
                     self._current_process.stdin.write('\n')
                     self._current_process.stdin.flush()
