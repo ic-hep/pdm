@@ -35,7 +35,7 @@ class MyProxyUtils(object):
             Returns a string with the new credential PEM. Raises a
             RuntimeError exception if anything goes wrong.
         """
-        with tempfile.NamedTemporaryFile() as proxy:
+        with tempfile.NamedTemporaryFile(mode='w') as proxy:
             hostname, port = myproxy_server.split(':', 1)
             myproxy_opts = ['myproxy-logon',    # Exectuable name
                             '-s', hostname,     # MyProxy server name

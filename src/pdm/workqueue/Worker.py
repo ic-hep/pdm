@@ -72,14 +72,14 @@ def temporary_proxy_files(src_credentials, dst_credentials=None):
         dict: A dictionary containing the proxy environment variables to set which point to the
               newly created temporary proxy files.
     """
-    with NamedTemporaryFile() as src_proxyfile:
+    with NamedTemporaryFile(mode='w') as src_proxyfile:
         src_proxyfile.write(src_credentials)
         src_proxyfile.flush()
         os.fsync(src_proxyfile.fileno())
         if dst_credentials is None:
             yield {'X509_USER_PROXY': src_proxyfile.name}
             return
-        with NamedTemporaryFile() as dst_proxyfile:
+        with NamedTemporaryFile(mode='w') as dst_proxyfile:
             dst_proxyfile.write(dst_credentials)
             dst_proxyfile.flush()
             os.fsync(dst_proxyfile.fileno())
