@@ -379,7 +379,7 @@ class TestHRService(unittest.TestCase):
         assert res.status_code == 400
 
 
-    @mock.patch('email.MIMEMultipart.MIMEMultipart')
+    @mock.patch('email.message.EmailMessage')
     @mock.patch.object(smtplib.SMTP, 'connect')
     @mock.patch.object(smtplib.SMTP, 'close')
     def test_compose_and_send(self, close_mock, connect_mock, mail_mock):
@@ -399,7 +399,7 @@ class TestHRService(unittest.TestCase):
                 HRService.compose_and_send("centos@localhost", 'mytoken_abc',
                                            datetime.datetime.utcnow())
 
-    @mock.patch('email.MIMEMultipart.MIMEMultipart')
+    @mock.patch('email.message.EmailMessage')
     @mock.patch('smtplib.SMTP')
     def test_compose_and_send_sendmail(self, smtp_mock, mail_mock):
         with self.__service.test_request_context(path="/test"):
@@ -407,14 +407,12 @@ class TestHRService(unittest.TestCase):
             mytoken = 'mytoken_abc'
             toaddr = "user@remotehost"
             body = os.path.join(self._conf['verification_url'], mytoken)
-            smtp_mock.return_value.sendmail.side_effect = smtplib.SMTPException
+            smtp_mock.return_value.send_message.side_effect = smtplib.SMTPException
             with self.assertRaises(RuntimeError):
                 HRService.compose_and_send(toaddr, mytoken,
                                            datetime.datetime.utcnow())
-            args = smtp_mock.return_value.sendmail.call_args
-            assert args[0][0] == self._conf['smtp_server_login']
-            assert args[0][1] == toaddr
-            assert body in args[0][2]  # check the important part of the email
+            args = smtp_mock.return_value.send_message.call_args
+            assert body in args[0][0].get_content()  # check the important part of the email
 
     def test_hello(self):
         res = self.__test.get('/users/api/v1.0/hello')
