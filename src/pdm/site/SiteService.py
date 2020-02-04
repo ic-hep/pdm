@@ -128,8 +128,8 @@ class SiteService(object):
         site = Site.query.filter_by(site_id=site_id).first_or_404()
         is_owner = (site.site_owner == user_id)
         if not (site.public or is_owner):
-            log.warn("User %u failed to get site %u details (no permission).",
-                     user_id, site_id)
+            log.warning("User %u failed to get site %u details (no permission).",
+                        user_id, site_id)
             abort(404) # User isn't allowed to see this site
         log.info("User %u got details of site %u (%s).", user_id, site_id,
                  site.site_name)
@@ -173,12 +173,12 @@ class SiteService(object):
                     site_data[key] = raw_val
             # Check the auth types
             if site_data["auth_type"] not in (0, 1):
-                log.warn("Unable to add site: Invalid auth_type (%s)",
-                         site_data["auth_type"])
+                log.warning("Unable to add site: Invalid auth_type (%s)",
+                            site_data["auth_type"])
                 return "Invalid auth_type.", 400
             if not SiteService.check_uri(site_data["auth_uri"]):
-                log.warn("Unable to add site: Invalid auth_uri (%s)",
-                         site_data["auth_uri"])
+                log.warning("Unable to add site: Invalid auth_uri (%s)",
+                            site_data["auth_uri"])
                 return "Invalid auth_uri.", 400
             # Extra fields
             site_data["site_owner"] = SiteService.get_current_uid()
@@ -186,11 +186,11 @@ class SiteService(object):
             raw_eps = raw_site_data.get('endpoints', [])
             for raw_ep in raw_eps:
                 if not SiteService.check_uri(raw_ep):
-                    log.warn("Unable to add site: Bad endpoint (%s)", raw_ep)
+                    log.warning("Unable to add site: Bad endpoint (%s)", raw_ep)
                     return "Invalid endpoint format.", 400
             endpoints.extend(raw_eps)
         except Exception as err:
-            log.warn("POST data error from client: %s", str(err))
+            log.warning("POST data error from client: %s", str(err))
             return "Malformed POST data", 400
         # Now actually try to create the site
         new_site = Site(**site_data)
@@ -272,8 +272,8 @@ class SiteService(object):
         auth_user_id = SiteService.get_current_uid()
         # Check the user is deleting their own items
         if auth_user_id != user_id:
-            log.warn("User %u tried to delete sites belonging to user %u.",
-                     auth_user_id, user_id)
+            log.warning("User %u tried to delete sites belonging to user %u.",
+                        auth_user_id, user_id)
             abort(404)
         sites = Site.query.filter_by(site_owner=auth_user_id).all()
         num_sites = len(sites)
@@ -321,7 +321,7 @@ class SiteService(object):
         user_id = SiteService.get_current_uid()
         # Decode POST data
         if not request.data:
-            log.warn("Missing post data for logon.")
+            log.warning("Missing post data for logon.")
             return "Missing POST data", 400
         cred_data = json.loads(request.data)
         username = cred_data.get("username", None)
@@ -329,25 +329,25 @@ class SiteService(object):
         lifetime = cred_data.get("lifetime", None)
         vo_name = cred_data.get("vo", None)
         if not username or not password or not lifetime:
-            log.warn("Missing post field in logon.")
+            log.warning("Missing post field in logon.")
             return "Required field missing", 400
         # Check user can see the site
         site = Site.query.filter_by(site_id=site_id).first_or_404()
         is_owner = (site.site_owner == user_id)
         if not (is_owner or site.public):
-            log.warn("User %u tried to login to site %u (access denied).",
-                     user_id, site_id)
+            log.warning("User %u tried to login to site %u (access denied).",
+                        user_id, site_id)
             abort(404) # This user can't see the requested site
         # Check the site auth configuration
         if site.auth_type == 1:
             # VOMS login
             if not vo_name:
-                log.warn("User %u did not specify required VO name for site %u",
-                         user_id, site_id)
+                log.warning("User %u did not specify required VO name for site %u",
+                            user_id, site_id)
                 return "VO required", 400
             if not vo_name in current_app.vo_list:
-                log.warn("User %u requested unknown VO '%s' for login to site %u.",
-                         user_id, vo_name, site_id)
+                log.warning("User %u requested unknown VO '%s' for login to site %u.",
+                            user_id, vo_name, site_id)
                 return "Unknown VO name", 400
         # Process the different possible CA info combinations
         ca_info = None
