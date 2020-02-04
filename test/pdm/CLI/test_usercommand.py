@@ -15,7 +15,7 @@ class TestUsercommand(unittest.TestCase):
         self._parser = argparse.ArgumentParser()
         subparsers = self._parser.add_subparsers()
         UserCommand(subparsers)
-        self._tmp_file = tempfile.NamedTemporaryFile(dir='/tmp')
+        self._tmp_file = tempfile.NamedTemporaryFile(dir='/tmp', mode='w')
         future_date = (datetime.timedelta(0, 600) + datetime.datetime.utcnow()).isoformat()
         plain = {'id': 44, 'expiry': future_date}
         svc = TokenService()
@@ -241,7 +241,7 @@ class TestUsercommand(unittest.TestCase):
 
         # user provides service certificates, file OK
         mock_site_client.reset_mock()
-        _tmp_file = tempfile.NamedTemporaryFile(dir='/tmp')
+        _tmp_file = tempfile.NamedTemporaryFile(dir='/tmp', mode='w')
         fake_cert = 'BEGIN_FAKE_CERTghsgshhgkxxxEND_FAKE_CERT'
         _tmp_file.write(fake_cert)
         _tmp_file.flush()
