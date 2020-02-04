@@ -25,10 +25,10 @@ def hash_pass(password, salt=None):
     """
     if not salt:
         salt = get_salt()
-    hashed_pass = hashlib.pbkdf2_hmac(HASH_ALGO, password,
+    hashed_pass = hashlib.pbkdf2_hmac(HASH_ALGO, password.encode(),
                                       salt, HASH_ITER)
-    hash_str = "$5$%s$%s" % (binascii.hexlify(salt),
-                             binascii.hexlify(hashed_pass))
+    hash_str = "$5$%s$%s" % (binascii.hexlify(salt).decode(),
+                             binascii.hexlify(hashed_pass).decode())
     return hash_str
 
 def check_hash(hash_in, password):
@@ -44,10 +44,11 @@ def check_hash(hash_in, password):
     if hash_parts[1] != "5":
         raise ValueError("Unreconised hash type")
     try:
+        print(hash_in)
         salt = binascii.unhexlify(hash_parts[2])
         stored_hash = binascii.unhexlify(hash_parts[3])
     except TypeError:
         raise ValueError("Malfomed base64 in hash input")
-    new_hash = hashlib.pbkdf2_hmac(HASH_ALGO, password,
+    new_hash = hashlib.pbkdf2_hmac(HASH_ALGO, password.encode(),
                                    salt, HASH_ITER)
     return new_hash == stored_hash
