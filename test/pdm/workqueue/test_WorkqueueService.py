@@ -117,6 +117,16 @@ class TestWorkqueueService(unittest.TestCase):
             self.__service.before_startup(conf)  # to continue startup
         self.__test = self.__service.test_client()
 
+    def _check_dict_subset(self, first, second, allow_identical=False):
+        # Check all keys in first present in second
+        if allow_identical:
+            self.assertLessEqual(set(first), set(second))
+        else:
+            self.assertLess(set(first), set(second))
+        # Get matching subset from second and check values
+        self.assertEqual(first, {key: second[key] for key in first})
+
+
     def test_get_next_job(self):
         """test worker get next job."""
         request = self.__test.post('/workqueue/api/v1.0/worker/jobs', data={'test': 12})
@@ -127,31 +137,31 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(len(work), 1)
         job = work[0]
         self.assertEqual(len(job['elements']), 1)
-        self.assertDictContainsSubset({'status': JobStatus.SUBMITTED,
-                                       'dst_credentials': None,
-                                       'user_id': 1,
-                                       'src_filepath': '/data/somefile1',
-                                       'priority': 5,
-                                       'dst_siteid': None,
-                                       'src_siteid': 13,
-                                       'extra_opts': None,
-                                       'protocol': 0,
-                                       'type': JobType.LIST,
-                                       'id': 1,
-                                       'src_credentials': None,
-                                       'dst_filepath': None}, job)#,  "Job not returned correctly.")
+        self._check_dict_subset({'status': JobStatus.SUBMITTED,
+                                 'dst_credentials': None,
+                                 'user_id': 1,
+                                 'src_filepath': '/data/somefile1',
+                                 'priority': 5,
+                                 'dst_siteid': None,
+                                 'src_siteid': 13,
+                                 'extra_opts': None,
+                                 'protocol': 0,
+                                 'type': JobType.LIST,
+                                 'id': 1,
+                                 'src_credentials': None,
+                                 'dst_filepath': None}, job)
 
         element = job['elements'][0]
         self.assertIsInstance(element['token'], str)
-        self.assertDictContainsSubset({'status': JobStatus.SUBMITTED,
-                                       'job_id': 1,
-                                       'attempts': 0,
-                                       'src_filepath': '/data/somefile1',
-                                       'listing': None,
-                                       'max_tries': 2,
-                                       'type': JobType.LIST,
-                                       'id': 0,
-                                       'dst_filepath': None}, element)
+        self._check_dict_subset({'status': JobStatus.SUBMITTED,
+                                 'job_id': 1,
+                                 'attempts': 0,
+                                 'src_filepath': '/data/somefile1',
+                                 'listing': None,
+                                 'max_tries': 2,
+                                 'type': JobType.LIST,
+                                 'id': 0,
+                                 'dst_filepath': None}, element)
         Job = self.__service.test_db().tables.Job
         JobElement = self.__service.test_db().tables.JobElement
         #j = Job.query.filter_by(id=job['id']).one()
@@ -597,9 +607,9 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(request.status_code, 200)
         returned_jobs = json.loads(request.data)
         self.assertEqual(len(returned_jobs), 1)
-        self.assertDictContainsSubset({'user_id': 1,
-                                       'type': 'LIST',
-                                       'status': 'NEW'}, returned_jobs[0])
+        self._check_dict_subset({'user_id': 1,
+                                 'type': 'LIST',
+                                 'status': 'NEW'}, returned_jobs[0])
 
     @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
     def test_get_job(self, mock_hrservice):
@@ -615,9 +625,9 @@ class TestWorkqueueService(unittest.TestCase):
         request = self.__test.get('/workqueue/api/v1.0/jobs/2')
         self.assertEqual(request.status_code, 200)
         returned_job = json.loads(request.data)
-        self.assertDictContainsSubset({'user_id': 2,
-                                       'type': 'REMOVE',
-                                       'status': 'NEW'}, returned_job)
+        self._check_dict_subset({'user_id': 2,
+                                 'type': 'REMOVE',
+                                 'status': 'NEW'}, returned_job)
 
     @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
     def test_get_elements(self, mock_hrservice):
@@ -632,9 +642,9 @@ class TestWorkqueueService(unittest.TestCase):
         self.assertEqual(request.status_code, 200)
         returned_elements = json.loads(request.data)
         self.assertEqual(len(returned_elements), 1)
-        self.assertDictContainsSubset({'job_id': 1,
-                                       'type': 'LIST',
-                                       'status': 'NEW'}, returned_elements[0])
+        self._check_dict_subset({'job_id': 1,
+                                 'type': 'LIST',
+                                 'status': 'NEW'}, returned_elements[0])
 
     @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
     def test_get_element(self, mock_hrservice):
@@ -654,9 +664,9 @@ class TestWorkqueueService(unittest.TestCase):
         request = self.__test.get('/workqueue/api/v1.0/jobs/2/elements/0')
         self.assertEqual(request.status_code, 200)
         returned_element = json.loads(request.data)
-        self.assertDictContainsSubset({'job_id': 2,
-                                       'type': 'LIST',
-                                       'status': 'NEW'}, returned_element)
+        self._check_dict_subset({'job_id': 2,
+                                 'type': 'LIST',
+                                 'status': 'NEW'}, returned_element)
 
     @mock.patch('pdm.userservicedesk.HRService.HRService.check_token')
     def test_get_job_status(self, mock_hrservice):
