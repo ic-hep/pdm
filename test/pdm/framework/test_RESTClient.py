@@ -2,8 +2,8 @@
 """ Test RESTClient framework module. """
 
 import json
-import mock
 import unittest
+import unittest.mock as mock
 import functools
 import requests
 

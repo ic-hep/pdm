@@ -1,5 +1,5 @@
-import mock
 import unittest
+import unittest.mock as mock
 import argparse
 import tempfile
 import datetime

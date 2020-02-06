@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """ Test SiteService client class. """
 
-import mock
 import logging
 import datetime
 import unittest
+import unittest.mock as mock
 
 from pdm.site.SiteClient import SiteClient
 from pdm.site.SiteService import SiteService

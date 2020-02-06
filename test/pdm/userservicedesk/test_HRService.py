@@ -2,7 +2,7 @@ import json
 import os
 import time
 import unittest
-import mock
+import unittest.mock as mock
 import copy
 import datetime
 import smtplib

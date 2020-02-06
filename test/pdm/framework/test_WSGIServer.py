@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """ Tests for the WSGIServer module. """
 
-import mock
 import unittest
+import unittest.mock as mock
 
 from pdm.framework.WSGIServer import WSGIAuth, WSGIServer
 

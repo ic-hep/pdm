@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import unittest
-import mock
+import unittest.mock as mock
 
 from pdm.web.WebPageService import WebPageService
 from pdm.framework.FlaskWrapper import FlaskServer

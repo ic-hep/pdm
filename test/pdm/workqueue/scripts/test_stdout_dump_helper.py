@@ -2,7 +2,7 @@ import sys
 import unittest
 import logging
 
-import mock
+import unittest.mock as mock
 
 from pdm.workqueue.scripts import stdout_dump_helper
 

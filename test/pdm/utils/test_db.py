@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """ Test DB utils. """
 
-import mock
 import unittest
+import unittest.mock as mock
 
 from pdm.utils.db import managed_session
 

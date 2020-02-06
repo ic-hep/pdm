@@ -2,9 +2,9 @@
 """ Test of utils lockfile module. """
 
 import os
-import mock
 import fcntl
 import unittest
+import unittest.mock as mock
 
 from pdm.utils.lockfile import PIDLockFile, AlreadyLockedError
 

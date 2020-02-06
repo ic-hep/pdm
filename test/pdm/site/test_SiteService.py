@@ -3,10 +3,10 @@
 
 import copy
 import json
-import mock
 import logging
 import datetime
 import unittest
+import unittest.mock as mock
 
 from flask import current_app
 from pdm.site.SiteService import SiteService

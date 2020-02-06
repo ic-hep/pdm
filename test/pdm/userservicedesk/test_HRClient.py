@@ -4,7 +4,7 @@ RESTful test client API for the HRService service
 
 import json
 import unittest
-import mock
+import unittest.mock as mock
 import datetime
 
 from pdm.userservicedesk.HRClient import HRClient

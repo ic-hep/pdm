@@ -3,7 +3,7 @@ import os
 import json
 import unittest
 from textwrap import dedent
-import mock
+import unittest.mock as mock
 
 from pdm.framework.FlaskWrapper import FlaskServer
 from pdm.workqueue.WorkqueueDB import JobType, JobStatus, JobProtocol

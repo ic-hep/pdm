@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import mock
 import unittest
+import unittest.mock as mock
 
 from pdm.demo.DemoClient import DemoClient
 from pdm.demo.DemoService import DemoService

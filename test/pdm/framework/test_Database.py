@@ -1,10 +1,10 @@
 #!/usr/bin/env
 """ Framework database object tests. """
 
-import mock
 import json
 import datetime
 import unittest
+import unittest.mock as mock
 
 from pdm.framework.Database import MemSafeSQLAlchemy
 from pdm.framework.Database import JSONMixin, JSONTableEncoder
