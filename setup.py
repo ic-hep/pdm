@@ -14,7 +14,8 @@ setup(name='pdm',
                         'requests',
                         'sqlalchemy',
                         'twisted',
-                        'python-dateutil'],
+                        'python-dateutil',
+                        'service_identity'],  # See commit notes: Needed by Twisted.
       include_package_data=True,
       scripts=['src/pdm/bin/pdm'],
      )
