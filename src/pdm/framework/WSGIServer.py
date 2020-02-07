@@ -3,22 +3,22 @@
 """
 
 import os
+import logging
 
 from twisted.web import server, wsgi
 #pylint: disable=no-member
 from twisted.internet import reactor
 from twisted.internet import ssl
-import M2Crypto.m2 as m2
 
 
-def _check_x509_hasattr(x509name, attr):
+def _get_x509_attr_or_none(x509name, attr):
     try:
-        ret = m2.x509_name_by_nid(x509name.x509_name, x509name.nid[attr])
+        ret = getattr(x509name, attr, None)
     except:
-        return False
-    if ret is None:
-        return False
-    return True
+        logger = logging.getLogger(__name__).getChild("_get_x509_attr_or_none")
+        logger.exception("Error getting attribute %r from x509name object", attr)
+        ret = None
+    return ret
 
 
 class WSGIAuth(wsgi.WSGIResource):
@@ -57,19 +57,20 @@ class WSGIAuth(wsgi.WSGIResource):
         """
         dn_parts = []
         # E-mail is special as it joins on to CN
-        if _check_x509_hasattr(x509name, 'CN') and x509name.CN:
-            if _check_x509_hasattr(x509name, 'emailAddress') and x509name.emailAddress:
-                dn_parts.append("CN=%s/emailAddress=%s" % \
-                                (x509name.CN, x509name.emailAddress))
+        cn = _get_x509_attr_or_none(x509name, 'CN')
+        email_address = _get_x509_attr_or_none(x509name, 'emailAddress')
+        if cn is not None:
+            if email_address is not None:
+                dn_parts.append("CN=%s/emailAddress=%s" % (cn, email_address))
             else:
-                dn_parts.append("CN=%s" % x509name.CN)
-        elif _check_x509_hasattr(x509name, 'emailAddress') and x509name.emailAddress:
-            dn_parts.append("emailAddress=%s" % x509name.emailAddress)
+                dn_parts.append("CN=%s" % cn)
+        elif email_address is not None:
+            dn_parts.append("emailAddress=%s" % email_address)
         # Now do other, more standard, parts...
         for field in ('OU', 'O', 'L', 'ST', 'C'):
-            if not _check_x509_hasattr(x509name, field):
+            field_val = _get_x509_attr_or_none(x509name, field)
+            if field_val is None:
                 continue
-            field_val = getattr(x509name, field)
             if field_val:
                 dn_parts.append("%s=%s" % (field, field_val))
         dn_parts.reverse()
