@@ -25,7 +25,7 @@ class TestAlgorithms(unittest.TestCase):
                            src_filepath='/data/somefile1', type=JobType.LIST))
         job = Job(user_id=2, src_siteid=14,
                   src_filepath='/data/somefile2', type=JobType.REMOVE)
-        for i in xrange(1, 6):
+        for i in range(1, 6):
             job.elements.append(JobElement(id=i, job_id=2, src_siteid=12,
                                            src_filepath='/data/somefile2.%d' % i,
                                            type=JobType.REMOVE, size=10**i))
@@ -34,7 +34,7 @@ class TestAlgorithms(unittest.TestCase):
                 src_siteid=15, src_filepath='/data/somefile3',
                 dst_siteid=16, dst_filepath='/data/newfile')
 
-        for i in xrange(1, 6):
+        for i in range(1, 6):
             j.elements.append(JobElement(id=i, job_id=3, src_siteid=12,
                                          src_filepath='/data/somefile3.%d' % i,
                                          dst_filepath='/data/newfile.%d' % i,
