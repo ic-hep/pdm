@@ -23,7 +23,13 @@ jobs:
       - name: Install Tox and dependencies (for testing)
         run: (. venv/bin/activate && pip install tox)
       - name: Run tox testing
-        run: (. venv/bin/activate && tox -e lint test)    
+        run: (. venv/bin/activate && tox -e lint test)
+      - name: Upload output artifact
+        if: failure()
+        uses: actions/upload-artifact@v1
+        with:
+          name: lint_output
+          path: .tox/lint
 
   unit:
     runs-on: ubuntu-latest
@@ -45,6 +51,12 @@ jobs:
         run: (. venv/bin/activate && pip install tox)
       - name: Run tox testing
         run: (. venv/bin/activate && tox -e unit test)
+      - name: Upload output artifact
+        if: failure()
+        uses: actions/upload-artifact@v1
+        with:
+          name: unit_output
+          path: .tox/unit
 
   full:
     runs-on: ubuntu-latest
@@ -66,3 +78,9 @@ jobs:
         run: (. venv/bin/activate && pip install tox)
       - name: Run tox testing
         run: (. venv/bin/activate && tox -e full test)
+      - name: Upload output artifact
+        if: failure()
+        uses: actions/upload-artifact@v1
+        with:
+          name: full_output
+          path: .tox/full
