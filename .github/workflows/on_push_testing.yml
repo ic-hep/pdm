@@ -74,8 +74,12 @@ jobs:
           (. venv/bin/activate && pip install --upgrade pip wheel setuptools)
       - name: Install pdm from push
         run: (. venv/bin/activate && pip install -e .)
+##Fixes ERROR: virtualenv 20.0.3 has requirement six<2,>=1.12.0, but you'll have six 1.11.0 which is incompatible.
+## This virtualenv is used by the tox (3.14.3) system.
+## The old version of six must come from the distribution (system-site-package) of python3-pyOpenSSL which is only
+## installed for full testing
       - name: Install Tox and dependencies (for testing)
-        run: (. venv/bin/activate && pip install tox)
+        run: (. venv/bin/activate && pip install 'six>=1.12.0,<2' tox==3.14.3)
       - name: Run tox testing
         run: (. venv/bin/activate && tox -e full test)
       - name: Upload output artifact
