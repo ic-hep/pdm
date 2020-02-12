@@ -243,7 +243,7 @@ class WorkqueueService(object):
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
             element_counter = 0
-            element_listing = sorted(iter(element.listing.items()), key=lambda item: len(item[0]))
+            element_listing = sorted(element.listing.items(), key=lambda item: len(item[0]))
             dir_copy = False
             if element_listing and \
                     element_listing[0][0].rstrip('/') == job.src_filepath.rstrip('/'):
@@ -270,7 +270,7 @@ class WorkqueueService(object):
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
             element_counter = 0
-            for root, listing in sorted(iter(element.listing.items()),
+            for root, listing in sorted(element.listing.items(),
                                         key=lambda item: len(item[0]), reverse=True):
                 for entry in sorted(listing, key=lambda x: stat.S_ISDIR(int(x['st_mode']))):
                     element_counter += 1
