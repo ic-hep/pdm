@@ -69,7 +69,7 @@ class MyProxyUtils(object):
             proc = Popen(myproxy_opts, shell=False, stdin=PIPE, stdout=PIPE,
                          stderr=PIPE, env=env)
             try:
-                stdout, stderr = proc.communicate('%s\n' % password)
+                stdout, stderr = proc.communicate(password.encode())
             except Exception as err:
                 if log:
                     log.warn("myproxy-logon command failed: %s", str(err))
