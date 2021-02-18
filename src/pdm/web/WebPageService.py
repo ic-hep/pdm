@@ -370,14 +370,13 @@ class WebPageService(object):
         session_info = current_app.siteclient.get_session_info(site['site_id'])
         if not session_info['ok']:
             vos = []
-            username = session_info.get('username', '')
             voms_auth = current_app.siteclient.get_site(site['site_id'])['auth_type']
             if voms_auth:
                 vos = current_app.siteclient.get_service_info().get('vos', [])
                 if not vos:
                     flash("No VOs registered, contact your system administrator!", "danger")
                     current_app.log.warning("No VOs returned by get_service_info.")
-            return render_template("loginform.html", username=username, sitename=sitename,
+            return render_template("loginform.html", sitename=sitename,
                                    voms_auth=voms_auth, vos=vos), 403
 
         tclient = TransferClient(token)
