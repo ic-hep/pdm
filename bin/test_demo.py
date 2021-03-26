@@ -11,14 +11,14 @@ from pdm.demo.DemoClient import DemoClient
 
 def show_turtles(client):
     turtles = client.get_turtles()
-    print "Server Turtles: %s" % ', '.join(turtles.values())
+    print("Server Turtles: %s" % ', '.join(turtles.values()))
 
 def main():
 
     return_code = 0
 
     if len(sys.argv) != 2:
-        print "Usage: test_demo.py <conf_file>"
+        print("Usage: test_demo.py <conf_file>")
         sys.exit(1)
 
     # We load a config so that the client can find the server
@@ -28,50 +28,50 @@ def main():
     os.chdir(os.path.dirname(conf_file))
     # Create a client and run the hello function
     client = DemoClient()
-    print "Hello Returned: %s" % client.hello().strip()
+    print("Hello Returned: %s" % client.hello().strip())
 
     # Now do Turtle stuff
     show_turtles(client)
-    print "Adding Turtle..."
+    print("Adding Turtle...")
     my_id = client.add_turtle("New Turtle")['id']
-    print "New turtle is ID: %u" % my_id
+    print("New turtle is ID: %u" % my_id)
     show_turtles(client)
-    print "Modifying turtle with ID %u..." % my_id
+    print("Modifying turtle with ID %u..." % my_id)
     mod_turtle = client.modify_turtle(my_id, "My Lovely Turtle")
-    print "Modified turtle: %s" % mod_turtle
+    print("Modified turtle: %s" % mod_turtle)
     show_turtles(client)
 
-    print "Deleting new turtle."""
+    print("Deleting new turtle.""")
     client.del_turtle(my_id)
     show_turtles(client)
 
 
     # Do Token Demo
-    print "\n\nTOKEN DEMO\n"
+    print("\n\nTOKEN DEMO\n")
     token = client.get('get_token')
-    print "Got Token: %s" % token
+    print("Got Token: %s" % token)
 
     # Try a request without a token
     try:
         res = client.get('verify_token')
-        print "Tokenless request accepted!!! %s" % res
+        print("Tokenless request accepted!!! %s" % res)
         return_code += 1
     except:
-        print "No token request rejected as expected. :-)"
+        print("No token request rejected as expected. :-)")
   
     # Try a request with the wrong token
     try:
         client.set_token('WRONGTOKEN')
         res = client.get('verify_token')
-        print "Invalid token accepted!!! %s" % res
+        print("Invalid token accepted!!! %s" % res)
         return_code += 1
     except:
-        print "Wrong token rejected, as expected. :-)"
+        print("Wrong token rejected, as expected. :-)")
 
     # Try a request with the correct token
     client.set_token(token)
     res = client.get('verify_token')
-    print "Verify real token: %s" % res
+    print("Verify real token: %s" % res)
 
     sys.exit(return_code)
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """ Test DB utils. """
 
-import mock
 import unittest
+import unittest.mock as mock
 
 from pdm.utils.db import managed_session
 
@@ -11,7 +11,7 @@ class TestDBUtils(unittest.TestCase):
 
   def run_db_session(self, test_request, **kwargs):
       with managed_session(test_request, **kwargs) as db_session:
-          self.assertEquals(db_session, test_request.db.session)
+          self.assertEqual(db_session, test_request.db.session)
 
   def test_managed_session(self):
     """ Test managed_session generator. """

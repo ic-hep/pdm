@@ -7,16 +7,16 @@ import re
 import sys
 import socket
 import getpass
-import ConfigParser
+import configparser
 from subprocess import Popen, PIPE
 try:
     import requests
 except ImportError as err:
-    print "ERROR: Could not find python requests library (%s)." % str(err)
-    print "Please install this with the standard package manager."
-    print "On RHEL7 and similar, the required (root) command is:"
-    print "  yum install python-requests"
-    print ""
+    print("ERROR: Could not find python requests library (%s)." % str(err))
+    print("Please install this with the standard package manager.")
+    print("On RHEL7 and similar, the required (root) command is:")
+    print("  yum install python-requests")
+    print("")
     sys.exit(1)
 
 # Program default options/config
@@ -39,32 +39,32 @@ def usage():
     """ Print the program usage information
         and exit.
     """
-    print "Usage: install_pdm.py <config>"
-    print "       install_pdm.py -w"
-    print ""
-    print "Installs a PDM client endpoint when provided with a config file."
-    print "The -w option will write a template config file, 'pdm.conf' in"
-    print "the current directory."
-    print ""
+    print("Usage: install_pdm.py <config>")
+    print("       install_pdm.py -w")
+    print("")
+    print("Installs a PDM client endpoint when provided with a config file.")
+    print("The -w option will write a template config file, 'pdm.conf' in")
+    print("the current directory.")
+    print("")
     sys.exit(1)
 
 def write_def_config():
     """ Write the default config file and exit. """
     CONF_FILE = "pdm.conf"
     if os.path.exists(CONF_FILE):
-        print "Config file %s already exists! Not overwriting..." % CONF_FILE
+        print("Config file %s already exists! Not overwriting..." % CONF_FILE)
         sys.exit(1)
     with open(CONF_FILE, "w") as conf_fd:
         conf_fd.write(INSTALLER_CONF % OPTS)
-    print "Default config written to '%s'." % CONF_FILE
+    print("Default config written to '%s'." % CONF_FILE)
     sys.exit(0)
 
 def read_config(fname):
     """ Read the config file 'fname' and update the OPTS dictionary with the
         new values.
     """
-    print "[*] Loading config file..."
-    conf = ConfigParser.ConfigParser()
+    print("[*] Loading config file...")
+    conf = configparser.ConfigParser()
     conf.read(fname)
     # All options are optional at this point
     for opt in ('conf_dir', 'ca_dir', 'hostname', 'gridftpd_path',
@@ -83,12 +83,12 @@ def read_config(fname):
     if 'hostname' not in OPTS:
         hostname = socket.gethostname()
         OPTS['hostname'] = hostname
-        print "  Note: Hostname not set in config. Using: %s" % hostname
+        print("  Note: Hostname not set in config. Using: %s" % hostname)
     # Tidy up
     OPTS['conf_dir'] = os.path.abspath(OPTS['conf_dir'])
     OPTS['ca_dir'] = os.path.abspath(OPTS['ca_dir'])
-    print "  Using conf dir: %s" % OPTS['conf_dir']
-    print "          ca dir: %s" % OPTS['ca_dir']
+    print("  Using conf dir: %s" % OPTS['conf_dir'])
+    print("          ca dir: %s" % OPTS['ca_dir'])
 
 def find_bin_helper(prog_name, conf_name, include_loc=False):
     """ Search for prog_name using the following locations:
@@ -104,9 +104,9 @@ def find_bin_helper(prog_name, conf_name, include_loc=False):
         # User set path, only use that if it's there
         bin_path = OPTS[conf_name]
         if not os.access(bin_path, os.X_OK):
-            print "ERROR: Configured path '%s' for '%s' is not found or exectuable." % \
-                  (bin_path, conf_name)
-            print "Please review your config file and try again."
+            print("ERROR: Configured path '%s' for '%s' is not found or exectuable." % \
+                  (bin_path, conf_name))
+            print("Please review your config file and try again.")
             sys.exit(1)
         return bin_path
     # Search the PATH
@@ -121,48 +121,48 @@ def find_bin_helper(prog_name, conf_name, include_loc=False):
             OPTS[conf_name] = bin_path
             return bin_path
     # Binary wasn't found
-    print "ERROR: Failed to find '%s' binary. Please ensure you have all" % prog_name
-    print "required packages installed or set the path manually in the"
-    print "config file if it isn't in a standard location."
+    print("ERROR: Failed to find '%s' binary. Please ensure you have all" % prog_name)
+    print("required packages installed or set the path manually in the")
+    print("config file if it isn't in a standard location.")
     sys.exit(1)
 
 def find_bins():
     """ Find all of the required binaries on $PATH if they weren't specified
         in the config file.
     """
-    print "[*] Locating program/daemon files..."
+    print("[*] Locating program/daemon files...")
     res = find_bin_helper("globus-gridftp-server", "gridftpd_path")
-    print "  Found globus-gridftp-server at '%s'." % res
+    print("  Found globus-gridftp-server at '%s'." % res)
     res = find_bin_helper("myproxy-server", "myproxy_path")
-    print "  Found myproxy-server at '%s'." % res
+    print("  Found myproxy-server at '%s'." % res)
     res = find_bin_helper("build_pdm_ca.sh", "ca_builder", True)
-    print "  Found build_pdm_ca.sh helper script at '%s'." % res
+    print("  Found build_pdm_ca.sh helper script at '%s'." % res)
     # One last binary to check for: the gridmap myproxy callout library
     # As this is a library, we'll check for the config file from the package instead
     if not os.path.exists("/etc/gridmap_verify_myproxy_callout-gsi_authz.conf"):
-        print "ERROR: Failed to find the myproxy callout library."
-        print "Please ensure you have the globus-gridmap-verify-myproxy-callout"
-        print "package installed."
+        print("ERROR: Failed to find the myproxy callout library.")
+        print("Please ensure you have the globus-gridmap-verify-myproxy-callout")
+        print("package installed.")
         sys.exit(1)
 
 def check_conf():
     """ Check that the config has all required options.
     """
-    print "[*] Verifying config options..."
+    print("[*] Verifying config options...")
     for opt in ('conf_dir', 'ca_dir', 'hostname', 'gridftpd_path',
                 'myproxy_path', 'myproxy_port', 'cert_hours',
                 'gridftp_port', 'gridftp_low', 'gridftp_high'):
         if not opt in OPTS:
-            print "ERROR: Config option '%s' was not found." % opt
-            print "Please review your config file and try again."
+            print("ERROR: Config option '%s' was not found." % opt)
+            print("Please review your config file and try again.")
             sys.exit(1)
     # Check optional sections
     if 'service_url' in OPTS:
         for opt in ('sitename', 'sitedesc', 'public'):
             if not opt in OPTS:
-                print "ERROR: service_url was set to enable registration,"
-                print "however option '%s' was missing from the config file." % opt
-                print "Please review your config file and try again."
+                print("ERROR: service_url was set to enable registration,")
+                print("however option '%s' was missing from the config file." % opt)
+                print("Please review your config file and try again.")
                 sys.exit(1)
 
 def get_central_ca():
@@ -174,13 +174,13 @@ def get_central_ca():
     warnings.filterwarnings("ignore")
     if 'service_url' not in OPTS:
         return # Registration not configured, skip this step
-    print "[*] Getting central services details..."
+    print("[*] Getting central services details...")
     full_url = "%s/service" % OPTS['service_url']
-    print "  Connecting to central info service: %s" % full_url
+    print("  Connecting to central info service: %s" % full_url)
     res = requests.get(full_url, verify=False)
     if res.status_code != 200:
-        print "ERROR: Failed to connect to central service (%u)." % res.status_code
-        print "  %s" % res.text
+        print("ERROR: Failed to connect to central service (%u)." % res.status_code)
+        print("  %s" % res.text)
     data = res.json()
     central_ca = data['central_ca']
     # Get the fingerprint of the CA for verification
@@ -188,20 +188,20 @@ def get_central_ca():
                  stdin=PIPE, stdout=PIPE, shell=False)
     stdout, _ = proc.communicate(central_ca)
     if proc.returncode:
-        print "ERROR: Failed to check fingerprint of CA cert."
+        print("ERROR: Failed to check fingerprint of CA cert.")
         sys.exit(1)
     stdout = stdout.strip()
-    print "  The central CA certificate has fingerprint:"
-    print "  %s" % stdout
-    print ""
-    print "  You should check this with the central admin."
+    print("  The central CA certificate has fingerprint:")
+    print("  %s" % stdout)
+    print("")
+    print("  You should check this with the central admin.")
     while True:
-        user_ip = raw_input("  Is this fingerprint correct? [y/n] ")
+        user_ip = input("  Is this fingerprint correct? [y/n] ")
         if user_ip == 'y':
             break
         if user_ip == 'n':
-            print "An incorrect fingerprint indicates an insecure connection."
-            print "Please contact the central admin for further advice."
+            print("An incorrect fingerprint indicates an insecure connection.")
+            print("Please contact the central admin for further advice.")
             sys.exit(1)
     ca_file = os.path.join(OPTS['conf_dir'], 'central.pem')
     with open(ca_file, 'w') as ca_fd:
@@ -214,52 +214,52 @@ def login_user():
     if 'service_url' not in OPTS:
         return
     # We need to get the users URL
-    print "[*] Preparing to login to central service..."
+    print("[*] Preparing to login to central service...")
     full_url = "%s/service" % OPTS['service_url']
     # Replace double-slash, but avoid breaking https://
     full_url = re.sub("([^:]/)/", "\\1", full_url)
     res = requests.get(full_url, verify=OPTS['ssl_ca'])
     data = res.json()
     if not 'user_ep' in data:
-        print "ERROR: Central service didn't return a user endpoint."
+        print("ERROR: Central service didn't return a user endpoint.")
         sys.exit(1)
-    print "  Please supply your login details for the central service:"
-    email = raw_input("  E-mail address: ")
+    print("  Please supply your login details for the central service:")
+    email = input("  E-mail address: ")
     passwd = getpass.getpass("  Password: ")
     user_data = {'email': email,
                  'passwd': passwd}
     login_ep = "%s/login" % data['user_ep']
-    for _ in xrange(3):
+    for _ in range(3):
         res = requests.post(login_ep, verify=OPTS['ssl_ca'], json=user_data)
         if res.status_code != 200:
-            print "Login request failed (%u), maybe invalid password?" % \
-                  res.status_code
+            print("Login request failed (%u), maybe invalid password?" % \
+                  res.status_code)
             continue
         OPTS['token'] = res.json()
         return
-    print "Three login attempts failed. Exiting."
+    print("Three login attempts failed. Exiting.")
     sys.exit(1)
 
 def create_ca_dir():
     """ Create system CA files.
     """
-    print "[*] Creating CA files..."
-    print "  This may take some time, please be patient..."
+    print("[*] Creating CA files...")
+    print("  This may take some time, please be patient...")
     # Just run the CA helper
     cmd_args = [OPTS['ca_builder'], OPTS['ca_dir'], OPTS['hostname']]
     proc = Popen(cmd_args, stdout=PIPE, stderr=PIPE, shell=False)
     stdout, stderr = proc.communicate()
     if proc.returncode:
-        print "ERROR: Building CAs failed, stderr:"
-        print stderr
-        print "stdout:"
-        print stdout
+        print("ERROR: Building CAs failed, stderr:")
+        print(stderr)
+        print("stdout:")
+        print(stdout)
         sys.exit(1)
 
 def install_services():
     """ Create the config files for all of the PDM services.
     """
-    print "[*] Creating PDM configuration files..."
+    print("[*] Creating PDM configuration files...")
     for fname, ftemp in (('gridftpd.conf', GRIDFTP_CONF),
                          ('myproxy.conf', MYPROXY_CONF),
                          ('myproxy_authz.conf', GRIDFTP_AUTH_CONF)):
@@ -268,14 +268,14 @@ def install_services():
             with open(full_path, 'w') as conf_fd:
                 conf_fd.write(ftemp % OPTS)
         except Exception as err:
-            print "ERROR: Failed to write config '%s' (%s)." % (full_path, str(err))
+            print("ERROR: Failed to write config '%s' (%s)." % (full_path, str(err)))
             sys.exit(1)
 
 def register_systemd():
     """ Create the systemd config file to start the relevant services
         at system boot.
     """
-    print "[*] Creating systemd unit files..."
+    print("[*] Creating systemd unit files...")
     for fname, ftemp in (('pdm-gridftpd.service', GRIDFTP_SYSTEMD),
                          ('pdm-myproxy.service', MYPROXY_SYSTEMD)):
         full_path = os.path.join(SYSTEMD_UNIT_PATH, fname)
@@ -283,29 +283,29 @@ def register_systemd():
             with open(full_path, 'w') as conf_fd:
                 conf_fd.write(ftemp % OPTS)
         except Exception as err:
-            print "ERROR: Failed to write unit file '%s' (%s)." % (full_path, str(err))
+            print("ERROR: Failed to write unit file '%s' (%s)." % (full_path, str(err)))
             sys.exit(1)
-    print "  Reloading systemd to pick up new files..."
+    print("  Reloading systemd to pick up new files...")
     proc = Popen(['systemctl', 'daemon-reload'], stdout=PIPE, stderr=PIPE, shell=False)
     proc.communicate()
 
 def start_services():
     """ Start & check the daemons.
     """
-    print "[*] Starting services..."
+    print("[*] Starting services...")
     for service_name in ('pdm-gridftpd.service', 'pdm-myproxy.service'):
-        print "    Starting & enabling %s." % service_name
+        print("    Starting & enabling %s." % service_name)
         for cmd in (['systemctl', '-q', 'start', service_name],
                     ['systemctl', '-q', 'enable', service_name]):
             proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=False)
             stdout, stderr = proc.communicate()
             if proc.returncode:
-                print "ERROR: Failed to run '%s':" % " ".join(cmd)
-                print stdout, stderr
-                print "For furter details, try running:"
-                print "  systemctl status %s" % service_name
-                print "and:"
-                print "  journalctl -u %s" % service_name
+                print("ERROR: Failed to run '%s':" % " ".join(cmd))
+                print(stdout, stderr)
+                print("For furter details, try running:")
+                print("  systemctl status %s" % service_name)
+                print("and:")
+                print("  journalctl -u %s" % service_name)
                 sys.exit(1)
 
 def register_service():
@@ -314,7 +314,7 @@ def register_service():
     """
     if 'service_url' not in OPTS:
         return # Registration not configured, skip this step
-    print "[*] Registering with central server..."
+    print("[*] Registering with central server...")
     # Load the load CA files
     user_ca = ""
     with open(os.path.join(OPTS['ca_dir'], 'user/ca_crt.pem'), "r") as pem_fd:
@@ -340,15 +340,15 @@ def register_service():
     res = requests.post(reg_url, json=reg_data,
                         headers=reg_hdrs, verify=OPTS['ssl_ca'])
     if res.status_code != 200:
-        print "ERROR: Failed to register site centrally:"
-        print res.text
+        print("ERROR: Failed to register site centrally:")
+        print(res.text)
         sys.exit(1)
     return
 
 def main():
     """ Main script entry point. """
     if os.getuid() != 0:
-        print "ERROR: This program required root access."
+        print("ERROR: This program required root access.")
         sys.exit(1)
     if len(sys.argv) != 2:
         usage()
@@ -358,7 +358,7 @@ def main():
         write_def_config()
     conf_file = sys.argv[1]
     if not os.path.isfile(conf_file):
-        print "Could not find config file '%s'." % conf_file
+        print("Could not find config file '%s'." % conf_file)
         sys.exit(1)
     read_config(conf_file)
     find_bins()
@@ -374,7 +374,7 @@ def main():
     register_systemd()
     start_services()
     register_service()
-    print "Congratulations: Configuration finished successfully."
+    print("Congratulations: Configuration finished successfully.")
 
 
 # The following are all of the config file templates

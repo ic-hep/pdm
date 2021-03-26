@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import os
-import mock
 import unittest
+import unittest.mock as mock
 from functools import partial
 
 from pdm.utils.X509 import X509Utils

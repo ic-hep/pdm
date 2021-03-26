@@ -88,7 +88,7 @@ class Daemon(object):
     @property
     def pid(self):
         """Get the pid of the running daemon."""
-        with open(self._pidfilename, 'rb') as pidfile:
+        with open(self._pidfilename, 'r') as pidfile:
             return pidfile.read()
 
     def exit(self):
@@ -153,7 +153,7 @@ class Daemon(object):
                         maxfd = 1024
 
                     # Close all open file descriptors.
-                    for filed in xrange(maxfd):
+                    for filed in range(maxfd):
                         if filed not in self._extra_fds | {pidfile.fileno}:
                             try:
                                 os.close(filed)
@@ -182,5 +182,5 @@ class Daemon(object):
                     sys.exit(0)
 
         except AlreadyLockedError as err:
-            sys.stderr.write(err.message)
+            sys.stderr.write(str(err))
             sys.stderr.write('\n')

@@ -22,12 +22,12 @@ class SSHKeyUtils(object):
         """
         # It would be nice if a library did this, while some are available
         # they are all overkill for a relatively simple conversion
-        algo = 'ssh-rsa'
+        algo = b'ssh-rsa'
         algo_hdr = struct.pack('>I', len(algo)) + algo
         exponent, modulus = key_in.pub()
         # exponent and modulus already have the length encoded
         buf = algo_hdr + exponent + modulus
-        return base64.b64encode(buf)
+        return base64.b64encode(buf).decode()
 
     @staticmethod
     def gen_rsa_keypair(passphrase=None, comment="", bits=DEF_NUM_BITS):
@@ -50,7 +50,7 @@ class SSHKeyUtils(object):
         if not passphrase:
             key_pem = key.as_pem(cipher=None)
         else:
-            pw_cb = lambda x: passphrase
+            pw_cb = lambda x: passphrase if passphrase is None else passphrase.encode()
             key_pem = key.as_pem(cipher=SSHKeyUtils.DEF_ENC_ALGO,
                                  callback=pw_cb)
         return (pub_str, key_pem)
@@ -62,6 +62,6 @@ class SSHKeyUtils(object):
             passphrase - The password of the input key.
             Returns PEM encoded key with no password.
         """
-        pw_cb = lambda x: passphrase
+        pw_cb = lambda x: passphrase if passphrase is None else passphrase.encode()
         key = RSA.load_key_string(key_in, callback=pw_cb)
-        return key.as_pem(cipher=None)
+        return key.as_pem(cipher=None).decode()

@@ -170,10 +170,10 @@ class RESTClientTest(RESTClient):
         # We import mock here as TestClient is only meant for use in the tests
         # If we import it globally, it'll break importing this module in
         # production.
-        import mock
+        import unittest.mock
         # We patch away the base class of the target, replacing it with
         # RESTClientTest instead.
-        patcher = mock.patch.object(target, '__bases__', (RESTClientTest, ))
+        patcher = unittest.mock.patch.object(target, '__bases__', (RESTClientTest, ))
         patcher.start()
         # is_local is required to prevent mock from attempting to delete
         # __bases__ when stop is called (which would throw an exception)

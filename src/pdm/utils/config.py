@@ -3,7 +3,7 @@ import ast
 import logging
 from os.path import abspath, realpath, expanduser, expandvars
 from copy import deepcopy
-from ConfigParser import SafeConfigParser
+from configparser import ConfigParser
 from collections import defaultdict
 
 from .singleton import singleton
@@ -26,7 +26,7 @@ class ConfigSystem(object):
     @property
     def sections(self):
         """Get list of sections."""
-        return self._config.keys()
+        return list(self._config.keys())
 
     def get_section(self, section):
         """Return a given section."""
@@ -34,18 +34,18 @@ class ConfigSystem(object):
 
     def setup(self, filenames='~/.config/pdm/pdm.conf', ignore_errors=False):
         """Setup the configuration system."""
-        config_parser = SafeConfigParser()
+        config_parser = ConfigParser()
         config_parser.optionxform = str
 
-        if isinstance(filenames, basestring):
+        if isinstance(filenames, str):
             filenames = [filenames]
         filenames = {abspath(realpath(expanduser(expandvars(filename))))
                      for filename in filenames}
 
         for filename in filenames:
             try:
-                with open(filename, 'rb') as config_file:
-                    config_parser.readfp(config_file)
+                with open(filename, 'r') as config_file:
+                    config_parser.read_file(config_file)
                 self._logger.debug("Read config file: %s", filename)
             except Exception:
                 self._logger.warning("Failed to read config file: %s", filename)

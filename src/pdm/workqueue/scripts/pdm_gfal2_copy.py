@@ -101,7 +101,7 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
         params.timeout = timeout
   
     # unzip:
-    _, src_l, dst_l = zip(*copy_list)  # don't care about jobid
+    _, src_l, dst_l = list(zip(*copy_list))  # don't care about jobid
     s_root = str(os.path.dirname(os.path.commonprefix(src_l)))
     d_root = str(os.path.dirname(os.path.commonprefix(dst_l)))
 

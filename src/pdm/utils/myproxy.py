@@ -35,7 +35,7 @@ class MyProxyUtils(object):
             Returns a string with the new credential PEM. Raises a
             RuntimeError exception if anything goes wrong.
         """
-        with tempfile.NamedTemporaryFile() as proxy:
+        with tempfile.NamedTemporaryFile(mode='w') as proxy:
             hostname, port = myproxy_server.split(':', 1)
             myproxy_opts = ['myproxy-logon',    # Exectuable name
                             '-s', hostname,     # MyProxy server name
@@ -67,9 +67,9 @@ class MyProxyUtils(object):
                 log.debug("Running myproxy-logon with: %s", " ".join(myproxy_opts))
                 log.debug("  myproxy-logon env: %s", str(env))
             proc = Popen(myproxy_opts, shell=False, stdin=PIPE, stdout=PIPE,
-                         stderr=PIPE, env=env)
+                         stderr=PIPE, env=env, encoding="utf-8")
             try:
-                stdout, stderr = proc.communicate('%s\n' % password)
+                stdout, stderr = proc.communicate(password)
             except Exception as err:
                 if log:
                     log.warn("myproxy-logon command failed: %s", str(err))

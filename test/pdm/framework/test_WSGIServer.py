@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """ Tests for the WSGIServer module. """
 
-import mock
 import unittest
+import unittest.mock as mock
 
 from pdm.framework.WSGIServer import WSGIAuth, WSGIServer
 
@@ -92,7 +92,7 @@ class TestWSGIServer(unittest.TestCase):
         self.assertEqual(port, TEST_PORT)
         self.assertEqual(site.resource._application, app_server)
 
-    @mock.patch("__builtin__.open")
+    @mock.patch("builtins.open")
     @mock.patch("pdm.framework.WSGIServer.ssl")
     @mock.patch("pdm.framework.WSGIServer.reactor")
     def test_add_ssl_server(self, mock_reactor, mock_ssl, mock_open):

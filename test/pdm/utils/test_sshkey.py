@@ -33,13 +33,13 @@ class TestSSHKeyUtils(unittest.TestCase):
         comment = pubkey.split(' ', 2)[2]
         self.assertEqual(comment, TEST_COMMENT)
         # Check the key is encrypted
-        pw_cb = lambda x: None
+        pw_cb = lambda x: b''  # None not working! raises SystemError within M2Crypto
         self.assertRaises(RSA.RSAError, RSA.load_key_string,
                           privkey, callback=pw_cb)
-        pw_cb = lambda x: "wrongpass"
+        pw_cb = lambda x: b"wrongpass"
         self.assertRaises(RSA.RSAError, RSA.load_key_string,
                           privkey, callback=pw_cb)
-        pw_cb = lambda x: TEST_PASS
+        pw_cb = lambda x: TEST_PASS.encode()
         key_obj = RSA.load_key_string(privkey, callback=pw_cb)
         self.assertIsInstance(key_obj, RSA.RSA)
 
@@ -49,12 +49,12 @@ class TestSSHKeyUtils(unittest.TestCase):
         # Generate a test key with a password
         key = RSA.gen_key(2048, 5, callback=lambda: None)
         key_pem = key.as_pem(cipher='aes_256_cbc',
-                             callback=lambda x: TEST_PASS)
+                             callback=lambda x: TEST_PASS.encode())
         # Now try to decrypt the key with the helper function
         key_out = SSHKeyUtils.remove_pass(key_pem, TEST_PASS)
         # Check returned key looks OK and is password-less
         self.assertIn('BEGIN RSA PRIVATE KEY', key_out)
-        key_back_in = RSA.load_key_string(key_out,
+        key_back_in = RSA.load_key_string(key_out.encode(),
                                           callback=lambda x: None)
         # Finally, test with wrong password
         self.assertRaises(RSA.RSAError, SSHKeyUtils.remove_pass,

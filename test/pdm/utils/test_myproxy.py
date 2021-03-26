@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import os
-import mock
 import unittest
+import unittest.mock as mock
 
 from pdm.utils.myproxy import MyProxyUtils
 
@@ -37,7 +37,7 @@ class TestMyProxyUtils(unittest.TestCase):
         # Simplest test
         res = MyProxyUtils.logon("localhost:12345", "user", "pass")
         self.assertEqual(res, 'PEMFILE')
-        self.assertEqual(proc.communicate.call_args[0][0], 'pass\n')
+        self.assertEqual(proc.communicate.call_args[0][0], 'pass')
         args, _ = self.get_args(popen_mock)
         self.assertIn('-s localhost', args)
         self.assertIn('-p 12345', args)
@@ -121,5 +121,5 @@ class TestMyProxyUtils(unittest.TestCase):
         open_mock.side_effect = self.voms_open_fcn
         res = MyProxyUtils.load_voms_list("/mydir")
         self.assertIsInstance(res, list)
-        self.assertItemsEqual(res, ["vo1", "vo2.test.vo"])
+        self.assertCountEqual(res, ["vo1", "vo2.test.vo"])
         self.assertTrue(sorted(res))

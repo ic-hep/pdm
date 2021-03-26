@@ -4,7 +4,7 @@ RESTful test client API for the HRService service
 
 import json
 import unittest
-import mock
+import unittest.mock as mock
 import datetime
 
 from pdm.userservicedesk.HRClient import HRClient
@@ -65,7 +65,7 @@ class TestHRClient(unittest.TestCase):
 
     def test_login(self):
         res = self.__client.login('Johnny@example.com', 'very_secret')
-        assert (isinstance(res, unicode))
+        assert (isinstance(res, str))
 
         with self.assertRaises(Exception) as login_ex:
             res = self.__client.login('Johnny@example.com', 'very_secret1')
@@ -93,7 +93,7 @@ class TestHRClient(unittest.TestCase):
         self.__service.fake_auth("TOKEN", {'id': 1, 'expiry': self.__future_date})
         # client takes plain passwords
         res = self.__client.change_password('very_secret', 'newpassword')
-        print res
+        print(res)
         assert (res['email'] == self.__userdict['email'])
 
         with self.assertRaises(Exception) as pwd_ex:

@@ -7,6 +7,7 @@ import os
 import json
 import uuid
 import logging
+import collections
 
 from pdm.framework.Tokens import TokenService
 from pdm.framework.ACLManager import ACLManager
@@ -116,8 +117,8 @@ class FlaskServer(Flask):
         """
         self.__db.tables = DBContainer()
         #pylint: disable=protected-access
-        registry = self.__db.Model._decl_class_registry
-        for tbl_name, tbl_inst in registry.iteritems():
+        registry = self.__db.Model.registry._class_registry
+        for tbl_name, tbl_inst in registry.items():
             if hasattr(tbl_inst, '__tablename__'):
                 setattr(self.__db.tables, tbl_name, tbl_inst)
 
@@ -140,7 +141,7 @@ class FlaskServer(Flask):
         self.__test_funcs = []
         self.__logger = logger
         if not token_key:
-            token_key = os.urandom(16)
+            token_key = os.urandom(16).decode('latin1')
         self.secret_key = token_key + "flask"
         self.token_svc = TokenService(token_key, "pdmwebsvc")
         # We override the test client class from Flask with our
@@ -212,7 +213,7 @@ class FlaskServer(Flask):
                 if not redir:
                     redir = parent_redir
                 obj_path = os.path.join(root_path, ename)
-                if not callable(obj_inst):
+                if not isinstance(obj_inst, collections.Callable):
                     self.__logger.debug("Class %s at %s", obj_inst, obj_path)
                     if hasattr(obj_inst, 'db_model'):
                         self.__logger.debug("Extending DB model: %s",
@@ -243,7 +244,7 @@ class FlaskServer(Flask):
                      name, value is a list of auth entries.
             Returns None
         """
-        for group, entries in groups.iteritems():
+        for group, entries in groups.items():
             for entry in entries:
                 self.__acl_manager.add_group_entry(group, entry)
 
@@ -259,7 +260,7 @@ class FlaskServer(Flask):
             By default no-one can call any function.
             Returns None.
         """
-        for path, rule in auth_rules.iteritems():
+        for path, rule in auth_rules.items():
             self.__acl_manager.add_rule(path, rule)
 
     def test_mode(self, main_cls, conf="", with_test=True):

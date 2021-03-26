@@ -231,7 +231,7 @@ class WorkqueueService(object):
                             str(element_id))
         if not os.path.exists(dir_):
             os.makedirs(dir_)
-        with open(os.path.join(dir_, 'attempt%i.log' % element.attempts), 'wb') as logfile:
+        with open(os.path.join(dir_, 'attempt%i.log' % element.attempts), 'w') as logfile:
             logfile.write("Job run on host: %s, returncode: %s, timestamp: %s\n"
                           % (request.data['host'],
                              request.data['returncode'],
@@ -243,7 +243,7 @@ class WorkqueueService(object):
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
             element_counter = 0
-            element_listing = sorted(element.listing.iteritems(), key=lambda item: len(item[0]))
+            element_listing = sorted(element.listing.items(), key=lambda item: len(item[0]))
             dir_copy = False
             if element_listing and \
                     element_listing[0][0].rstrip('/') == job.src_filepath.rstrip('/'):
@@ -270,7 +270,7 @@ class WorkqueueService(object):
             and element.type == JobType.LIST\
                 and element.status == JobStatus.DONE:
             element_counter = 0
-            for root, listing in sorted(element.listing.iteritems(),
+            for root, listing in sorted(element.listing.items(),
                                         key=lambda item: len(item[0]), reverse=True):
                 for entry in sorted(listing, key=lambda x: stat.S_ISDIR(int(x['st_mode']))):
                     element_counter += 1
@@ -328,13 +328,13 @@ class WorkqueueService(object):
         try:
             job = Job(**request.data)
         except ValueError as err:
-            abort(400, description=err.message)
+            abort(400, description=str(err))
         except Exception as err:  # pylint: disable=broad-except
-            abort(500, description=err.message)
+            abort(500, description=str(err))
         try:
             job.add()
         except Exception as err:  # pylint: disable=broad-except
-            abort(500, description=err.message)
+            abort(500, description=str(err))
         return jsonify(job)
 
     @staticmethod
@@ -448,13 +448,13 @@ class WorkqueueService(object):
             attempt_list = []
             attempts = element.attempts
             element_log_filebase = os.path.join(log_filebase, str(element.id))
-            for attempt in xrange(1, attempts):  # previous attempts, presumably failed ones
+            for attempt in range(1, attempts):  # previous attempts, presumably failed ones
                 failed_output = dict(attempt_output, attempt=attempt, status=JobStatus.FAILED.name)
                 log_filename = os.path.join(element_log_filebase, "attempt%i.log" % attempt)
                 log = "log directory/file %s not found for job.element %s.%s."\
                       % (log_filename, job_id, element.id)
                 if os.path.exists(log_filename):
-                    with open(log_filename, 'rb') as logfile:
+                    with open(log_filename, 'r') as logfile:
                         log = logfile.read()
                 failed_output.update(log=log)
                 attempt_list.append(failed_output)
@@ -468,7 +468,7 @@ class WorkqueueService(object):
                 log = "log directory/file %s not found for job.element %s.%s."\
                       % (log_filename, job_id, element.id)
                 if os.path.exists(log_filename):
-                    with open(log_filename, 'rb') as logfile:
+                    with open(log_filename, 'r') as logfile:
                         log = logfile.read()
                 last_output.update(log=log)
                 if status == JobStatus.DONE and element.type == JobType.LIST:
@@ -510,7 +510,7 @@ class WorkqueueService(object):
                 abort(400, description="bad attempt, expected an integer.")
             if attempt < 0:
                 attempt = element.attempts + attempt + 1
-            if attempt not in xrange(1, element.attempts + 1):
+            if attempt not in range(1, element.attempts + 1):
                 abort(404, description="Invalid attempt '%s', job.element %s.%s has been tried %s "
                                        "time(s)" % (attempt, job_id, element_id, element.attempts))
 
@@ -522,7 +522,7 @@ class WorkqueueService(object):
             if attempt == element.attempts and element.status == JobStatus.DONE:
                 status = JobStatus.DONE
             attempt_output.update(attempt=attempt, status=status.name)
-            with open(log_filename, 'rb') as logfile:
+            with open(log_filename, 'r') as logfile:
                 attempt_output.update(log=logfile.read())
             if status == JobStatus.DONE and element.type == JobType.LIST:
                 attempt_output.update(listing=element.listing)
@@ -530,13 +530,13 @@ class WorkqueueService(object):
 
         attempt_list = []
         attempts = element.attempts
-        for attempt_ in xrange(1, attempts):  # previous attempts, presumably failed ones
+        for attempt_ in range(1, attempts):  # previous attempts, presumably failed ones
             failed_output = dict(attempt_output, attempt=attempt_, status=JobStatus.FAILED.name)
             log_filename = os.path.join(log_filebase, "attempt%i.log" % attempt_)
             log = "log directory/file %s not found for job.element %s.%s."\
                   % (log_filename, job_id, element.id)
             if os.path.exists(log_filename):
-                with open(log_filename, 'rb') as logfile:
+                with open(log_filename, 'r') as logfile:
                     log = logfile.read()
             failed_output.update(log=log)
             attempt_list.append(failed_output)
@@ -550,7 +550,7 @@ class WorkqueueService(object):
             log = "log directory/file %s not found for job.element %s.%s."\
                   % (log_filename, job_id, element.id)
             if os.path.exists(log_filename):
-                with open(log_filename, 'rb') as logfile:
+                with open(log_filename, 'r') as logfile:
                     log = logfile.read()
             last_output.update(log=log)
             if status == JobStatus.DONE and element.type == JobType.LIST:

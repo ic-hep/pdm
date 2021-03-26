@@ -6,51 +6,85 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
+    container:
+      image: centos:8
     steps:
       - uses: actions/checkout@v1
+      - name: Install EPEL
+        run: dnf install -y epel-release
       - name: Install dependencies
-        run: sudo apt-get install python python-pip python-virtualenv python-m2crypto
+        run: dnf install -y python3 python3-m2crypto
       - name: Setup virtualenv
         run: |
-          virtualenv --system-site-packages venv
+          python3 -m venv --system-site-packages venv
           (. venv/bin/activate && pip install --upgrade pip wheel setuptools)
       - name: Install pdm from push
-        run: (. venv/bin/activate && pip install --user -e .)
+        run: (. venv/bin/activate && pip install -e .)
       - name: Install Tox and dependencies (for testing)
         run: (. venv/bin/activate && pip install tox)
       - name: Run tox testing
-        run: (. venv/bin/activate && tox -e lint test)    
+        run: (. venv/bin/activate && tox -e lint test)
+      - name: Upload output artifact
+        if: failure()
+        uses: actions/upload-artifact@v1
+        with:
+          name: lint_output
+          path: .tox/lint
 
   unit:
     runs-on: ubuntu-latest
+    container:
+      image: centos:8
     steps:
       - uses: actions/checkout@v1
+      - name: Install EPEL
+        run: dnf install -y epel-release
       - name: Install dependencies
-        run: sudo apt-get install python python-pip python-virtualenv python-m2crypto
+        run: dnf install -y python3 python3-m2crypto
       - name: Setup virtualenv
         run: |
-          virtualenv --system-site-packages venv
+          python3 -m venv --system-site-packages venv
           (. venv/bin/activate && pip install --upgrade pip wheel setuptools)
       - name: Install pdm from push
-        run: (. venv/bin/activate && pip install --user -e .)
+        run: (. venv/bin/activate && pip install -e .)
       - name: Install Tox and dependencies (for testing)
         run: (. venv/bin/activate && pip install tox)
       - name: Run tox testing
         run: (. venv/bin/activate && tox -e unit test)
+      - name: Upload output artifact
+        if: failure()
+        uses: actions/upload-artifact@v1
+        with:
+          name: unit_output
+          path: .tox/unit
 
   full:
     runs-on: ubuntu-latest
+    container:
+      image: centos:8
     steps:
       - uses: actions/checkout@v1
+      - name: Install EPEL
+        run: dnf install -y epel-release
       - name: Install dependencies
-        run: sudo apt-get install python python-pip python-virtualenv python-m2crypto
+        run: dnf install -y openssl python3 python3-m2crypto python3-pyOpenSSL
       - name: Setup virtualenv
         run: |
-          virtualenv --system-site-packages venv
+          python3 -m venv --system-site-packages venv
           (. venv/bin/activate && pip install --upgrade pip wheel setuptools)
       - name: Install pdm from push
-        run: (. venv/bin/activate && pip install --user -e .)
+        run: (. venv/bin/activate && pip install -e .)
+##Fixes ERROR: virtualenv 20.0.3 has requirement six<2,>=1.12.0, but you'll have six 1.11.0 which is incompatible.
+## This virtualenv is used by the tox (3.14.3) system.
+## The old version of six must come from the distribution (system-site-package) of python3-pyOpenSSL which is only
+## installed for full testing
       - name: Install Tox and dependencies (for testing)
-        run: (. venv/bin/activate && pip install tox)
+        run: (. venv/bin/activate && pip install 'six>=1.12.0,<2' tox==3.14.3)
       - name: Run tox testing
         run: (. venv/bin/activate && tox -e full test)
+      - name: Upload output artifact
+        if: failure()
+        uses: actions/upload-artifact@v1
+        with:
+          name: full_output
+          path: .tox/full

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """ Test WorkqueueClient module. """
 import unittest
-import mock
+import unittest.mock as mock
 
 from pdm.framework.FlaskWrapper import FlaskServer, jsonify
 from pdm.framework.RESTClient import RESTClientTest

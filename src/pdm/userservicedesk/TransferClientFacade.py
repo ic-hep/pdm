@@ -26,7 +26,7 @@ class TransferClientFacade(TransferClient):
         if sitename and path:
             return super(TransferClientFacade, self).list(sitename, path, **kwargs)
         else:
-            print "Malformed site path (format sitename:path)", site
+            print("Malformed site path (format sitename:path)", site)
             return None
 
     def copy(self, src_site, dst_site, **kwargs):
@@ -43,11 +43,11 @@ class TransferClientFacade(TransferClient):
         dst_sitename, dst_path = self.split_site_path(dst_site)
 
         if not src_sitename:
-            print "Malformed site path (probably missing colon)", src_site
+            print("Malformed site path (probably missing colon)", src_site)
             return None
 
         if not dst_sitename:
-            print "Malformed site path (probably missing colon)", dst_site
+            print("Malformed site path (probably missing colon)", dst_site)
             return None
 
         return super(TransferClientFacade, self).copy(src_sitename, src_path,
@@ -67,7 +67,7 @@ class TransferClientFacade(TransferClient):
         if sitename and path:
             return super(TransferClientFacade, self).remove(sitename, path, **kwargs)
         else:
-            print "Malformed site path (probably missing sitename or path)", src_site
+            print("Malformed site path (probably missing sitename or path)", src_site)
             return None
 
     def mkdir(self, sitepath, **kwargs):
@@ -81,7 +81,7 @@ class TransferClientFacade(TransferClient):
         if sitename and path:
             return super(TransferClientFacade, self).mkdir(sitename, path, **kwargs)
         else:
-            print "Malformed site path (probably missing colon or path element):", sitepath
+            print("Malformed site path (probably missing colon or path element):", sitepath)
             return None
 
     def rename(self, site_path, newname, **kwargs):
@@ -95,13 +95,13 @@ class TransferClientFacade(TransferClient):
         sitename, path = self.split_site_path(site_path)
         new_site, newpath = self.split_site_path(newname)
         if new_site or new_site is None:  # we expect '' !
-            print "Malformed (new) site path (it has to start with a : " \
-                  "since source and dest share the same site)", new_site
+            print("Malformed (new) site path (it has to start with a : " \
+                  "since source and dest share the same site)", new_site)
             return None
         if sitename and path:
             return super(TransferClientFacade, self).rename(sitename, path, newpath, **kwargs)
         else:
-            print "Malformed (old) site path (probably missing sitename or path:)", site_path
+            print("Malformed (old) site path (probably missing sitename or path:)", site_path)
             return None
 
     @staticmethod

@@ -250,7 +250,7 @@ class UserCommand(object):
         :return:
         """
 
-        print " Operation not implemented yet ..."
+        print(" Operation not implemented yet ...")
 
     def register(self, args):  # pylint: disable=no-self-use
         """
@@ -261,22 +261,22 @@ class UserCommand(object):
         :return: None
         """
         if not args.name:
-            args.name = raw_input("Please enter your given name: ")
+            args.name = input("Please enter your given name: ")
         if not args.surname:
-            args.surname = raw_input("Please enter your surname: ")
+            args.surname = input("Please enter your surname: ")
 
         password = getpass()
         conf_pass = getpass(prompt='Confirm password: ')
         if password != conf_pass:
-            print "Passwords don't match. Aborted"
+            print("Passwords don't match. Aborted")
             return
 
         client = HRClient()
         userdict = {'surname': args.surname, 'name': args.name,
                     'email': args.email, 'password': password}
         client.add_user(userdict)
-        print "User registered %s %s %s " % (args.name, args.surname, args.email)
-        print "Verification email sent to %s. Please check your mailbox." % args.email
+        print("User registered %s %s %s " % (args.name, args.surname, args.email))
+        print("Verification email sent to %s. Please check your mailbox." % args.email)
 
     def verify(self, args):
         """
@@ -285,19 +285,19 @@ class UserCommand(object):
         :param args: parser arguments
         :return: None
         """
-        print "Verifying email address.\nCut and paste the token received by email."
-        token = raw_input("Token:")
+        print("Verifying email address.\nCut and paste the token received by email.")
+        token = input("Token:")
         token =  os.path.basename(token)
         client = HRClient()
         tokendict = {'mailtoken': token}
         try:
             client.verify_user(tokendict)
-            print "User email %s verified" % HRUtils.get_token_username_insecure(token)
+            print("User email %s verified" % HRUtils.get_token_username_insecure(token))
         except RESTException as re:
             if re.code == 400:
-                print "Token expired or already verified."
+                print("Token expired or already verified.")
             else:
-                print re
+                print(re)
 
     def resend_email(self, args):
         """
@@ -306,11 +306,11 @@ class UserCommand(object):
         :param args: parser arguments (email address)
         :return: None
         """
-        print "Sending a verification email to %s " % args.email
+        print("Sending a verification email to %s " % args.email)
         client = HRClient()
         userdict = {'email': args.email}
         client.resend_email(userdict)
-        print "Email sent. Please check your mailbox."
+        print("Email sent. Please check your mailbox.")
 
     def unregister(self, args):
         """
@@ -326,9 +326,9 @@ class UserCommand(object):
             client.set_token(token)
             client.del_user()
             os.remove(os.path.expanduser(args.token))
-            print "User unregistered. Token deleted."
+            print("User unregistered. Token deleted.")
         else:
-            print "Unregister operation failed."
+            print("Unregister operation failed.")
 
     def login(self, args):  # pylint: disable=no-self-use
         """
@@ -346,14 +346,14 @@ class UserCommand(object):
                     password = getpass(prompt=str(username) + "'s password: ")
             except ValueError as ve:
                 # corrupted or empty token
-                print ve.message
+                print(ve)
 
         if not password:
             # username from the command line
             if not args.email:
-                args.email = raw_input("Please enter your email address: ")
+                args.email = input("Please enter your email address: ")
                 if not args.email:
-                    print "No email provided. Exiting .."
+                    print("No email provided. Exiting ..")
                     exit(1)
             username = args.email
             password = getpass()
@@ -366,14 +366,14 @@ class UserCommand(object):
             os.makedirs(os.path.dirname(filename))
         except OSError as exc:
             if exc.errno != errno.EEXIST:
-                print os.strerror(exc.errno)
+                print(os.strerror(exc.errno))
                 raise
 
         with open(filename, "w") as token_file:
             os.chmod(filename, 0o600)
             token_file.write(token)
 
-        print "User {} logged in".format(username)
+        print("User {} logged in".format(username))
 
     def logoff(self, args):
         """
@@ -389,12 +389,12 @@ class UserCommand(object):
             try:
                 username = HRUtils.get_token_username_insecure(token)
             except ValueError as ve:
-                print ve.message
+                print(ve)
             finally:
                 os.remove(os.path.expanduser(args.token))
-                print "Token deleted, user {} is now logged off".format(str(username))
+                print("Token deleted, user {} is now logged off".format(str(username)))
         else:
-            print "No token found, no one to log off."
+            print("No token found, no one to log off.")
 
     def passwd(self, args):  # pylint: disable=no-self-use
         """ Change user password. """
@@ -406,13 +406,13 @@ class UserCommand(object):
             newpassword1 = getpass(prompt='Confirm New Password: ')
 
             if newpassword != newpassword1:
-                print "Passwords don't match. Aborted"
+                print("Passwords don't match. Aborted")
                 return
 
             client = HRClient()
             client.set_token(token)
             ret = client.change_password(password, newpassword)
-            print ret
+            print(ret)
 
     def whoami(self, args):  # pylint: disable=no-self-use
         """
@@ -442,7 +442,7 @@ class UserCommand(object):
         if token and self._session_ok(args.site, token):
             client = TransferClientFacade(token)
             # remove None values, position args, func and token from the kwargs:
-            accepted_args = {key: value for (key, value) in vars(args).iteritems() if
+            accepted_args = {key: value for (key, value) in vars(args).items() if
                              value is not None and key not in ('func', 'site', 'token',
                                                                'config', 'verbosity', 'wait')}
             resp = client.list(args.site, **accepted_args)  # max_tries, priority, depth)
@@ -459,15 +459,15 @@ class UserCommand(object):
                 if status['status'] == 'DONE':
                     listing_output = client.output(resp['id'], 0, -1)[0][0]  # listing is 0, last attempt
                     listing_d_value = listing_output['listing']
-                    root, listing = listing_d_value.items()[0]  # top root
+                    root, listing = list(listing_d_value.items())[0]  # top root
                     self._print_formatted_listing(root, listing_d_value)
                 elif resp['status'] == 'FAILED':
-                    print " Failed to obtain a listing for job %d " % (resp['id'],)
+                    print(" Failed to obtain a listing for job %d " % (resp['id'],))
                 else:
-                    print "Timeout. Last status is %s for job id %d" % \
-                          (status['status'], resp['id'])
+                    print("Timeout. Last status is %s for job id %d" % \
+                          (status['status'], resp['id']))
             elif isinstance(resp, list) and not resp:
-                print "No such site: %s " % (args.site,)
+                print("No such site: %s " % (args.site,))
 
     def sitelist(self, args):  # pylint disable-no-self-use
         """
@@ -480,12 +480,12 @@ class UserCommand(object):
         if token:
             client = TransferClientFacade(token)
             sites = client.list_sites()
-            print '-' + 91 * '-' + '-'
-            print '|{0:40}|{1:50}|'.format('site:', 'description:')
-            print '|' + 91 * '-' + '|'
+            print('-' + 91 * '-' + '-')
+            print('|{0:40}|{1:50}|'.format('site:', 'description:'))
+            print('|' + 91 * '-' + '|')
             for elem in sites:
-                print '|{site_name:40s}|{site_desc:50s}|'.format(**elem)
-            print '-' + 91 * '-' + '-'
+                print('|{site_name:40s}|{site_desc:50s}|'.format(**elem))
+            print('-' + 91 * '-' + '-')
 
     def _print_formatted_listing(self, root, full_listing, level=0):  # pylint: disable=no-self-use
         """
@@ -500,7 +500,7 @@ class UserCommand(object):
 
         listing = full_listing[root]
         if not listing:
-            print "<empty>"
+            print("<empty>")
             return
 
         size_len = len(str(max(d['st_size'] for d in listing)))
@@ -513,13 +513,13 @@ class UserCommand(object):
 
         for elem in listing:
             # filter ot bits we don't want:
-            filtered_elem = {key: value for (key, value) in elem.iteritems() if
+            filtered_elem = {key: value for (key, value) in elem.items() if
                              value is not None
                              and key not in ('st_atime', 'st_ctime', 'st_ino', 'st_dev')}
-            print level * indent * ' ', fmt. \
+            print(level * indent * ' ', fmt. \
                 format(**dict(filtered_elem,
                               st_mode=filemode(elem['st_mode']),
-                              st_mtime=str(datetime.utcfromtimestamp(elem['st_mtime']))))
+                              st_mtime=str(datetime.utcfromtimestamp(elem['st_mtime'])))))
 
             if stat.S_ISDIR(elem['st_mode']):
                 if os.path.join(root, elem['name']) in full_listing:
@@ -561,17 +561,17 @@ class UserCommand(object):
                 status = client.status(job_id, element_id)
                 self.__count += 1
                 if self.__count >= self.__max_iter:
-                    print "Timeout .."
+                    print("Timeout ..")
                     break
-                print "(%2d) job id: %d status: %s " % (self.__count, job_id, status['status'])
+                print("(%2d) job id: %d status: %s " % (self.__count, job_id, status['status']))
 
         if element_id is None:
-            print "Job id: %d status: %s " % (job_id, status['status'])
+            print("Job id: %d status: %s " % (job_id, status['status']))
         else:
-            print "Job id: %d.%d status: %s " % (job_id, element_id, status['status'])
-            print "\tattempts: {attempts} transferred[MB]: {transferred}\n\t" \
+            print("Job id: %d.%d status: %s " % (job_id, element_id, status['status']))
+            print("\tattempts: {attempts} transferred[MB]: {transferred}\n\t" \
                   "instant[kB/s]: {instant} average[kB/s]:" \
-                  " {average} elapsed[s]: {elapsed}".format(**status)
+                  " {average} elapsed[s]: {elapsed}".format(**status))
         return status
 
     def remove(self, args):  # pylint: disable=no-self-use
@@ -586,7 +586,7 @@ class UserCommand(object):
         if token and self._session_ok(args.site, token):
             client = TransferClientFacade(token)
             # remove None values, position args, func and token from the kwargs:
-            accepted_args = {key: value for (key, value) in vars(args).iteritems() if
+            accepted_args = {key: value for (key, value) in vars(args).items() if
                              value is not None and key not in ('func', 'site', 'token', 'block',
                                                                'config', 'verbosity')}
             response = client.remove(args.site, **accepted_args)  # max_tries, priority)
@@ -609,7 +609,7 @@ class UserCommand(object):
             src_site = args.src_site
             dst_site = args.dst_site
             # remove None values, position args, func and token from the kwargs:
-            accepted_args = {key: value for (key, value) in vars(args).iteritems() if
+            accepted_args = {key: value for (key, value) in vars(args).items() if
                              value is not None
                              and key not in ('func', 'src_site', 'dst_site', 'token', 'block',
                                              'config', 'verbosity')}
@@ -628,7 +628,7 @@ class UserCommand(object):
         token = UserCommand._get_token(args.token)
         if token and self._session_ok(args.site, token):
             client = TransferClientFacade(token)
-            accepted_args = {key: value for (key, value) in vars(args).iteritems() if
+            accepted_args = {key: value for (key, value) in vars(args).items() if
                              value is not None and key not in ('func', 'site', 'token', 'block',
                                                                'config', 'verbosity')}
             response = client.mkdir(args.site, **accepted_args)  # max_tries, priority
@@ -647,7 +647,7 @@ class UserCommand(object):
         token = UserCommand._get_token(args.token)
         if token and self._session_ok(args.oldname, token):
             client = TransferClientFacade(token)
-            accepted_args = {key: value for (key, value) in vars(args).iteritems() if
+            accepted_args = {key: value for (key, value) in vars(args).items() if
                              value is not None
                              and key not in ('func', 'token', 'block',
                                              'config', 'verbosity', 'oldname', 'newname')}
@@ -676,9 +676,9 @@ class UserCommand(object):
                         if args.verbosity == logging.DEBUG:
                             pprint(attempt)
                         else:
-                            print log_listing
+                            print(log_listing)
             except RESTException as rexc:
-                print str(rexc)
+                print(str(rexc))
 
     def jobs(self, args):
         """
@@ -712,9 +712,9 @@ class UserCommand(object):
                     session_info = site_client.get_session_info(site_id)
                     UserCommand._print_formatted_session_info(session_info)
                 except RESTException as res_ex:
-                    print str(res_ex)
+                    print(str(res_ex))
             else:
-                print "site %s not found !" % (args.name,)
+                print("site %s not found !" % (args.name,))
 
     def get_session(self, args):
         """
@@ -731,7 +731,7 @@ class UserCommand(object):
                 session_info = site_client.get_session_info(site_id)
                 UserCommand._print_formatted_session_info(session_info, attach=False)
             else:
-                print "site %s not found !" % (args.name,)
+                print("site %s not found !" % (args.name,))
 
     def _session_ok(self, site_path, token):
         """
@@ -743,16 +743,16 @@ class UserCommand(object):
         """
         name, path = TransferClientFacade.split_site_path(site_path)
         if name is None:
-            print "Malformed site path (should be sitename:path)"
+            print("Malformed site path (should be sitename:path)")
             return None
         site_client, site_id = UserCommand._get_site_id(name, token)
         ok = False
         if site_id:
             ok = site_client.get_session_info(site_id)['ok']
             if not ok:
-                print "Please log to the site %s first" % (name)
+                print("Please log to the site %s first" % (name))
         else:
-            print "site %s not found !" % (name)
+            print("site %s not found !" % (name))
         return ok
 
     def add_site(self, args):
@@ -764,7 +764,7 @@ class UserCommand(object):
         """
         token = UserCommand._get_token(args.token)
         if token:
-            site_info = {key: value for (key, value) in vars(args).iteritems() if
+            site_info = {key: value for (key, value) in vars(args).items() if
                          value is not None and key not in ('func', 'token',
                                                            'config', 'verbosity',
                                                            'service_ca_cert', 'user_ca_cert')}
@@ -780,7 +780,7 @@ class UserCommand(object):
                     site_info['service_ca_cert'] = service_cert
                 else:
                     return None
-            print site_info
+            print(site_info)
             site_client = SiteClient()
             site_client.set_token(token)
             site_client.add_site(site_info)
@@ -799,7 +799,7 @@ class UserCommand(object):
             if site_id:
                 site_client.del_site(site_id)
             else:
-                print "site %s not found !" % (args.name,)
+                print("site %s not found !" % (args.name,))
 
     def site_login(self, args):
         """
@@ -819,7 +819,7 @@ class UserCommand(object):
                 else:
                     user = session_info.get('username')
                     if not user:
-                        user = raw_input("Please enter username for site {}:".format(args.name))
+                        user = input("Please enter username for site {}:".format(args.name))
 
                 password = getpass("User [{}], "
                                    "please enter password for site {}:".format(user, args.name))
@@ -827,12 +827,12 @@ class UserCommand(object):
                 try:
                     site_client.logon(site_id, user, password,
                                       lifetime=args.lifetime, voms=args.voms)
-                    print " user %s logged in at site %s (valid for %d hours)" \
-                          % (user, args.name, args.lifetime)
+                    print(" user %s logged in at site %s (valid for %d hours)" \
+                          % (user, args.name, args.lifetime))
                 except RESTException as res_ex:
-                    print str(res_ex)
+                    print(str(res_ex))
             else:
-                print "site %s not found !" % (args.name,)
+                print("site %s not found !" % (args.name,))
 
     def site_logoff(self, args):
         """
@@ -847,11 +847,11 @@ class UserCommand(object):
             if site_id:
                 try:
                     site_client.logoff(site_id)
-                    print "Logged out from site %s" % (args.name,)
+                    print("Logged out from site %s" % (args.name,))
                 except RESTException as res_ex:
-                    print str(res_ex)
+                    print(str(res_ex))
             else:
-                print "site %s not found !" % (args.name,)
+                print("site %s not found !" % (args.name,))
 
     @staticmethod
     def _get_site_name(site_id, token):
@@ -883,46 +883,46 @@ class UserCommand(object):
     @staticmethod
     def _print_formatted_siteinfo(siteinfo):
         if not siteinfo:
-            print " Nothing to print"
+            print(" Nothing to print")
             return
-        print '-' + 91 * '-' + '-'
-        print '|{0:20}|{1:70}|'.format('site property:', 'value:')
-        print '|' + 91 * '-' + '|'
-        for key, value in siteinfo.iteritems():
+        print('-' + 91 * '-' + '-')
+        print('|{0:20}|{1:70}|'.format('site property:', 'value:'))
+        print('|' + 91 * '-' + '|')
+        for key, value in siteinfo.items():
             if key.endswith('cert'):
                 continue
             if isinstance(value, list):
                 for item in value:
-                    print '|{0:20}|{1:70}|'.format(key, str(item))
+                    print('|{0:20}|{1:70}|'.format(key, str(item)))
                     key = ' '
             else:
-                print '|{0:20}|{1:70}|'.format(key, str(value))
-        print '-' + 91 * '-' + '-'
+                print('|{0:20}|{1:70}|'.format(key, str(value)))
+        print('-' + 91 * '-' + '-')
 
     @staticmethod
     def _print_formatted_session_info(usersession, attach=True):
         if not usersession:
-            print " Nothing to print"
+            print(" Nothing to print")
             return
         if not attach:
-            print '-' + 91 * '-' + '-'
-        print '|{0:20}|{1:70}|'.format('user session:', 'value:')
-        print '|' + 91 * '-' + '|'
-        for key, value in usersession.iteritems():
-            print '|{0:20}|{1:70}|'.format(key, str(value))
-        print '-' + 91 * '-' + '-'
+            print('-' + 91 * '-' + '-')
+        print('|{0:20}|{1:70}|'.format('user session:', 'value:'))
+        print('|' + 91 * '-' + '|')
+        for key, value in usersession.items():
+            print('|{0:20}|{1:70}|'.format(key, str(value)))
+        print('-' + 91 * '-' + '-')
 
     @staticmethod
     def _print_formatted_user_info(userinfo):
         if not userinfo:
-            print " Nothing to print"
+            print(" Nothing to print")
             return
-        print '-' + 91 * '-' + '-'
-        print '|{0:20}|{1:70}|'.format('user property:', 'value:')
-        print '|' + 91 * '-' + '|'
-        for key, value in userinfo.iteritems():
-            print '|{0:20}|{1:70}|'.format(key, str(value))
-        print '-' + 91 * '-' + '-'
+        print('-' + 91 * '-' + '-')
+        print('|{0:20}|{1:70}|'.format('user property:', 'value:'))
+        print('|' + 91 * '-' + '|')
+        for key, value in userinfo.items():
+            print('|{0:20}|{1:70}|'.format(key, str(value)))
+        print('-' + 91 * '-' + '-')
 
     @staticmethod
     def _print_formatted_jobs_info(jobs, token, long_listing=True):
@@ -944,9 +944,9 @@ class UserCommand(object):
             fmt += '{%s:^%d}|' % elem
             fmth += '{%d:^%d}|' % (i, elem[1])
             nchars += elem[1]
-        print nchars * '-'
-        print fmth.format(*zip(*keys)[0])
-        print nchars * '-'
+        print(nchars * '-')
+        print(fmth.format(*zip(*keys)[0]))
+        print(nchars * '-')
 
         sites = {}
         for job in jobs:
@@ -970,13 +970,13 @@ class UserCommand(object):
             dst_filepath = UserCommand._trim_string_to_size(job['dst_filepath'],
                                                             dict(keys)['dst_filepath'])
 
-            print fmt.format(
+            print(fmt.format(
                 **dict(job, timestamp=job['timestamp'][:19],
                        src_filepath=src_filepath,
                        dst_filepath=dst_filepath,
                        src_sitename=src_sitename,
-                       dst_sitename=dst_sitename))
-        print nchars * '-'
+                       dst_sitename=dst_sitename)))
+        print(nchars * '-')
 
     @staticmethod
     def _trim_string_to_size(source, size, dots=True):
@@ -1011,15 +1011,15 @@ class UserCommand(object):
             with open(os.path.expanduser(tokenfile)) as token_file:
                 token = token_file.read()
                 if not token:
-                    print "No token at requested location. Please login first."
+                    print("No token at requested location. Please login first.")
                     return None
                 if check_validity:
                     if HRUtils.is_token_expired_insecure(token):
-                        print "Token expired. Please log in again."
+                        print("Token expired. Please log in again.")
                         return None
                 return token
         if check_validity:
-            print "No token at requested location. Please login first."
+            print("No token at requested location. Please login first.")
         return None
 
     @staticmethod
@@ -1028,7 +1028,7 @@ class UserCommand(object):
             with open(os.path.expanduser(certfile)) as cert_file:
                 cert = cert_file.read()
                 if not cert:
-                    print "No certificate at requested location. Please check and try again."
+                    print("No certificate at requested location. Please check and try again.")
                 return cert
-        print "%s does not exist or it is not a file. Please check and try again." % (certfile,)
+        print("%s does not exist or it is not a file. Please check and try again." % (certfile,))
         return None

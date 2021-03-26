@@ -38,7 +38,7 @@ class EnumBase(IntEnum):
         """Convert arg to enum."""
         if isinstance(obj, int):
             return cls(obj)
-        if isinstance(obj, basestring):
+        if isinstance(obj, str):
             if obj.isdigit():
                 return cls(int(obj))
             return cls[obj.upper()]
@@ -167,7 +167,7 @@ class WorkqueueModels(object):  # pylint: disable=too-few-public-methods
             timestamp = Column(TIMESTAMP, nullable=False,
                                default=datetime.utcnow, onupdate=datetime.utcnow)
             priority = SmartColumn(SmallInteger,
-                                   CheckConstraint('priority in {0}'.format(tuple(xrange(10)))),
+                                   CheckConstraint('priority in {0}'.format(tuple(range(10)))),
                                    nullable=False, allowed=True, default=5)
             type = SmartColumn(SmallInteger,  # pylint: disable=invalid-name
                                CheckConstraint('type in {0}'.format(JobType.values())),

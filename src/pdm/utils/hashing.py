@@ -23,12 +23,14 @@ def hash_pass(password, salt=None):
               every time. Use check_hash to check an existing hash
               against a password.
     """
-    if not salt:
+    if salt is None:
         salt = get_salt()
-    hashed_pass = hashlib.pbkdf2_hmac(HASH_ALGO, password,
+    elif isinstance(salt, str):
+        salt = salt.encode()
+    hashed_pass = hashlib.pbkdf2_hmac(HASH_ALGO, password.encode(),
                                       salt, HASH_ITER)
-    hash_str = "$5$%s$%s" % (binascii.hexlify(salt),
-                             binascii.hexlify(hashed_pass))
+    hash_str = "$5$%s$%s" % (binascii.hexlify(salt).decode(),
+                             binascii.hexlify(hashed_pass).decode())
     return hash_str
 
 def check_hash(hash_in, password):
@@ -48,6 +50,6 @@ def check_hash(hash_in, password):
         stored_hash = binascii.unhexlify(hash_parts[3])
     except TypeError:
         raise ValueError("Malfomed base64 in hash input")
-    new_hash = hashlib.pbkdf2_hmac(HASH_ALGO, password,
+    new_hash = hashlib.pbkdf2_hmac(HASH_ALGO, password.encode(),
                                    salt, HASH_ITER)
     return new_hash == stored_hash
