@@ -37,7 +37,7 @@ class TestMyProxyUtils(unittest.TestCase):
         # Simplest test
         res = MyProxyUtils.logon("localhost:12345", "user", "pass")
         self.assertEqual(res, 'PEMFILE')
-        self.assertEqual(proc.communicate.call_args[0][0], 'pass\n')
+        self.assertEqual(proc.communicate.call_args[0][0], 'pass')
         args, _ = self.get_args(popen_mock)
         self.assertIn('-s localhost', args)
         self.assertIn('-p 12345', args)
