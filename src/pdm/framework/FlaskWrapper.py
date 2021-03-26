@@ -117,7 +117,7 @@ class FlaskServer(Flask):
         """
         self.__db.tables = DBContainer()
         #pylint: disable=protected-access
-        registry = self.__db.Model._decl_class_registry
+        registry = self.__db.Model.registry._class_registry
         for tbl_name, tbl_inst in registry.items():
             if hasattr(tbl_inst, '__tablename__'):
                 setattr(self.__db.tables, tbl_name, tbl_inst)
