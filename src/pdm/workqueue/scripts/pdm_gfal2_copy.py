@@ -107,8 +107,8 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     _logger.info("common source prefix: %s ", s_root)
     _logger.info("common dest   prefix: %s ", d_root)
 
-    ctx.cred_set(ctx, s_root, s_cred)
-    ctx.cred_set(ctx, d_root, t_cred)
+    ctx.cred_set(s_root, s_cred)
+    ctx.cred_set(d_root, t_cred)
 
     for jobid, source_file, dest_file in copy_list:
         try:
