@@ -81,16 +81,15 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
             _logger.debug("job id %s : gfal copy source: %s TO dest: %s , overwrite ? %s ",
                           job_id, f_source, f_dest, overwrite)
 
-    s_cred = _get_cred(s_cred_file)
-    t_cred = _get_cred(t_cred_file)
+    ctx = gfal2.creat_context()
+    s_cred = _get_cred(ctx, s_cred_file)
+    t_cred = _get_cred(ctx, t_cred_file)
 
     if s_cred is None or t_cred is None:
         _logger.fatal("Please provide credential location: source %s, dest %s. ",
                       s_cred, t_cred)
         dump_and_flush({"Reason": "No credentials passed in", "Code": 1, 'id': ''})
         return
-
-    ctx = gfal2.creat_context()
 
     params = ctx.transfer_parameters()
     params.overwrite = overwrite
@@ -108,8 +107,8 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     _logger.info("common source prefix: %s ", s_root)
     _logger.info("common dest   prefix: %s ", d_root)
 
-    gfal2.cred_set(ctx, s_root, s_cred)
-    gfal2.cred_set(ctx, d_root, t_cred)
+    ctx.cred_set(s_root, s_cred)
+    ctx.cred_set(d_root, t_cred)
 
     for jobid, source_file, dest_file in copy_list:
         try:
@@ -131,9 +130,9 @@ def pdm_gfal_copy(copy_dict, s_cred_file=None, t_cred_file=None, overwrite=False
     return
 
 
-def _get_cred(cred_file):
+def _get_cred(ctx, cred_file):
     if cred_file:
-        cred = gfal2.cred_new('X509_CERT', str(cred_file))
+        cred = ctx.cred_new('X509_CERT', str(cred_file))
     else:
         return None
     return cred
